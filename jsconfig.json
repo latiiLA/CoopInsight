@@ -1,0 +1,22 @@
+// {
+//   "compilerOptions": {
+//     "baseUrl": ".",
+//     "paths": {
+//       "@/components/*": ["src/components/*"]
+//       // "@/lib/*": ["src/lib/*"]
+//     },
+//     "allowJs": true, // Allows JS files in the project
+//     "jsx": "react" // Treats JSX as React JSX
+//   },
+//   "include": ["src/**/*"]
+// }
+
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/": ["./src/"]
+    },
+    "jsx": "react-jsx"
+  }
+}
