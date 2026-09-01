@@ -1,0 +1,12 @@
+.env
+tmp
+/uploads
+/logs
+*.exe
+coop-forex-server
+
+# SSL certificates
+ssl
+ssl/*.key
+ssl/*.pem
+ssl/*.crt
