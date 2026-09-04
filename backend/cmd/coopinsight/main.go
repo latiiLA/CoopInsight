@@ -112,6 +112,10 @@ func main() {
 
 	userHandler := handler.NewUserHandler(userService)
 
+	permissionRepository := mongodb.NewPermissionRepository(db)
+	permissionService := service.NewPermissionService(permissionRepository)
+	permissionHandler := handler.NewPermissionHandler(permissionService)
+
 	// oracle depency injection
 	testRepository := oracle.NewTestRepository(oracleDB)
 	testService := service.NewTestService(testRepository)
@@ -123,8 +127,9 @@ func main() {
 	// --------------------------------------------------
 
 	r := router.SetupRouter(router.Handlers{
-		User: userHandler,
-		Test: testHandler,
+		User:       userHandler,
+		Permission: permissionHandler,
+		Test:       testHandler,
 	})
 
 	// --------------------------------------------------

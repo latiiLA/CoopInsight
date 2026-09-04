@@ -13,6 +13,9 @@ var (
 	ErrRoleNameAlreadyExists = errors.New("role with this name already exists")
 	ErrRoleNameNotAllowed    = errors.New("role name not allowed")
 
+	ErrPermissionNotFound      = errors.New("permission not found")
+	ErrPermissionAlreadyExists = errors.New("permission already exists")
+
 	ErrUnauthorized   = errors.New("unauthorized")
 	ErrInternalServer = errors.New("internal server error")
 )
