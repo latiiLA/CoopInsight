@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
@@ -15,6 +16,7 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/auth"
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/utils"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -22,6 +24,7 @@ import (
 type UserService interface {
 	Authenticate(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error)
 	AuthenticateLocal(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error)
+	Register(ctx context.Context, createdBy primitive.ObjectID, req *dto.RegisterRequest) error
 	GetUserDetails(ctx context.Context, username string) (*dto.UserResponse, error)
 	GetByID(ctx context.Context, id string) (*model.User, error)
 	GetAll(ctx context.Context) ([]model.User, error)
@@ -29,6 +32,7 @@ type UserService interface {
 
 type userService struct {
 	userRepository repository.UserRepository
+	roleRepository repository.RoleRepository
 	host           string
 	port           string
 	basedDN        string
@@ -37,9 +41,14 @@ type userService struct {
 	userFilter     string
 }
 
-func NewUserService(userRepository repository.UserRepository, host, port, baseDN, bindUser, bindPassword, userFilter string) UserService {
+func NewUserService(
+	userRepository repository.UserRepository,
+	roleRepository repository.RoleRepository,
+	host, port, baseDN, bindUser, bindPassword, userFilter string,
+) UserService {
 	return &userService{
 		userRepository: userRepository,
+		roleRepository: roleRepository,
 		host:           host,
 		port:           port,
 		basedDN:        baseDN,
@@ -246,4 +255,57 @@ func (s *userService) GetByID(ctx context.Context, id string) (*model.User, erro
 
 func (s *userService) GetAll(ctx context.Context) ([]model.User, error) {
 	return s.userRepository.FindAll(ctx)
+}
+
+func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID, req *dto.RegisterRequest) error {
+	username := strings.ToLower(strings.TrimSpace(req.Username))
+
+	_, err := s.userRepository.FindByUsername(ctx, username)
+	if err == nil {
+		return common.ErrUsernameAlreadyExists
+	}
+	if !errors.Is(err, mongo.ErrNoDocuments) {
+		return err
+	}
+
+	roleID, err := primitive.ObjectIDFromHex(req.Role)
+	if err != nil {
+		return common.ErrRoleNotFound
+	}
+
+	if _, err := s.roleRepository.FindByID(ctx, roleID); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return common.ErrRoleNotFound
+		}
+
+		return err
+	}
+
+	email := ""
+	if adUser, adErr := s.GetUserDetails(ctx, username); adErr == nil && adUser != nil {
+		email = adUser.Email
+	}
+
+	now := time.Now()
+	permissions := req.Permissions
+	if permissions == nil {
+		permissions = []string{}
+	}
+
+	user := &model.User{
+		ID:          primitive.NewObjectID(),
+		FirstName:   strings.TrimSpace(req.FirstName),
+		MiddleName:  strings.TrimSpace(req.MiddleName),
+		LastName:    strings.TrimSpace(req.LastName),
+		Email:       email,
+		RoleID:      roleID,
+		Permissions: permissions,
+		Username:    username,
+		Status:      model.StatusNew,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+		CreatedBy:   createdBy,
+	}
+
+	return s.userRepository.Create(ctx, user)
 }

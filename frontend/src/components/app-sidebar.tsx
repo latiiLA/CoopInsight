@@ -1,10 +1,20 @@
 import * as React from "react";
 import {
+  Activity,
   AppleIcon,
-  BookOpen,
+  ChartBar,
+  ChartNoAxesGantt,
   ChevronRight,
-  InspectionPanel,
+  Home,
+  HomeIcon,
+  LayoutDashboard,
+  LucideIdCard,
   ProjectorIcon,
+  Settings,
+  Shield,
+  SquareArrowOutDownRight,
+  Terminal,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,6 +41,9 @@ import {
 import { VersionSwitcher } from "./version-switcher";
 import { SearchForm } from "./search-form";
 import { NavUser } from "./nav-user";
+import { NavLink } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { RootState } from "../../app/store/store";
 
 // ------------------------------------
 // Types
@@ -50,6 +63,12 @@ type NavItem = {
   items: NavSubItem[];
 };
 
+type NavHome = {
+  title: string;
+  icon?: LucideIcon;
+  url: string;
+};
+
 // ------------------------------------
 // Data
 // ------------------------------------
@@ -61,6 +80,7 @@ const data: {
     username: string;
     avatar: string;
   };
+  navHome: NavHome;
   navMain: NavItem[];
 } = {
   versions: ["1.0.1"],
@@ -71,16 +91,22 @@ const data: {
     avatar: "/avatars/shadcn.jpg",
   },
 
+  navHome: {
+    title: "Home",
+    url: "home",
+    icon: Home,
+  },
+
   navMain: [
     {
-      title: "Getting Started",
-      icon: BookOpen,
+      title: "Reports",
+      icon: ChartBar,
       url: "#",
       items: [
         {
-          title: "Installation",
-          icon: InspectionPanel,
-          url: "#",
+          title: "Deposit Per Terminal",
+          icon: SquareArrowOutDownRight,
+          url: "deposit-per-terminal",
         },
         {
           title: "Project Structure",
@@ -89,44 +115,47 @@ const data: {
         },
       ],
     },
-
     {
-      title: "Build Your Application",
-      icon: AppleIcon,
+      title: "Dashboards",
+      icon: LayoutDashboard,
       url: "#",
       items: [
         {
-          title: "Routing",
+          title: "ATM Terminal",
           url: "#",
+          icon: Terminal,
         },
         {
-          title: "Data Fetching",
+          title: "POS Terminal",
           url: "#",
-          isActive: true,
+          icon: LucideIdCard,
+        },
+      ],
+    },
+    {
+      title: "System Administration",
+      icon: Settings,
+      url: "#",
+      items: [
+        {
+          title: "Manage Users",
+          url: "users",
+          icon: Users,
         },
         {
-          title: "Rendering",
-          url: "#",
+          title: "Manage Roles",
+          url: "roles",
+          icon: Shield,
         },
         {
-          title: "Caching",
-          url: "#",
+          title: "Analytics",
+          url: "analytics",
+          icon: ChartNoAxesGantt,
         },
         {
-          title: "Styling",
-          url: "#",
-        },
-        {
-          title: "Optimizing",
-          url: "#",
-        },
-        {
-          title: "Configuring",
-          url: "#",
-        },
-        {
-          title: "Testing",
-          url: "#",
+          title: "Activity Log",
+          url: "activity",
+          icon: Activity,
         },
       ],
     },
@@ -137,9 +166,9 @@ const data: {
 // Sidebar
 // ------------------------------------
 
-export function AppSidebar({
-  ...props
-}: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { authUser } = useSelector((state: RootState) => state.user);
+
   return (
     <Sidebar {...props}>
       <SidebarHeader>
@@ -152,6 +181,22 @@ export function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent className="gap-0">
+        {/* Home rendered alone, no collapsible wrapper */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to={data.navHome.url}>
+                    {HomeIcon && <HomeIcon className="size-4" />}
+                    <span>{data.navHome.title}</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         {data.navMain.map((item) => {
           const Icon = item.icon;
 
@@ -184,17 +229,11 @@ export function AppSidebar({
 
                         return (
                           <SidebarMenuItem key={subItem.title}>
-                            <SidebarMenuButton
-                              asChild
-                              isActive={subItem.isActive ?? false}
-                            >
-                              <a href={subItem.url}>
-                                {SubIcon && (
-                                  <SubIcon className="size-4" />
-                                )}
-
+                            <SidebarMenuButton asChild>
+                              <NavLink to={subItem.url}>
+                                {SubIcon && <SubIcon className="size-4" />}
                                 <span>{subItem.title}</span>
-                              </a>
+                              </NavLink>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
                         );
@@ -211,7 +250,13 @@ export function AppSidebar({
       <SidebarRail />
 
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser
+          user={{
+            name: `${authUser?.data?.user?.firstName ?? ""} ${authUser?.data?.user?.lastName ?? ""}`.trim(),
+            username: authUser?.data?.user?.username ?? "",
+            avatar: "",
+          }}
+        />
       </SidebarFooter>
     </Sidebar>
   );

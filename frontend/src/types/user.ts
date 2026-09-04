@@ -21,7 +21,6 @@ export interface CreateUserDTO {
   firstName: string;
   middleName: string;
   lastName: string;
-  office: string;
   role: string;
   permissions?: string[];
 }

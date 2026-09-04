@@ -8,6 +8,7 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -247,4 +248,17 @@ func (ur *userRepository) FindAll(ctx context.Context) ([]model.User, error) {
 	// fmt.Println("users:", string(prettyJSON))
 
 	return users, nil
+}
+
+func (ur *userRepository) Create(ctx context.Context, user *model.User) error {
+	if user.ID.IsZero() {
+		user.ID = primitive.NewObjectID()
+	}
+
+	_, err := ur.collection.InsertOne(ctx, user)
+	if err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return nil
 }

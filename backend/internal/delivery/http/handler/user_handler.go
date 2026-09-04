@@ -12,6 +12,7 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/common/response"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/dto"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
+	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/utils"
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
 	"github.com/sirupsen/logrus"
 )
@@ -263,8 +264,67 @@ func (h *userHandler) GetByID(c *gin.Context) {
 }
 
 func (h *userHandler) Create(c *gin.Context) {
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Create user",
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessUnauthorized,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	var req dto.RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			message := fmt.Sprintf(
+				"%s failed on %s validation",
+				e.Field(),
+				e.Tag(),
+			)
+
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: message,
+				Error:   err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: common.MessInvalidRequest,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	err = h.userService.Register(c, authUserID, &req)
+	if err != nil {
+		status := http.StatusInternalServerError
+		message := common.MessInternalServerError
+
+		switch {
+		case errors.Is(err, common.ErrUsernameAlreadyExists):
+			status = http.StatusConflict
+			message = "Username already has been registered"
+
+		case errors.Is(err, common.ErrRoleNotFound):
+			status = http.StatusBadRequest
+			message = "Selected role was not found"
+		}
+
+		logrus.WithError(err).Error("failed to register user")
+		c.JSON(status, response.Status{
+			IsSuccessful: false,
+			Message:      message,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, response.Status{
+		IsSuccessful: true,
+		Message:      "User registered successfully",
 	})
 }
 

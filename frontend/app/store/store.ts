@@ -1,9 +1,15 @@
 import { configureStore } from '@reduxjs/toolkit'
 import userReducer from "../.././src/features/user_slice";
+import depositPerTerminalReducer from "../.././src/features/terminal_slice";
+import permissionReducer from "@/features/permission_slice";
+import roleReducer from "@/features/role_slice";
 
 export const store = configureStore({
   reducer: {
-        user: userReducer,
+      user: userReducer,
+      depositPerTerminal: depositPerTerminalReducer,
+      permission: permissionReducer,
+      role: roleReducer,
   },
 })
 

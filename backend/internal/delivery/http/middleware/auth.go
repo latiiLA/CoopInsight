@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/latiiLA/CoopInsight/backend/internal/common/response"
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/auth"
@@ -54,6 +55,9 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 		}
 
 		c.Set("claims", claims)
+		if userID, ok := claims["userId"].(string); ok {
+			c.Set("userID", userID)
+		}
 		c.Next()
 	}
 }
@@ -69,7 +73,7 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermissions []st
 			return
 		}
 
-		claims, ok := claimsValue.(map[string]interface{})
+		claims, ok := toClaimsMap(claimsValue)
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, response.Status{
 				Message: "Authorization failed",
@@ -138,3 +142,15 @@ func extractPermissions(value interface{}) []string {
 		return nil
 	}
 }
+
+func toClaimsMap(value interface{}) (map[string]interface{}, bool) {
+	switch claims := value.(type) {
+	case jwt.MapClaims:
+		return map[string]interface{}(claims), true
+	case map[string]interface{}:
+		return claims, true
+	default:
+		return nil, false
+	}
+}
+

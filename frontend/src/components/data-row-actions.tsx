@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DeleteDialog } from "./delete-dialog";
+import { hasPermission } from "../../utility/has-permission";
 
 // import { RootState } from "@/store/store";
 // import { hasPermission } from "@/utility/has-permission";
@@ -51,39 +52,23 @@ export function DataRowActions<TData>({
 }: DataRowActionsProps<TData>) {
   const navigate = useNavigate();
 
-//   const { authUser } = useSelector(
-//     (state: RootState) => state.auth
-//   );
-
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const hasRequiredPermission = (
-    permissions?: string[]
-  ) => {
-    if (!permissions || permissions.length === 0) {
-      return true;
-    }
-
-    // if (!authUser) {
-    //   return false;
-    // }
-
-    // return hasPermission({
-    //   authUser,
-    //   requiredPermissions: permissions,
-    // });
-    return true
-  };
-
   const canView =
-    !!viewPath && hasRequiredPermission(viewPermission);
+  !!viewPath &&
+  !!viewPermission &&
+  hasPermission(viewPermission);
 
-  const canEdit =
-    !!editPath && hasRequiredPermission(editPermission);
+const canEdit =
+  !!editPath &&
+  !!editPermission &&
+  hasPermission(editPermission);
 
-  const canDelete =
-    !!onDelete && hasRequiredPermission(deletePermission);
+const canDelete =
+  !!onDelete &&
+  !!deletePermission &&
+  hasPermission(deletePermission);
 
   const handleDelete = async () => {
     if (!onDelete) return;
@@ -109,22 +94,15 @@ export function DataRowActions<TData>({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="h-8 w-8 p-0"
-          >
-            <span className="sr-only">
-              Open menu
-            </span>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
 
             <MoreHorizontal />
           </Button>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>
-            Actions
-          </DropdownMenuLabel>
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
           {canView && (
             <DropdownMenuItem

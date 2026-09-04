@@ -108,9 +108,11 @@ func main() {
 
 	// Mongodb user dependencies
 	userRepository := mongodb.NewUserRepository(db)
+	roleRepository := mongodb.NewRoleRepository(db)
 
 	userService := service.NewUserService(
 		userRepository,
+		roleRepository,
 		configs.LDAPHost,
 		configs.LDAPPort,
 		configs.LDAPBaseDN,
@@ -124,6 +126,9 @@ func main() {
 	permissionRepository := mongodb.NewPermissionRepository(db)
 	permissionService := service.NewPermissionService(permissionRepository)
 	permissionHandler := handler.NewPermissionHandler(permissionService)
+
+	roleService := service.NewRoleService(roleRepository)
+	roleHandler := handler.NewRoleHandler(roleService)
 
 	var testHandler handler.TestHandler
 	if oracleDB != nil {
@@ -141,6 +146,7 @@ func main() {
 	r := router.SetupRouter(router.Handlers{
 		User:       userHandler,
 		Permission: permissionHandler,
+		Role:       roleHandler,
 		Test:       testHandler,
 	})
 

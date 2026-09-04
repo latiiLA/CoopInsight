@@ -21,7 +21,7 @@ import { AppDispatch, RootState } from "../../app/store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
-import { loginUser } from "../../src/features/user_slice";
+import { loginUser } from "@/features/user_slice";
 
 // Zod schema
 const loginSchema = z.object({
@@ -47,7 +47,7 @@ export function LoginForm({
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { authLoading, authError } = useSelector(
+  const { authLoading } = useSelector(
     (state: RootState) => state.user
   );
 

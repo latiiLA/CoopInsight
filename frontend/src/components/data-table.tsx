@@ -1,5 +1,6 @@
 import {
   ColumnFiltersState,
+  ColumnSizingState,
   ColumnVisibilityState,
   SortingState,
   useTable,
@@ -44,10 +45,15 @@ import {
 } from "lucide-react";
 
 import { DataTableFeatures, features } from "./data-table-features";
+import { DatePickerWithRange } from "./date-picker";
+import { DateRange } from "react-day-picker";
+import SkeletonTableBasic from "./skeloton-table-basic";
 
 interface DataTableProps<TData extends RowData> {
- columns: ColumnDef<DataTableFeatures, TData>[];
+  columns: ColumnDef<DataTableFeatures, TData>[];
   data: TData[];
+
+  loading?: boolean;
 
   searchPlaceholder?: string;
   exportFileName?: string;
@@ -56,11 +62,15 @@ interface DataTableProps<TData extends RowData> {
   enableExport?: boolean;
   enableColumnVisibility?: boolean;
   enablePagination?: boolean;
+
+  onDateChange?: (date: DateRange | undefined) => void;
 }
 
 export function DataTable<TData extends RowData>({
   columns,
   data,
+
+  loading = false,
 
   searchPlaceholder = "Search all columns...",
   exportFileName = "data-export",
@@ -69,12 +79,15 @@ export function DataTable<TData extends RowData>({
   enableExport = true,
   enableColumnVisibility = true,
   enablePagination = true,
+  onDateChange,
 }: DataTableProps<TData>) {
+  const [date, setDate] = useState<DateRange | undefined>();
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] =
-    useState<ColumnFiltersState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] =
     useState<ColumnVisibilityState>({});
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [rowSelection, setRowSelection] = useState({});
 
@@ -91,6 +104,7 @@ export function DataTable<TData extends RowData>({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
+    onColumnSizingChange: setColumnSizing,
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
@@ -99,6 +113,7 @@ export function DataTable<TData extends RowData>({
       sorting,
       columnFilters,
       columnVisibility,
+      columnSizing,
       globalFilter,
       rowSelection,
       pagination,
@@ -114,34 +129,23 @@ export function DataTable<TData extends RowData>({
   const getExportableData = () => {
     const exportableColumns = table
       .getVisibleLeafColumns()
-      .filter(
-        (column) =>
-          column.id !== "select" &&
-          column.id !== "actions"
-      );
+      .filter((column) => column.id !== "select" && column.id !== "actions");
 
-    const headers = exportableColumns.map(
-      (column) => column.id
+    const headers = exportableColumns.map((column) => column.id);
+
+    const rows = table.getFilteredRowModel().rows.map((row) =>
+      exportableColumns.map((column) => {
+        const cell = row
+          .getVisibleCells()
+          .find((cell) => cell.column.id === column.id);
+
+        const value = cell?.getValue();
+
+        return typeof value === "string"
+          ? value.replace(/"/g, '""')
+          : (value ?? "");
+      }),
     );
-
-    const rows = table
-      .getFilteredRowModel()
-      .rows
-      .map((row) =>
-        exportableColumns.map((column) => {
-          const cell = row
-            .getVisibleCells()
-            .find(
-              (cell) => cell.column.id === column.id
-            );
-
-          const value = cell?.getValue();
-
-          return typeof value === "string"
-            ? value.replace(/"/g, '""')
-            : value ?? "";
-        })
-      );
 
     return {
       headers,
@@ -174,23 +178,13 @@ export function DataTable<TData extends RowData>({
   const exportToXLSX = () => {
     const { headers, rows } = getExportableData();
 
-    const worksheet = XLSX.utils.aoa_to_sheet([
-      headers,
-      ...rows,
-    ]);
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
 
     const workbook = XLSX.utils.book_new();
 
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "Data"
-    );
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
 
-    XLSX.writeFile(
-      workbook,
-      `${exportFileName}.xlsx`
-    );
+    XLSX.writeFile(workbook, `${exportFileName}.xlsx`);
   };
 
   // --------------------------------------------------
@@ -200,15 +194,13 @@ export function DataTable<TData extends RowData>({
   return (
     <div className="w-full">
       {/* Toolbar */}
-      <div className="flex items-center justify-between py-4">
+      <div className="flex items-center justify-between py-2">
         {/* Search */}
         {enableSearch ? (
           <Input
             placeholder={searchPlaceholder}
             value={globalFilter}
-            onChange={(event) =>
-              setGlobalFilter(event.target.value)
-            }
+            onChange={(event) => setGlobalFilter(event.target.value)}
             className="max-w-sm"
           />
         ) : (
@@ -216,14 +208,22 @@ export function DataTable<TData extends RowData>({
         )}
 
         <div className="flex items-center gap-2">
+          {/* Date Picker With Range */}
+          {onDateChange && (
+            <DatePickerWithRange
+              date={date}
+              onDateChange={(newDate) => {
+                setDate(newDate);
+                onDateChange?.(newDate);
+              }}
+            />
+          )}
+
           {/* Export */}
           {enableExport && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" className="flex items-center gap-2">
                   <FolderUp />
                   Export
                 </Button>
@@ -245,26 +245,20 @@ export function DataTable<TData extends RowData>({
           {enableColumnVisibility && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  Columns
-                </Button>
+                <Button variant="outline">Columns</Button>
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="end">
                 {table
                   .getAllColumns()
-                  .filter((column) =>
-                    column.getCanHide()
-                  )
+                  .filter((column) => column.getCanHide())
                   .map((column) => (
                     <DropdownMenuCheckboxItem
                       key={column.id}
                       className="capitalize"
                       checked={column.getIsVisible()}
                       onCheckedChange={(value) =>
-                        column.toggleVisibility(
-                          !!value
-                        )
+                        column.toggleVisibility(!!value)
                       }
                     >
                       {column.id}
@@ -278,63 +272,51 @@ export function DataTable<TData extends RowData>({
 
       {/* Table */}
       <div className="overflow-hidden rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map(
-              (headerGroup) => (
+        {loading ? (
+          <SkeletonTableBasic />
+        ) : (
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map(
-                    (header) => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : (
-                              <table.FlexRender
-                                header={header}
-                              />
-                            )}
-                      </TableHead>
-                    )
-                  )}
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} >
+                      {header.isPlaceholder ? null : (
+                        <table.FlexRender header={header} />
+                      )}
+                    </TableHead>
+                  ))}
                 </TableRow>
-              )
-            )}
-          </TableHeader>
+              ))}
+            </TableHeader>
 
-          <TableBody>
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={
-                    row.getIsSelected()
-                      ? "selected"
-                      : undefined
-                  }
-                >
-                  {row
-                    .getVisibleCells()
-                    .map((cell) => (
+            <TableBody>
+              {table.getRowModel().rows.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() ? "selected" : undefined}
+                  >
+                    {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
-                        <table.FlexRender
-                          cell={cell}
-                        />
+                        <table.FlexRender cell={cell} />
                       </TableCell>
                     ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No results.
+                  </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {/* Pagination */}
@@ -342,49 +324,37 @@ export function DataTable<TData extends RowData>({
         <div className="flex items-center justify-between py-4">
           {/* Selection count */}
           <div className="text-sm text-muted-foreground">
-            {table.getFilteredSelectedRowModel().rows.length}{" "}
-            of{" "}
-            {table.getFilteredRowModel().rows.length}{" "}
-            row(s) selected.
+            {table.getFilteredSelectedRowModel().rows.length} of{" "}
+            {table.getFilteredRowModel().rows.length} row(s) selected.
           </div>
 
           <div className="flex items-center space-x-6">
             {/* Page size */}
             <div className="flex items-center space-x-2">
-              <p className="text-sm font-medium">
-                Rows per page
-              </p>
+              <p className="text-sm font-medium">Rows per page</p>
 
               <Select
                 value={`${table.state.pagination.pageSize}`}
-                onValueChange={(value) =>
-                  table.setPageSize(Number(value))
-                }
+                onValueChange={(value) => table.setPageSize(Number(value))}
               >
                 <SelectTrigger className="h-8 w-[70px]">
                   <SelectValue />
                 </SelectTrigger>
 
                 <SelectContent side="top">
-                  {[10, 20, 25, 30, 40, 50].map(
-                    (pageSize) => (
-                      <SelectItem
-                        key={pageSize}
-                        value={`${pageSize}`}
-                      >
-                        {pageSize}
-                      </SelectItem>
-                    )
-                  )}
+                  {[10, 20, 25, 30, 40, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             {/* Page number */}
             <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-              Page{" "}
-              {table.state.pagination.pageIndex + 1}{" "}
-              of {table.getPageCount()}
+              Page {table.state.pagination.pageIndex + 1} of{" "}
+              {table.getPageCount()}
             </div>
 
             {/* Navigation */}
@@ -393,12 +363,8 @@ export function DataTable<TData extends RowData>({
                 variant="outline"
                 size="icon"
                 className="hidden size-8 lg:flex"
-                onClick={() =>
-                  table.setPageIndex(0)
-                }
-                disabled={
-                  !table.getCanPreviousPage()
-                }
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
               >
                 <ChevronsLeft />
               </Button>
@@ -407,12 +373,8 @@ export function DataTable<TData extends RowData>({
                 variant="outline"
                 size="icon"
                 className="size-8"
-                onClick={() =>
-                  table.previousPage()
-                }
-                disabled={
-                  !table.getCanPreviousPage()
-                }
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
               >
                 <ChevronLeft />
               </Button>
@@ -431,11 +393,7 @@ export function DataTable<TData extends RowData>({
                 variant="outline"
                 size="icon"
                 className="hidden size-8 lg:flex"
-                onClick={() =>
-                  table.setPageIndex(
-                    table.getPageCount() - 1
-                  )
-                }
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
                 <ChevronsRight />

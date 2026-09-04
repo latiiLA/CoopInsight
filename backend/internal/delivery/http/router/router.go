@@ -12,6 +12,7 @@ import (
 type Handlers struct {
 	User       handler.UserHandler
 	Permission handler.PermissionHandler
+	Role       handler.RoleHandler
 	Test       handler.TestHandler
 }
 
@@ -97,6 +98,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 
 	registerUserRoutes(protected, handlers.User)
 	registerPermissionRoutes(protected, handlers.Permission)
+	registerRoleRoutes(protected, handlers.Role)
 
 	// --------------------------------------------------
 	// Protected Oracle routes - longer timeout

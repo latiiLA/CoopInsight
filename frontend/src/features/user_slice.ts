@@ -1,23 +1,23 @@
 import config from "@/configs/config";
 import { Auth } from "@/types/auth";
+import { CreateUserDTO, User } from "@/types/user";
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 import getErrorMessage from "../../utility/error-message";
-import { User } from "@/types/user";
 import { RootState } from "../../app/store/store";
 import { jwtDecode } from "jwt-decode";
 
 export interface UserSliceState {
-  // auth
   authUser: Auth | null;
   isLoggedIn: boolean;
   authLoading: boolean;
   authError: string | null;
 
-  // permissions
+  registerLoading: boolean;
+  registerError: string | null;
+
   permissions: string[];
 
-  // users list
   users: User[];
   usersLoading: boolean;
   usersError: string | null;
@@ -34,7 +34,6 @@ interface JwtPayload {
 
 const AUTH_STORAGE_KEY = "coop-hub-auth";
 
-// Decode permissions from JWT
 const getPermissionsFromToken = (token?: string): string[] => {
   if (!token) {
     return [];
@@ -50,7 +49,6 @@ const getPermissionsFromToken = (token?: string): string[] => {
   }
 };
 
-// Helper: Safely retrieve initial user from localStorage without breaking SSR
 const getInitialStoredUser = (): Auth | null => {
   if (typeof window === "undefined") return null;
 
@@ -64,6 +62,17 @@ const getInitialStoredUser = (): Auth | null => {
   }
 };
 
+const persistAuth = (auth: Auth | null) => {
+  if (typeof window === "undefined") return;
+
+  if (auth) {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+    return;
+  }
+
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+};
+
 const initialUser = getInitialStoredUser();
 
 const initialState: UserSliceState = {
@@ -72,7 +81,9 @@ const initialState: UserSliceState = {
   authLoading: false,
   authError: null,
 
-  // Get permissions from JWT, NOT from authUser response data
+  registerLoading: false,
+  registerError: null,
+
   permissions: getPermissionsFromToken(initialUser?.data?.token),
 
   users: [],
@@ -80,7 +91,6 @@ const initialState: UserSliceState = {
   usersError: null,
 };
 
-// Async Thunk: Login
 export const loginUser = createAsyncThunk<
   Auth,
   LoginCredentials,
@@ -99,19 +109,44 @@ export const loginUser = createAsyncThunk<
   }
 });
 
+export const registerAuth = createAsyncThunk<
+  string,
+  CreateUserDTO,
+  { state: RootState; rejectValue: string }
+>("user/registerAuth", async (payload, thunkAPI) => {
+  try {
+    const token = thunkAPI.getState().user.authUser?.data.token;
+
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
+    }
+
+    const response = await axios.post<{
+      isSuccessful: boolean;
+      message: string;
+    }>(`${config.API_URL}/users`, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response.data.message || "User registered successfully";
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
 export const fetchUsers = createAsyncThunk<
   User[],
   void,
-  { state: RootState, rejectValue: string }
+  { state: RootState; rejectValue: string }
 >("user/fetchUsers", async (_, thunkAPI) => {
   try {
     const token = thunkAPI.getState().user.authUser?.data.token;
 
-      if (!token) {
-        return thunkAPI.rejectWithValue(
-          "Authentication token not found",
-        );
-      }
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
+    }
 
     const response = await axios.get<{
       isSuccessful: boolean;
@@ -123,7 +158,7 @@ export const fetchUsers = createAsyncThunk<
       },
     });
 
-    return response.data.data;
+    return response.data.data ?? [];
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getErrorMessage(error));
   }
@@ -136,17 +171,8 @@ const userSlice = createSlice({
     setUser: (state, action: PayloadAction<Auth | null>) => {
       state.authUser = action.payload;
       state.isLoggedIn = Boolean(action.payload);
-
-      if (typeof window !== "undefined") {
-        if (action.payload) {
-          localStorage.setItem(
-            AUTH_STORAGE_KEY,
-            JSON.stringify(action.payload),
-          );
-        } else {
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-        }
-      }
+      state.permissions = getPermissionsFromToken(action.payload?.data?.token);
+      persistAuth(action.payload);
     },
 
     logout: (state) => {
@@ -154,14 +180,18 @@ const userSlice = createSlice({
       state.isLoggedIn = false;
       state.authLoading = false;
       state.authError = null;
-
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-      }
+      state.registerLoading = false;
+      state.registerError = null;
+      state.permissions = [];
+      persistAuth(null);
     },
 
     clearAuthError: (state) => {
       state.authError = null;
+    },
+
+    clearRegisterError: (state) => {
+      state.registerError = null;
     },
 
     clearUsersError: (state) => {
@@ -180,37 +210,40 @@ const userSlice = createSlice({
         state.isLoggedIn = true;
         state.authError = null;
         state.authUser = action.payload;
-
-        // Persist session state on successful login
-        if (typeof window !== "undefined") {
-          localStorage.setItem(
-            AUTH_STORAGE_KEY,
-            JSON.stringify(action.payload),
-          );
-        }
+        state.permissions = getPermissionsFromToken(action.payload?.data?.token);
+        persistAuth(action.payload);
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.authLoading = false;
         state.isLoggedIn = false;
         state.authUser = null;
+        state.permissions = [];
         state.authError = action.payload || "Failed to login user";
+        persistAuth(null);
+      })
 
-        if (typeof window !== "undefined") {
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-        }
+      .addCase(registerAuth.pending, (state) => {
+        state.registerLoading = true;
+        state.registerError = null;
+      })
+      .addCase(registerAuth.fulfilled, (state) => {
+        state.registerLoading = false;
+        state.registerError = null;
+      })
+      .addCase(registerAuth.rejected, (state, action) => {
+        state.registerLoading = false;
+        state.registerError = action.payload || "Failed to register user";
       })
 
       .addCase(fetchUsers.pending, (state) => {
         state.usersLoading = true;
         state.usersError = null;
       })
-
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.usersLoading = false;
         state.users = action.payload;
         state.usersError = null;
       })
-
       .addCase(fetchUsers.rejected, (state, action) => {
         state.usersLoading = false;
         state.usersError = action.payload || "Failed to fetch users";
@@ -218,7 +251,12 @@ const userSlice = createSlice({
   },
 });
 
-export const { setUser, logout, clearAuthError, clearUsersError } =
-  userSlice.actions;
+export const {
+  setUser,
+  logout,
+  clearAuthError,
+  clearRegisterError,
+  clearUsersError,
+} = userSlice.actions;
 
 export default userSlice.reducer;
