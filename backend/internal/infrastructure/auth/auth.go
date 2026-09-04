@@ -12,7 +12,7 @@ import (
 
 func GenerateToken(userID primitive.ObjectID, role string, permissions []string, ip string) (string, error) {
 	claims := jwt.MapClaims{
-		"userID":      userID.Hex(),
+		"userId":      userID.Hex(),
 		"role":        role,
 		"permissions": permissions,
 		"ip":          ip,
@@ -44,9 +44,9 @@ func ValidateToken(tokenString string, clientIP string) (jwt.MapClaims, error) {
 	}
 
 	// Check if user ID exists
-	tokenUserID, exists := claims["userID"].(string)
+	tokenUserID, exists := claims["userId"].(string)
 	if !exists || tokenUserID == "" {
-		return nil, errors.New("user ID missing in token")
+		return nil, errors.New("userId missing in token")
 	}
 
 	// --- IP validation ---
@@ -73,7 +73,7 @@ func GenerateRefreshToken(userID primitive.ObjectID, ip string) (string, error) 
 
 	// Use MapClaims to match your access token style
 	claims := jwt.MapClaims{
-		"userID": userID.Hex(),
+		"userId": userID.Hex(),
 		"ip":     ip, // optional
 		"exp":    expirationTime.Unix(),
 		"iat":    time.Now().Unix(),
@@ -114,9 +114,9 @@ func ValidateRefreshToken(tokenString string, clientIP string) (jwt.MapClaims, e
 	}
 
 	// Check if userID exists
-	tokenUserID, exists := claims["userID"].(string)
+	tokenUserID, exists := claims["userId"].(string)
 	if !exists || tokenUserID == "" {
-		return nil, fmt.Errorf("userID missing in token")
+		return nil, fmt.Errorf("userId missing in token")
 	}
 
 	// --- Optional IP validation ---

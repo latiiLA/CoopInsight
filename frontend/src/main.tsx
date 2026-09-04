@@ -6,6 +6,7 @@ import { store } from "../app/store/store";
 import "./index.css";
 import App from "./App";
 import { ThemeProvider } from "./components/theme-provider";
+import { Toaster } from "./components/ui/sonner";
 
 if (import.meta.env.VITE_APP_MODE === "production") {
   console.log = () => {};
@@ -19,6 +20,7 @@ createRoot(document.getElementById("root")!).render(
       <Provider store={store}>
         <App />            
       </Provider>
+      <Toaster/>
     </Router>
   </ThemeProvider>
 );

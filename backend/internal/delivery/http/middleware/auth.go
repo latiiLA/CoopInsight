@@ -14,15 +14,9 @@ import (
 
 func JwtAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		logrus.Info("========== JWT MIDDLEWARE HIT ==========")
-
 		logEntry := utils.GetLogger(c)
 
 		authHeader := c.GetHeader("Authorization")
-
-		logrus.WithField("authorization", authHeader).
-			Info("Authorization header received")
-
 		parts := strings.Fields(authHeader)
 
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
@@ -60,9 +54,6 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 		}
 
 		c.Set("claims", claims)
-
-		logrus.Info("JWT validation successful")
-
 		c.Next()
 	}
 }

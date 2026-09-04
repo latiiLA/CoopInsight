@@ -5,6 +5,6 @@ export type Auth = {
   data: {
     user: User;
     token: string;
-    refresh_token: string;
+    refreshToken: string;
   };
 };

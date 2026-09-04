@@ -15,6 +15,7 @@ import logincover from "../assets/Login-pana.svg";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Label } from "./ui/label";
+import { toast } from "sonner"
 
 import { AppDispatch, RootState } from "../../app/store/store";
 import { useDispatch, useSelector } from "react-redux";
@@ -46,7 +47,7 @@ export function LoginForm({
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { loading, error } = useSelector(
+  const { authLoading, authError } = useSelector(
     (state: RootState) => state.user
   );
 
@@ -57,6 +58,10 @@ export function LoginForm({
 
     if (loginUser.fulfilled.match(result)) {
       navigate("/home");
+    }
+
+    if (loginUser.rejected.match(result)) {
+      toast.error(result.payload || "Invalid username or password");
     }
   };
 
@@ -137,20 +142,13 @@ export function LoginForm({
                 )}
               </div>
 
-              {/* API Error */}
-              {error && (
-                <p className="text-center text-sm text-red-600">
-                  {error}
-                </p>
-              )}
-
               {/* Submit */}
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loading}
+                disabled={authLoading}
               >
-                {loading ? (
+                {authLoading ? (
                   <>
                     <Loader2 className="animate-spin" />
                     <span>Please wait</span>
