@@ -16,8 +16,9 @@ var (
 	ErrPermissionNotFound      = errors.New("permission not found")
 	ErrPermissionAlreadyExists = errors.New("permission already exists")
 
-	ErrUnauthorized   = errors.New("unauthorized")
-	ErrInternalServer = errors.New("internal server error")
+	ErrUnauthorized      = errors.New("unauthorized")
+	ErrInternalServer    = errors.New("internal server error")
+	ErrOracleUnavailable = errors.New("oracle is unavailable")
 )
 
 var (
@@ -25,5 +26,6 @@ var (
 	MessUnauthorized        = "Unauthorized"
 	MessInvalidRequest      = "Invalid request"
 	MessInvalidRequestData  = "Invalid request data"
-	MessInvalidRequestFile  = "Invalid request data"
+	MessInvalidRequestFile = "Invalid request data"
+	MessOracleUnavailable  = "Oracle is unavailable"
 )

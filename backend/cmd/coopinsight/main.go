@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/latiiLA/CoopInsight/backend/configs"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/handler"
@@ -68,30 +69,38 @@ func main() {
 
 	db := mongoClient.Database(dbName)
 
-	// Oracle
-	oracleDB, err := database.ConnectOracle(
-		ctx,
-		configs.OracleHost,
-		configs.OraclePort,
-		configs.OracleServiceName,
-		configs.OracleUsername,
-		configs.OraclePassword,
-	)
+	// Oracle is optional. Login and user administration depend on Mongo only.
+	var oracleDB *sql.DB
 
-	if err != nil {
-		logrus.Fatal("Oracle connection error:", err)
-	}
+	if configs.OracleEnabled {
+		oracleDB, err = database.ConnectOracle(
+			ctx,
+			configs.OracleHost,
+			configs.OraclePort,
+			configs.OracleServiceName,
+			configs.OracleUsername,
+			configs.OraclePassword,
+		)
 
-	defer func() {
-		if err := oracleDB.Close(); err != nil {
-			logrus.Printf(
-				"Warning: failed to close Oracle connection: %v",
-				err,
-			)
+		if err != nil {
+			logrus.WithError(err).Warn("Oracle connection failed; report features will be unavailable")
+		} else {
+			configs.OracleConnected = true
+
+			defer func() {
+				if err := oracleDB.Close(); err != nil {
+					logrus.Printf(
+						"Warning: failed to close Oracle connection: %v",
+						err,
+					)
+				}
+			}()
+
+			logrus.Info("Oracle DB connected successfully")
 		}
-	}()
-
-	logrus.Info("Oracle DB connected successfully")
+	} else {
+		logrus.Info("Oracle is disabled; skipping connection")
+	}
 
 	// --------------------------------------------------
 	// Dependency Injection
@@ -116,11 +125,14 @@ func main() {
 	permissionService := service.NewPermissionService(permissionRepository)
 	permissionHandler := handler.NewPermissionHandler(permissionService)
 
-	// oracle depency injection
-	testRepository := oracle.NewTestRepository(oracleDB)
-	testService := service.NewTestService(testRepository)
-
-	testHandler := handler.NewTestHandler(testService)
+	var testHandler handler.TestHandler
+	if oracleDB != nil {
+		testHandler = handler.NewTestHandler(
+			service.NewTestService(oracle.NewTestRepository(oracleDB)),
+		)
+	} else {
+		testHandler = handler.NewTestHandler(service.NewTestService(nil))
+	}
 
 	// --------------------------------------------------
 	// Router

@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/latiiLA/CoopInsight/backend/internal/common"
+	"github.com/latiiLA/CoopInsight/backend/internal/common/response"
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
 )
 
@@ -51,6 +54,14 @@ func (h *testHandler) GetTestData(c *gin.Context) {
 
 	data, err := h.service.GetTestData(c.Request.Context(), dateFrom, dateTo, page, pageSize)
 	if err != nil {
+		if errors.Is(err, common.ErrOracleUnavailable) {
+			c.JSON(http.StatusServiceUnavailable, response.Status{
+				Message: common.MessOracleUnavailable,
+				Error:   err.Error(),
+			})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Failed to fetch Oracle data",
 			"error":   err.Error(),

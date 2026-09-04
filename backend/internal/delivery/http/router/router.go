@@ -61,8 +61,19 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
+		oracleStatus := "disabled"
+		if configs.OracleEnabled {
+			if configs.OracleConnected {
+				oracleStatus = "up"
+			} else {
+				oracleStatus = "down"
+			}
+		}
+
 		c.JSON(200, gin.H{
 			"status": "ok",
+			"mongo":  "up",
+			"oracle": oracleStatus,
 		})
 	})
 

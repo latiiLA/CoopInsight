@@ -73,6 +73,8 @@ var (
 	AllowedOrigins []string
 
 	// oracle
+	OracleEnabled     bool
+	OracleConnected   bool
 	OracleHost        string
 	OraclePort        string
 	OracleServiceName string
@@ -325,41 +327,75 @@ func LoadConfig() {
 		AllowedOrigins = strings.Split(originsEnv, ",")
 	}
 
-	// oracle
-
+	// oracle — optional. Login and user features use Mongo only.
+	explicitOracleEnabled, oracleEnabled := parseBoolEnv("ORACLE_ENABLED")
 	OracleHost = os.Getenv("ORACLE_HOST")
-	if OracleHost == "" {
-		log.Fatalf("Oracle host is required but not set")
+
+	if explicitOracleEnabled {
+		OracleEnabled = oracleEnabled
+	} else {
+		OracleEnabled = OracleHost != ""
 	}
 
-	OraclePort = os.Getenv("ORACLE_PORT")
-	if OraclePort == "" {
-		log.Fatalf("Oracle port is required but not set")
+	if OracleEnabled {
+		if OracleHost == "" {
+			log.Fatal("ORACLE_HOST is required when Oracle is enabled")
+		}
+
+		OraclePort = os.Getenv("ORACLE_PORT")
+		if OraclePort == "" {
+			log.Fatal("ORACLE_PORT is required when Oracle is enabled")
+		}
+
+		OracleServiceName = os.Getenv("ORACLE_SERVICE_NAME")
+		if OracleServiceName == "" {
+			log.Fatal("ORACLE_SERVICE_NAME is required when Oracle is enabled")
+		}
+
+		OracleUsername = os.Getenv("ORACLE_USERNAME")
+		if OracleUsername == "" {
+			log.Fatal("ORACLE_USERNAME is required when Oracle is enabled")
+		}
+
+		OraclePassword = os.Getenv("ORACLE_PASSWORD")
+		if OraclePassword == "" {
+			log.Fatal("ORACLE_PASSWORD is required when Oracle is enabled")
+		}
+
+		oracleTimeoutStr := os.Getenv("ORACLE_TIMEOUT")
+		if oracleTimeoutStr == "" {
+			OracleTimeout = 30 * time.Second
+			log.Print("ORACLE_TIMEOUT is not set, defaulting to 30s")
+		} else {
+			OracleTimeout, err = time.ParseDuration(oracleTimeoutStr)
+			if err != nil {
+				log.Fatalf("Invalid ORACLE_TIMEOUT format: %v", err)
+			}
+		}
+	} else {
+		if Timeout > 0 {
+			OracleTimeout = Timeout
+		} else {
+			OracleTimeout = 30 * time.Second
+		}
+		log.Print("Oracle is disabled; report features that need Oracle will be unavailable")
+	}
+}
+
+func parseBoolEnv(key string) (set bool, value bool) {
+	raw := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	if raw == "" {
+		return false, false
 	}
 
-	OracleServiceName = os.Getenv("ORACLE_SERVICE_NAME")
-	if OracleServiceName == "" {
-		log.Fatalf("Oracle service name is required but not set")
-	}
-
-	OracleUsername = os.Getenv("ORACLE_USERNAME")
-	if OracleUsername == "" {
-		log.Fatalf("Oracle username is required but not set")
-	}
-
-	OraclePassword = os.Getenv("ORACLE_PASSWORD")
-	if OraclePassword == "" {
-		log.Fatalf("Oracle password is required but not set")
-	}
-
-	OracleTimeoutStr := os.Getenv("ORACLE_TIMEOUT")
-	if timeoutStr == "" {
-		log.Fatalf("ORACLE_TIMEOUT is required but not set")
-	}
-
-	OracleTimeout, err = time.ParseDuration(OracleTimeoutStr)
-	if err != nil {
-		log.Fatalf("Invalid ORACLE_TIMEOUT format: %v", err)
+	switch raw {
+	case "true", "1", "yes", "on":
+		return true, true
+	case "false", "0", "no", "off":
+		return true, false
+	default:
+		log.Fatalf("invalid %s value %q; use true or false", key, raw)
+		return false, false
 	}
 }
 

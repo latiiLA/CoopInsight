@@ -28,7 +28,7 @@ func (ur *userRepository) FindByUsername(ctx context.Context, username string) (
 		bson.D{{Key: "$match", Value: bson.D{
 			{Key: "username", Value: username},
 			{Key: "status", Value: bson.D{
-				{Key: "$ne", Value: "Deleted"},
+				{Key: "$ne", Value: "deleted"},
 			}},
 		}}},
 		bson.D{{Key: "$lookup", Value: bson.D{
@@ -62,7 +62,7 @@ func (ur *userRepository) FindByUsername(ctx context.Context, username string) (
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "users"},
-				{Key: "localField", Value: "createdBy"},
+				{Key: "localField", Value: "updatedBy"},
 				{Key: "foreignField", Value: "_id"},
 				{Key: "as", Value: "updater"},
 			}},
@@ -76,6 +76,10 @@ func (ur *userRepository) FindByUsername(ctx context.Context, username string) (
 
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
+			{Key: "firstName", Value: 1},
+			{Key: "middleName", Value: 1},
+			{Key: "lastName", Value: 1},
+			{Key: "email", Value: 1},
 			{Key: "role", Value: 1},
 			{Key: "username", Value: 1},
 			{Key: "status", Value: 1},
@@ -111,7 +115,7 @@ func (ur *userRepository) FindByUsername(ctx context.Context, username string) (
 	return &user, nil
 }
 
-func (r *userRepository) GetByID(ctx context.Context, id string) (*model.User, error) {
+func (r *userRepository) FindByID(ctx context.Context, id string) (*model.User, error) {
 
 	var u model.User
 
@@ -129,4 +133,118 @@ func (r *userRepository) GetByID(ctx context.Context, id string) (*model.User, e
 	}
 
 	return &u, nil
+}
+
+func (ur *userRepository) FindAll(ctx context.Context) ([]model.User, error) {
+
+	pipeline := mongo.Pipeline{
+		bson.D{
+			{Key: "$match", Value: bson.D{
+				{Key: "status", Value: bson.D{
+					{Key: "$ne", Value: "deleted"},
+				}},
+			}},
+		},
+
+		// Role
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "roles"},
+				{Key: "localField", Value: "roleId"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "role"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$role"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+
+		// User - Creator
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "users"},
+				{Key: "localField", Value: "createdBy"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "creator"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$creator"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+
+		// User - Updater
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "users"},
+				{Key: "localField", Value: "updatedBy"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "updater"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$updater"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+
+		// sort
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "createdAt", Value: -1},
+		}}},
+
+		bson.D{
+			{Key: "$project", Value: bson.D{
+				{Key: "_id", Value: 1},
+				{Key: "firstName", Value: 1},
+				{Key: "middleName", Value: 1},
+				{Key: "lastName", Value: 1},
+				{Key: "roleId", Value: 1},
+				{Key: "role", Value: 1},
+				{Key: "permissions", Value: 1},
+				{Key: "email", Value: 1},
+				{Key: "username", Value: 1},
+				{Key: "status", Value: 1},
+				{Key: "createdAt", Value: 1},
+				{Key: "updatedAt", Value: 1},
+				{Key: "createdAy", Value: 1},
+				{Key: "updatedBy", Value: 1},
+				{Key: "deletedBy", Value: 1},
+				{Key: "deletedAt", Value: 1},
+
+				{Key: "creator", Value: bson.D{{Key: "$cond", Value: bson.A{
+					bson.D{{Key: "$ifNull", Value: bson.A{"$creator._id", false}}},
+					"$creator",
+					"$$REMOVE",
+				}}}},
+				{Key: "updater", Value: bson.D{{Key: "$cond", Value: bson.A{
+					bson.D{{Key: "$ifNull", Value: bson.A{"$updater._id", false}}},
+					"$updater",
+					"$$REMOVE",
+				}}}},
+			}},
+		},
+	}
+
+	cursor, err := ur.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var users []model.User
+	if err := cursor.All(ctx, &users); err != nil {
+		return nil, err
+	}
+
+	// prettyJSON, _ := json.MarshalIndent(users, "", "  ")
+	// fmt.Println("users:", string(prettyJSON))
+
+	return users, nil
 }

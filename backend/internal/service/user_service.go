@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"crypto/subtle"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
@@ -13,12 +16,15 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/utils"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService interface {
 	Authenticate(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error)
-	GetUserDetails(ctx context.Context, username string) (*model.User, error)
+	AuthenticateLocal(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error)
+	GetUserDetails(ctx context.Context, username string) (*dto.UserResponse, error)
 	GetByID(ctx context.Context, id string) (*model.User, error)
+	GetAll(ctx context.Context) ([]model.User, error)
 }
 
 type userService struct {
@@ -44,20 +50,9 @@ func NewUserService(userRepository repository.UserRepository, host, port, baseDN
 }
 
 func (s *userService) Authenticate(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error) {
-	// check local database
-	existingUser, err := s.userRepository.FindByUsername(ctx, username)
+	existingUser, err := s.findEligibleUser(ctx, username)
 	if err != nil {
-		logrus.Println("invalid username or user", err)
-		if err == mongo.ErrNoDocuments {
-			return nil, common.ErrUserNotFound
-		}
-
-		return nil, common.ErrInvalidCredentials
-	}
-
-	if existingUser.Status != model.StatusNew && existingUser.Status != model.StatusActive {
-		logrus.Println("user status is active", err)
-		return nil, common.ErrUserAccessRevoked
+		return nil, err
 	}
 
 	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s", s.host))
@@ -105,15 +100,56 @@ func (s *userService) Authenticate(ctx context.Context, username, password, ip s
 	}
 	logrus.Println("✅ User authentication successful")
 
-	// Prepare response and reply
-	var perms []string
-	if existingUser.Role != nil && existingUser.Permissions != nil {
-		perms = existingUser.Permissions
+	return s.issueLoginResponse(existingUser, ip)
+}
+
+func (s *userService) AuthenticateLocal(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error) {
+	existingUser, err := s.findEligibleUser(ctx, username)
+	if err != nil {
+		return nil, err
 	}
 
-	effectivePerms := utils.MergePermissions(existingUser.Role.Permissions, perms)
+	if !passwordMatches(existingUser.Password, password) {
+		logrus.Println("local authentication failed: invalid password")
+		return nil, common.ErrInvalidCredentials
+	}
 
-	accessToken, err := auth.GenerateToken(existingUser.ID, existingUser.Role.Name, effectivePerms, ip)
+	logrus.Println("local user authentication successful")
+
+	return s.issueLoginResponse(existingUser, ip)
+}
+
+func (s *userService) findEligibleUser(ctx context.Context, username string) (*model.User, error) {
+	existingUser, err := s.userRepository.FindByUsername(ctx, username)
+	if err != nil {
+		logrus.Println("invalid username or user", err)
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, common.ErrUserNotFound
+		}
+
+		return nil, common.ErrInvalidCredentials
+	}
+
+	if existingUser.Status != model.StatusNew && existingUser.Status != model.StatusActive {
+		logrus.Println("user access has been revoked")
+		return nil, common.ErrUserAccessRevoked
+	}
+
+	return existingUser, nil
+}
+
+func (s *userService) issueLoginResponse(existingUser *model.User, ip string) (*dto.LoginResponse, error) {
+	var roleName string
+	var rolePerms []string
+
+	if existingUser.Role != nil {
+		roleName = existingUser.Role.Name
+		rolePerms = existingUser.Role.Permissions
+	}
+
+	effectivePerms := utils.MergePermissions(rolePerms, existingUser.Permissions)
+
+	accessToken, err := auth.GenerateToken(existingUser.ID, roleName, effectivePerms, ip)
 	if err != nil {
 		return nil, err
 	}
@@ -123,37 +159,38 @@ func (s *userService) Authenticate(ctx context.Context, username, password, ip s
 		return nil, err
 	}
 
-	response := dto.LoginResponse{
-		ID:           existingUser.ID,
-		FirstName:    existingUser.FirstName,
-		MiddleName:   existingUser.MiddleName,
-		Username:     existingUser.Username,
-		Email:        existingUser.Email,
-		Role:         existingUser.Role.Name,
-		Permissions:  effectivePerms,
+	return &dto.LoginResponse{
+		User: model.User{
+			ID:         existingUser.ID,
+			FirstName:  existingUser.FirstName,
+			MiddleName: existingUser.MiddleName,
+			Username:   existingUser.Username,
+			Email:      existingUser.Email,
+			Role:       existingUser.Role,
+		},
 		Token:        accessToken,
 		RefreshToken: refreshToken,
+	}, nil
+}
+
+func passwordMatches(stored, provided string) bool {
+	if stored == "" || provided == "" {
+		return false
 	}
 
-	// Update last login
-	// var now = time.Now()
-	// if existingUser.Status == model.StatusNew {
-	// 	existingUser.Status = model.StatusActive
-	// }
-	// existingUser.LastLogin = &now
-	// existingUser.Updater = nil
-	// existingUser.Creator = nil
-	// existingUser.Role = nil
+	if strings.HasPrefix(stored, "$2a$") || strings.HasPrefix(stored, "$2b$") || strings.HasPrefix(stored, "$2y$") {
+		return bcrypt.CompareHashAndPassword([]byte(stored), []byte(provided)) == nil
+	}
 
-	// if _, err := s.userRepository.Update(ctx, existingUser.ID, existingUser); err != nil {
-	// 	return nil, fmt.Errorf("user login failed %s", err)
-	// }
+	if len(stored) != len(provided) {
+		return false
+	}
 
-	return &response, nil
+	return subtle.ConstantTimeCompare([]byte(stored), []byte(provided)) == 1
 }
 
 // Inside your LDAP service
-func (s *userService) GetUserDetails(ctx context.Context, username string) (*model.User, error) {
+func (s *userService) GetUserDetails(ctx context.Context, username string) (*dto.UserResponse, error) {
 	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s:%s", s.host, s.port))
 	if err != nil {
 		return nil, err
@@ -194,7 +231,7 @@ func (s *userService) GetUserDetails(ctx context.Context, username string) (*mod
 
 	// log.Println("================================")
 
-	user := &model.User{
+	user := &dto.UserResponse{
 		// DisplayName: entry.GetAttributeValue("name"),
 		FirstName:  entry.GetAttributeValue("givenName"),
 		MiddleName: entry.GetAttributeValue("sn"),
@@ -204,5 +241,9 @@ func (s *userService) GetUserDetails(ctx context.Context, username string) (*mod
 }
 
 func (s *userService) GetByID(ctx context.Context, id string) (*model.User, error) {
-	return s.userRepository.GetByID(ctx, id)
+	return s.userRepository.FindByID(ctx, id)
+}
+
+func (s *userService) GetAll(ctx context.Context) ([]model.User, error) {
+	return s.userRepository.FindAll(ctx)
 }

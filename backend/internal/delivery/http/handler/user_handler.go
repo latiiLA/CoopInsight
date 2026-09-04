@@ -11,11 +11,14 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
 	"github.com/latiiLA/CoopInsight/backend/internal/common/response"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/dto"
+	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
+	"github.com/sirupsen/logrus"
 )
 
 type UserHandler interface {
 	Login(c *gin.Context)
+	LoginLocal(c *gin.Context)
 	GetAll(c *gin.Context)
 	GetByID(c *gin.Context)
 	Create(c *gin.Context)
@@ -34,6 +37,42 @@ func NewUserHandler(userService service.UserService) UserHandler {
 }
 
 func (a *userHandler) Login(c *gin.Context) {
+	req, ok := bindLoginRequest(c)
+	if !ok {
+		return
+	}
+
+	username := strings.ToLower(req.Username)
+
+	user, err := a.userService.Authenticate(
+		c,
+		username,
+		req.Password,
+		c.ClientIP(),
+	)
+
+	a.writeLoginResult(c, user, err)
+}
+
+func (a *userHandler) LoginLocal(c *gin.Context) {
+	req, ok := bindLoginRequest(c)
+	if !ok {
+		return
+	}
+
+	username := strings.ToLower(req.Username)
+
+	user, err := a.userService.AuthenticateLocal(
+		c,
+		username,
+		req.Password,
+		c.ClientIP(),
+	)
+
+	a.writeLoginResult(c, user, err)
+}
+
+func bindLoginRequest(c *gin.Context) (dto.LoginRequest, bool) {
 	var req dto.LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -49,26 +88,20 @@ func (a *userHandler) Login(c *gin.Context) {
 				Message: message,
 				Error:   err.Error(),
 			})
-			return
+			return dto.LoginRequest{}, false
 		}
 
 		c.JSON(http.StatusBadRequest, response.Status{
 			Message: common.MessInvalidRequest,
 			Error:   err.Error(),
 		})
-		return
+		return dto.LoginRequest{}, false
 	}
 
-	username := strings.ToLower(req.Username)
+	return req, true
+}
 
-	// Call the usecase to perform authentication
-	user, err := a.userService.Authenticate(
-		c,
-		username,
-		req.Password,
-		c.ClientIP(),
-	)
-
+func (a *userHandler) writeLoginResult(c *gin.Context, user *dto.LoginResponse, err error) {
 	if err != nil {
 		var (
 			status  int
@@ -197,8 +230,26 @@ func (a *userHandler) Login(c *gin.Context) {
 // }
 
 func (h *userHandler) GetAll(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Get all users",
+	users, err := h.userService.GetAll(c)
+	if err != nil {
+		logrus.WithError(err).Error("failed to fetch users")
+		c.JSON(http.StatusInternalServerError, response.Status{
+			IsSuccessful: false,
+			Message:      "Failed to fetch users",
+			Data:         nil,
+		})
+		return
+	}
+
+	// Ensure slice is initialized as empty slice instead of nil for clean JSON output ("[]" instead of "null")
+	if users == nil {
+		users = []model.User{}
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Users fetched successfully",
+		Data:         users,
 	})
 }
 
