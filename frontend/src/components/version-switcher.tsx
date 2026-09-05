@@ -33,7 +33,7 @@ export function VersionSwitcher({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-            <div className="flex aspect-square size-10 items-center justify-center rounded-lg">
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
             <img
                 src={coopgif}
                 alt="Switch Hub"

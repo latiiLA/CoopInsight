@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Loader2, ShieldPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -30,23 +29,7 @@ import { fetchPermissions } from "@/features/permission_slice";
 
 import { AppDispatch, RootState } from "../../../../app/store/store";
 import { CreateRoleDTO } from "@/types/role";
-
-const formSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(3, "Role name must be at least 3 characters")
-    .max(50, "Role name must be at most 50 characters")
-    .regex(
-      /^[a-zA-Z0-9\s_-]+$/,
-      "Role name can only contain letters, numbers, spaces, underscores and hyphens",
-    ),
-  permissions: z
-    .array(z.string())
-    .min(1, "Select at least one permission for this role"),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { roleFormSchema, type RoleFormValues } from "./role-form-schema";
 
 const CreateRole = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -58,8 +41,8 @@ const CreateRole = () => {
     (state: RootState) => state.permission,
   );
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<RoleFormValues>({
+    resolver: zodResolver(roleFormSchema),
     defaultValues: {
       name: "",
       permissions: [],
@@ -78,7 +61,7 @@ const CreateRole = () => {
     }
   }, [permissionError]);
 
-  async function onSubmit(values: FormValues) {
+  async function onSubmit(values: RoleFormValues) {
     const payload: CreateRoleDTO = {
       name: values.name.trim(),
       permissions: values.permissions ?? [],

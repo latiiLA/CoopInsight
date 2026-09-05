@@ -90,25 +90,21 @@ export function LoginForm({
                   Username
                 </Label>
 
-                <div>
-                  <Input
-                    id="username"
-                    type="text"
-                    {...register("username")}
-                  />
+                <Input
+                  id="username"
+                  type="text"
+                  {...register("username")}
+                />
 
-                  <p
-                    className={`mt-1 min-h-5 text-xs leading-5 break-words text-red-600 ${
-                      errors.username?.message ? "" : "invisible"
-                    }`}
-                  >
-                    {errors.username?.message || "\u00A0"}
+                {errors.username?.message ? (
+                  <p className="text-xs text-red-600">
+                    {errors.username.message}
                   </p>
-                </div>
+                ) : null}
               </div>
 
               {/* Password */}
-              <div className="grid gap-3">
+              <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="password">
                     Password
@@ -137,13 +133,11 @@ export function LoginForm({
                   </button>
                 </div>
 
-                <p
-                  className={`min-h-5 text-xs leading-5 break-words text-red-600 ${
-                    errors.password?.message ? "" : "invisible"
-                  }`}
-                >
-                  {errors.password?.message || "\u00A0"}
-                </p>
+                {errors.password?.message ? (
+                  <p className="text-xs text-red-600">
+                    {errors.password.message}
+                  </p>
+                ) : null}
               </div>
 
               {/* Submit */}

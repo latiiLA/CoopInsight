@@ -10,10 +10,15 @@ export type Role = {
 };
 
 export function getRoleId(role?: Role | null) {
-  return role?.id ?? "";
+  return role?.id || (role as { _id?: string } | null | undefined)?._id || "";
 }
 
 export interface CreateRoleDTO {
+  name: string;
+  permissions: string[];
+}
+
+export interface UpdateRoleDTO {
   name: string;
   permissions: string[];
 }

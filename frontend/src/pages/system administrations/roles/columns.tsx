@@ -5,7 +5,7 @@ import { ArrowUpDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataRowActions } from "@/components/data-row-actions";
 import { DataTableFeatures } from "@/components/data-table-features";
-import { Role } from "@/types/role";
+import { Role, getRoleId } from "@/types/role";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Role>();
 
@@ -58,24 +58,29 @@ export const columns = columnHelper.columns([
       );
     },
   }),
-  {
+  columnHelper.display({
     id: "actions",
+    header: "Actions",
     enableHiding: false,
-    cell: ({ row }) => (
-      <DataRowActions
-        row={row.original}
-        viewPath="/role/details"
-        viewPermission={["role:view-details"]}
-        editPath="/role/edit"
-        editPermission={["role:update"]}
-        deleteLabel="Delete"
-        deleteTitle="Delete Role"
-        deleteDescription="Are you sure you want to delete this role?"
-        deletePermission={["role:delete"]}
-        onDelete={async () => {
-          // delete role here
-        }}
-      />
-    ),
-  },
+    cell: ({ row }) => {
+      const roleId = getRoleId(row.original);
+
+      return (
+        <DataRowActions
+          row={row.original}
+          viewPath="/role/details"
+          viewPermission={["role:view-details"]}
+          editPath={`/role/${roleId}/edit`}
+          editPermission={["role:update"]}
+          deleteLabel="Delete"
+          deleteTitle="Delete Role"
+          deleteDescription="Are you sure you want to delete this role?"
+          deletePermission={["role:delete"]}
+          onDelete={async () => {
+            // delete role here
+          }}
+        />
+      );
+    },
+  }),
 ]);

@@ -11,6 +11,7 @@ import ViewUser from "./pages/system administrations/users/view-user";
 import EditUser from "./pages/system administrations/users/edit-user";
 import ManageRoles from "./pages/system administrations/roles/manage-roles";
 import CreateRole from "./pages/system administrations/roles/create-role";
+import EditRole from "./pages/system administrations/roles/edit-role";
 import ManagePermissions from "./pages/system administrations/permissions/manage-permissions";
 import CreatePermission from "./pages/system administrations/permissions/create-permission";
 
@@ -52,6 +53,10 @@ function App() {
           <Route
             path="/role"
             element={<CreateRole />}
+          />
+          <Route
+            path="/role/:id/edit"
+            element={<EditRole />}
           />
           <Route
             path="/permissions"
