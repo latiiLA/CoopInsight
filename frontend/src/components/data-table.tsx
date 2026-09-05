@@ -64,6 +64,7 @@ interface DataTableProps<TData extends RowData> {
   enablePagination?: boolean;
 
   onDateChange?: (date: DateRange | undefined) => void;
+  defaultDate?: DateRange;
 }
 
 export function DataTable<TData extends RowData>({
@@ -80,8 +81,9 @@ export function DataTable<TData extends RowData>({
   enableColumnVisibility = true,
   enablePagination = true,
   onDateChange,
+  defaultDate,
 }: DataTableProps<TData>) {
-  const [date, setDate] = useState<DateRange | undefined>();
+  const [date, setDate] = useState<DateRange | undefined>(defaultDate);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] =

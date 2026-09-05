@@ -40,6 +40,7 @@
     "react-redux": "^9.3.0",
     "react-resizable": "^3.0.5",
     "react-router-dom": "^7.3.0",
+    "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",

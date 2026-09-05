@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import LoginPage from "./pages/Login";
 import Transaction from "./pages/transaction/Transaction";
 import DepositPerTerminal from "./pages/reports/deposit-per-terminal";
+import SuccessRate from "./pages/reports/success-rate/success-rate";
 import ManageUsers from "./pages/system administrations/users/manage-users";
 import CreateUser from "./pages/system administrations/users/create-user";
 import ViewUser from "./pages/system administrations/users/view-user";
@@ -29,6 +30,10 @@ function App() {
           <Route
             path="/deposit-per-terminal"
             element={<DepositPerTerminal />}
+          />
+          <Route
+            path="/success-rate"
+            element={<SuccessRate />}
           />
           <Route
             path="/users"
