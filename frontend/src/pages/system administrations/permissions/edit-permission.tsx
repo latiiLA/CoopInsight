@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, KeyRound, Loader2 } from "lucide-react";
+import { ArrowLeft, KeyRound, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -20,32 +20,59 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 
 import {
-  clearCreateError,
-  createPermission,
+  clearSelectedPermission,
+  clearUpdateError,
+  fetchPermissionById,
   fetchPermissions,
+  updatePermission,
 } from "@/features/permission_slice";
 
 import { AppDispatch, RootState } from "../../../../app/store/store";
-import { CreatePermissionDTO } from "@/types/permission";
+import { UpdatePermissionDTO, getPermissionId } from "@/types/permission";
 import {
   permissionFormSchema,
   type PermissionFormValues,
 } from "./permission-form-schema";
 
-type FormValues = PermissionFormValues;
+const emptyFormValues: PermissionFormValues = {
+  resource: "",
+  action: "",
+  description: "",
+};
 
-const CreatePermission = () => {
+const EditPermission = () => {
+  const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  const { createLoading } = useSelector((state: RootState) => state.permission);
+  const { isLoggedIn } = useSelector((state: RootState) => state.user);
+  const {
+    selectedPermission,
+    permissionDetailLoading,
+    permissionDetailError,
+    updateLoading,
+  } = useSelector((state: RootState) => state.permission);
 
-  const form = useForm<FormValues>({
+  const nameLocked = Boolean(selectedPermission?.assigned);
+
+  const formValues = useMemo<PermissionFormValues>(() => {
+    if (!selectedPermission) {
+      return emptyFormValues;
+    }
+
+    return {
+      resource: selectedPermission.resource ?? "",
+      action: selectedPermission.action ?? "",
+      description: selectedPermission.description ?? "",
+    };
+  }, [selectedPermission]);
+
+  const form = useForm<PermissionFormValues>({
     resolver: zodResolver(permissionFormSchema),
-    defaultValues: {
-      resource: "",
-      action: "",
-      description: "",
+    defaultValues: emptyFormValues,
+    values: formValues,
+    resetOptions: {
+      keepDirtyValues: true,
     },
   });
 
@@ -54,49 +81,97 @@ const CreatePermission = () => {
   const permissionName =
     resource.trim() && action.trim()
       ? `${resource.trim().toLowerCase()}:${action.trim().toLowerCase()}`
-      : "";
+      : selectedPermission?.name ?? "";
 
   useEffect(() => {
-    return () => {
-      dispatch(clearCreateError());
-    };
-  }, [dispatch]);
+    if (!isLoggedIn || !id) {
+      return;
+    }
 
-  async function onSubmit(values: FormValues) {
-    const payload: CreatePermissionDTO = {
-      name: `${values.resource.trim().toLowerCase()}:${values.action.trim().toLowerCase()}`,
-      resource: values.resource.trim().toLowerCase(),
-      action: values.action.trim().toLowerCase(),
-      description: values.description?.trim() || undefined,
-    };
+    dispatch(fetchPermissionById(id));
+  }, [dispatch, id, isLoggedIn]);
 
-    const resultAction = await dispatch(createPermission(payload));
-
-    if (createPermission.fulfilled.match(resultAction)) {
-      form.reset();
-      dispatch(fetchPermissions());
-
-      toast.success("Permission created successfully", {
-        id: "permission-add-success",
-        description: `${payload.name} has been added to CoopInsight.`,
+  useEffect(() => {
+    if (!id) {
+      toast.error("Unable to load permission", {
+        id: "permission-detail-error",
+        description: "Permission id is missing.",
       });
-
       navigate("/permissions");
       return;
     }
 
-    const errorMessage =
-      (resultAction.payload as string) ||
-      "Unable to create the permission. Please try again.";
+    if (!permissionDetailError) {
+      return;
+    }
 
-    toast.error("Permission creation failed", {
-      description: errorMessage,
+    toast.error("Unable to load permission", {
+      id: "permission-detail-error",
+      description: permissionDetailError,
     });
+    navigate("/permissions");
+  }, [id, navigate, permissionDetailError]);
 
-    dispatch(clearCreateError());
+  useEffect(() => {
+    return () => {
+      dispatch(clearSelectedPermission());
+      dispatch(clearUpdateError());
+    };
+  }, [dispatch]);
+
+  async function onSubmit(values: PermissionFormValues) {
+    const permissionId = id || getPermissionId(selectedPermission);
+
+    if (!permissionId) {
+      toast.error("Permission id is missing");
+      return;
+    }
+
+    const resourceValue = nameLocked
+      ? selectedPermission?.resource ?? values.resource.trim().toLowerCase()
+      : values.resource.trim().toLowerCase();
+    const actionValue = nameLocked
+      ? selectedPermission?.action ?? values.action.trim().toLowerCase()
+      : values.action.trim().toLowerCase();
+
+    const payload: UpdatePermissionDTO = {
+      name: `${resourceValue}:${actionValue}`,
+      resource: resourceValue,
+      action: actionValue,
+      description: values.description?.trim() || undefined,
+    };
+
+    const resultAction = await dispatch(
+      updatePermission({ id: permissionId, payload }),
+    );
+
+    if (updatePermission.fulfilled.match(resultAction)) {
+      dispatch(fetchPermissions());
+      toast.success("Permission updated successfully", {
+        description: `${payload.name} has been updated.`,
+      });
+      navigate("/permissions");
+      return;
+    }
+
+    toast.error("Permission update failed", {
+      description:
+        (resultAction.payload as string) ||
+        "Unable to update the permission. Please try again.",
+    });
+    dispatch(clearUpdateError());
   }
 
-  const isSubmitting = form.formState.isSubmitting || createLoading;
+  const isSubmitting = form.formState.isSubmitting || updateLoading;
+
+  if (permissionDetailLoading && !selectedPermission) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Loading permission...
+      </div>
+    );
+  }
 
   return (
     <div className="w-full pb-8">
@@ -106,13 +181,13 @@ const CreatePermission = () => {
             <div className="flex items-center gap-2">
               <KeyRound className="h-5 w-5" />
               <h1 className="text-2xl font-semibold tracking-tight">
-                Add Permission
+                Edit Permission
               </h1>
             </div>
-
             <p className="mt-1 text-sm text-muted-foreground">
-              Create a CoopInsight permission that can be assigned to roles and
-              users.
+              {nameLocked
+                ? "This permission is assigned, so its name stays locked. You can still update the description."
+                : "Update the CoopInsight permission details."}
             </p>
           </div>
 
@@ -142,11 +217,16 @@ const CreatePermission = () => {
                     <FormItem>
                       <FormLabel>Resource</FormLabel>
                       <FormControl>
-                        <Input placeholder="user" {...field} />
+                        <Input
+                          placeholder="user"
+                          disabled={nameLocked}
+                          {...field}
+                        />
                       </FormControl>
                       <FormDescription>
-                        The area this permission applies to, such as user or
-                        role.
+                        {nameLocked
+                          ? "Resource cannot change while this permission is assigned."
+                          : "The area this permission applies to, such as user or role."}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -160,11 +240,16 @@ const CreatePermission = () => {
                     <FormItem>
                       <FormLabel>Action</FormLabel>
                       <FormControl>
-                        <Input placeholder="create" {...field} />
+                        <Input
+                          placeholder="create"
+                          disabled={nameLocked}
+                          {...field}
+                        />
                       </FormControl>
                       <FormDescription>
-                        The operation being allowed, such as create, edit, or
-                        delete.
+                        {nameLocked
+                          ? "Action cannot change while this permission is assigned."
+                          : "The operation being allowed, such as create, edit, or delete."}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -192,10 +277,7 @@ const CreatePermission = () => {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Optional description"
-                        {...field}
-                      />
+                      <Input placeholder="Optional description" {...field} />
                     </FormControl>
                     <FormDescription>
                       Explain what this permission allows.
@@ -224,12 +306,12 @@ const CreatePermission = () => {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    Saving...
                   </>
                 ) : (
                   <>
-                    <KeyRound className="mr-2 h-4 w-4" />
-                    Create Permission
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Permission
                   </>
                 )}
               </Button>
@@ -241,4 +323,4 @@ const CreatePermission = () => {
   );
 };
 
-export default CreatePermission;
+export default EditPermission;
