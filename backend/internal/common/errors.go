@@ -41,6 +41,9 @@ var (
 	ErrFailedToFetchReport        = errors.New("failed to fetch report")
 	ErrOnusMonitoringUnavailable  = errors.New("on-us monitoring is unavailable")
 	ErrOffusMonitoringUnavailable = errors.New("off-us monitoring is unavailable")
+	ErrSwitchCommandUnavailable   = errors.New("switch command is unavailable")
+	ErrInvalidSwitchCommand       = errors.New("invalid switch command")
+	ErrSwitchCommandTimeout       = errors.New("switch command timed out")
 )
 
 var (

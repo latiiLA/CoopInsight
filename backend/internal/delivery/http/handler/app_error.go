@@ -48,6 +48,9 @@ var appErrors = []struct {
 	{common.ErrFailedToFetchReport, http.StatusInternalServerError},
 	{common.ErrOnusMonitoringUnavailable, http.StatusServiceUnavailable},
 	{common.ErrOffusMonitoringUnavailable, http.StatusServiceUnavailable},
+	{common.ErrSwitchCommandUnavailable, http.StatusServiceUnavailable},
+	{common.ErrInvalidSwitchCommand, http.StatusBadRequest},
+	{common.ErrSwitchCommandTimeout, http.StatusGatewayTimeout},
 }
 
 func writeAppError(c *gin.Context, err error) {

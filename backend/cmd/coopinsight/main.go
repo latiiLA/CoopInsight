@@ -178,6 +178,10 @@ func main() {
 	offusHandler := handler.NewOnusMonitoringHandler(
 		service.NewOffusMonitoringService(offusCollector),
 	)
+	switchCommandHandler := handler.NewSwitchCommandHandler(
+		service.NewSwitchCommandService(nil),
+	)
+	logrus.Info("Switch commands are in dry-run mode (SSH not connected)")
 
 	// --------------------------------------------------
 	// Router
@@ -191,6 +195,7 @@ func main() {
 		SuccessTransaction: successTransactionHandler,
 		OnusMonitoring:     onusHandler,
 		OffusMonitoring:    offusHandler,
+		SwitchCommand:      switchCommandHandler,
 	})
 
 	// --------------------------------------------------

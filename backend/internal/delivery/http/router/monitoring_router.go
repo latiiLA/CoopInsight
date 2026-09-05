@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/latiiLA/CoopInsight/backend/configs"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/handler"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/middleware"
 )
@@ -10,7 +11,12 @@ func registerMonitoringRoutes(
 	live *gin.RouterGroup,
 	onusHandler handler.OnusMonitoringHandler,
 	offusHandler handler.OnusMonitoringHandler,
+	_ handler.SwitchCommandHandler,
 ) {
+	if !configs.LiveMonitoringEnabled {
+		return
+	}
+
 	monitoring := live.Group("/monitoring")
 
 	monitoring.GET(

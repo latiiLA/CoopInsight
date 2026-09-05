@@ -96,6 +96,7 @@ var (
 	SSHSwitchPollSeconds    int
 	SSHSwitchInsecure       bool
 	SSHSwitchKnownHosts     string
+	LiveMonitoringEnabled   bool
 )
 
 func LoadConfig() {
@@ -454,6 +455,13 @@ func LoadConfig() {
 		}
 	} else {
 		log.Print("SSH switch monitoring is disabled")
+	}
+
+	explicitLiveMonitoring, liveMonitoring := parseBoolEnv("LIVE_MONITORING_ENABLED")
+	if explicitLiveMonitoring {
+		LiveMonitoringEnabled = liveMonitoring
+	} else {
+		LiveMonitoringEnabled = SSHSwitchEnabled
 	}
 }
 

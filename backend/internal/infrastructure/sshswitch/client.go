@@ -2,7 +2,9 @@ package sshswitch
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -11,6 +13,13 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 )
+
+const maxCommandOutput = 32 * 1024
+
+type CommandResult struct {
+	ExitCode int
+	Output   string
+}
 
 type ClientConfig struct {
 	Host       string
@@ -117,6 +126,54 @@ func (c *Client) Follow(ctx context.Context, onStart func(), onLine func(string)
 	}
 
 	return ctx.Err()
+}
+
+func (c *Client) Run(ctx context.Context, command string) (CommandResult, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	session, err := c.newSession()
+	if err != nil {
+		return CommandResult{}, err
+	}
+	defer session.Close()
+
+	var buf bytes.Buffer
+	session.Stdout = &buf
+	session.Stderr = &buf
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- session.Run(command)
+	}()
+
+	var runErr error
+	select {
+	case <-ctx.Done():
+		_ = session.Close()
+		<-errCh
+		runErr = ctx.Err()
+	case runErr = <-errCh:
+	}
+
+	result := CommandResult{Output: truncateOutput(buf.String())}
+	if runErr == nil {
+		return result, nil
+	}
+	if errors.Is(runErr, context.Canceled) || errors.Is(runErr, context.DeadlineExceeded) {
+		result.ExitCode = -1
+		return result, runErr
+	}
+
+	var exitErr *ssh.ExitError
+	if errors.As(runErr, &exitErr) {
+		result.ExitCode = exitErr.ExitStatus()
+		return result, nil
+	}
+
+	c.reset()
+	return result, fmt.Errorf("ssh command: %w", runErr)
 }
 
 func (c *Client) Close() {
@@ -226,4 +283,21 @@ func (c *Client) reset() {
 
 func shellQuote(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", `'"'"'`) + "'"
+}
+
+func LoginShellCommand(inner string) string {
+	script := strings.Join([]string{
+		"[ -f \"$HOME/.profile\" ] && . \"$HOME/.profile\" >/dev/null 2>&1 || true",
+		"[ -f \"$HOME/.bash_profile\" ] && . \"$HOME/.bash_profile\" >/dev/null 2>&1 || true",
+		"[ -f \"$HOME/.kshrc\" ] && . \"$HOME/.kshrc\" >/dev/null 2>&1 || true",
+		inner,
+	}, "; ")
+	return "bash -lc " + shellQuote(script)
+}
+
+func truncateOutput(raw string) string {
+	if len(raw) <= maxCommandOutput {
+		return raw
+	}
+	return raw[:maxCommandOutput] + "\n...[truncated]"
 }
