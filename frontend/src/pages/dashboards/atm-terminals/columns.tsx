@@ -28,6 +28,23 @@ async function copyText(label: string, value: string) {
   }
 }
 
+export function atmTerminalActionItems(terminal: AtmTerminal) {
+  return [
+    {
+      label: "Copy terminal ID",
+      onSelect: () => {
+        void copyText("Terminal ID", terminal.terminalId);
+      },
+    },
+    {
+      label: "Copy unit ID",
+      onSelect: () => {
+        void copyText("Unit ID", String(terminal.unitId ?? ""));
+      },
+    },
+  ];
+}
+
 export const columns = columnHelper.columns([
   columnHelper.display({
     id: "select",
@@ -116,6 +133,45 @@ export const columns = columnHelper.columns([
       );
     },
   }),
+  columnHelper.accessor("status", {
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Status
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+  }),
+  columnHelper.accessor("site", {
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Site
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+  }),
+  columnHelper.accessor("type", {
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Type
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+  }),
   columnHelper.display({
     id: "actions",
     header: "Actions",
@@ -126,20 +182,7 @@ export const columns = columnHelper.columns([
       return (
         <DataRowActions
           row={terminal}
-          extraItems={[
-            {
-              label: "Copy terminal ID",
-              onSelect: () => {
-                void copyText("Terminal ID", terminal.terminalId);
-              },
-            },
-            {
-              label: "Copy unit ID",
-              onSelect: () => {
-                void copyText("Unit ID", String(terminal.unitId ?? ""));
-              },
-            },
-          ]}
+          extraItems={atmTerminalActionItems(terminal)}
         />
       );
     },

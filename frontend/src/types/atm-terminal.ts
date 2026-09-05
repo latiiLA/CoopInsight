@@ -12,4 +12,5 @@ export type AtmTerminal = {
   port?: number;
   ipAddress?: string;
   status?: string;
+  isDeleted?: boolean;
 };

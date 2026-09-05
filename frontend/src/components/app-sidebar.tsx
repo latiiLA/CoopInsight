@@ -164,7 +164,7 @@ const data: {
       items: [
         {
           title: "ATM Terminal",
-          url: "atm-terminals",
+          url: "atm-dashboard",
           icon: Terminal,
           permissions: ["terminal:view-atm"],
         },
