@@ -32,6 +32,12 @@ interface DataRowActionsProps<TData> {
   deleteLabel?: string;
   deleteTitle?: string;
   deleteDescription?: string;
+
+  extraItems?: Array<{
+    label: string;
+    onSelect: () => void;
+    disabled?: boolean;
+  }>;
 }
 
 export function DataRowActions<TData>({
@@ -49,6 +55,7 @@ export function DataRowActions<TData>({
   deleteLabel = "Delete",
   deleteTitle = "Delete item",
   deleteDescription = "Are you sure you want to delete this item?",
+  extraItems = [],
 }: DataRowActionsProps<TData>) {
   const navigate = useNavigate();
 
@@ -86,7 +93,7 @@ const canDelete =
     }
   };
 
-  if (!canView && !canEdit && !canDelete) {
+  if (!canView && !canEdit && !canDelete && extraItems.length === 0) {
     return null;
   }
 
@@ -103,6 +110,16 @@ const canDelete =
 
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+          {extraItems.map((item) => (
+            <DropdownMenuItem
+              key={item.label}
+              disabled={item.disabled}
+              onClick={item.onSelect}
+            >
+              {item.label}
+            </DropdownMenuItem>
+          ))}
 
           {canView && (
             <DropdownMenuItem

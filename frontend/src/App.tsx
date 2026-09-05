@@ -18,6 +18,7 @@ import CreatePermission from "./pages/system administrations/permissions/create-
 import EditPermission from "./pages/system administrations/permissions/edit-permission";
 import OnusMonitoring from "./pages/monitoring/onus/onus-monitoring";
 import OffusMonitoring from "./pages/monitoring/offus/offus-monitoring";
+import AtmTerminals from "./pages/dashboards/atm-terminals/atm-terminals";
 import { RequirePermission } from "./components/require-permission";
 
 function App() {
@@ -58,6 +59,14 @@ function App() {
             element={
               <RequirePermission permissions={["monitoring:view-offus"]}>
                 <OffusMonitoring />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/atm-terminals"
+            element={
+              <RequirePermission permissions={["terminal:view-atm"]}>
+                <AtmTerminals />
               </RequirePermission>
             }
           />

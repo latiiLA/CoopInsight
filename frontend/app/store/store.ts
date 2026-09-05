@@ -4,6 +4,7 @@ import depositPerTerminalReducer from "../.././src/features/terminal_slice";
 import permissionReducer from "@/features/permission_slice";
 import roleReducer from "@/features/role_slice";
 import reportReducer from "@/features/report_slice";
+import atmTerminalReducer from "@/features/atm_terminal_slice";
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
       permission: permissionReducer,
       role: roleReducer,
       report: reportReducer,
+      atmTerminal: atmTerminalReducer,
   },
 })
 
