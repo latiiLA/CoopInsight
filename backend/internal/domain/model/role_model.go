@@ -8,7 +8,7 @@ import (
 )
 
 type Role struct {
-	ID          primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
+	ID          primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
 	Name        string              `json:"name" bson:"name"`
 	Permissions []string            `json:"permissions" bson:"permissions"`
 	CreatedAt   time.Time           `json:"createdAt" bson:"createdAt"`
@@ -21,6 +21,11 @@ type Role struct {
 	DeletedAt   *time.Time          `json:"deletedAt,omitempty" bson:"deletedAt,omitempty"`
 	Status      string              `json:"status" bson:"status"`
 }
+
+const (
+	RoleStatusActive  = "active"
+	RoleStatusDeleted = "deleted"
+)
 
 type CreateRoleDTO struct {
 	Name        string   `json:"name" binding:"required,min=3,max=50,alphanum"`

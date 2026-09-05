@@ -2,10 +2,9 @@ package mongodb
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"regexp"
 
+	"github.com/latiiLA/CoopInsight/backend/internal/common"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 	"go.mongodb.org/mongo-driver/bson"
@@ -30,16 +29,15 @@ func (r *roleRepository) FindByID(ctx context.Context, roleID primitive.ObjectID
 	err := r.collection.FindOne(ctx, bson.M{
 		"_id": roleID,
 		"status": bson.M{
-			"$ne": "deleted",
+			"$ne": model.RoleStatusDeleted,
 		},
 	}).Decode(&role)
 
+	if isNoDocuments(err) {
+		return nil, nil
+	}
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, mongo.ErrNoDocuments
-		}
-
-		return nil, err
+		return nil, wrapDBError(common.ErrFailedToFetchRole, err)
 	}
 
 	return &role, nil
@@ -51,16 +49,15 @@ func (r *roleRepository) FindByName(ctx context.Context, name string) (*model.Ro
 	err := r.collection.FindOne(ctx, bson.M{
 		"name": primitive.Regex{Pattern: "^" + regexp.QuoteMeta(name) + "$", Options: "i"},
 		"status": bson.M{
-			"$ne": "deleted",
+			"$ne": model.RoleStatusDeleted,
 		},
 	}).Decode(&role)
 
+	if isNoDocuments(err) {
+		return nil, nil
+	}
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, mongo.ErrNoDocuments
-		}
-
-		return nil, err
+		return nil, wrapDBError(common.ErrFailedToFetchRole, err)
 	}
 
 	return &role, nil
@@ -69,17 +66,17 @@ func (r *roleRepository) FindByName(ctx context.Context, name string) (*model.Ro
 func (r *roleRepository) FindAll(ctx context.Context) ([]model.Role, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{
 		"status": bson.M{
-			"$ne": "deleted",
+			"$ne": model.RoleStatusDeleted,
 		},
 	}, options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}))
 	if err != nil {
-		return nil, err
+		return nil, wrapDBError(common.ErrFailedToFetchRoles, err)
 	}
 	defer cursor.Close(ctx)
 
 	var roles []model.Role
 	if err := cursor.All(ctx, &roles); err != nil {
-		return nil, err
+		return nil, wrapDBError(common.ErrFailedToFetchRoles, err)
 	}
 
 	if roles == nil {
@@ -96,7 +93,7 @@ func (r *roleRepository) Create(ctx context.Context, role *model.Role) error {
 
 	_, err := r.collection.InsertOne(ctx, role)
 	if err != nil {
-		return fmt.Errorf("failed to create role: %w", err)
+		return wrapDBError(common.ErrFailedToCreateRole, err)
 	}
 
 	return nil

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/utils"
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
-	"github.com/sirupsen/logrus"
 )
 
 type RoleHandler interface {
@@ -34,12 +32,7 @@ func NewRoleHandler(roleService service.RoleService) RoleHandler {
 func (h *roleHandler) GetAll(c *gin.Context) {
 	roles, err := h.roleService.GetAll(c)
 	if err != nil {
-		logrus.WithError(err).Error("failed to fetch roles")
-		c.JSON(http.StatusInternalServerError, response.Status{
-			IsSuccessful: false,
-			Message:      "Failed to fetch roles",
-			Data:         nil,
-		})
+		writeAppError(c, err)
 		return
 	}
 
@@ -91,20 +84,7 @@ func (h *roleHandler) Create(c *gin.Context) {
 
 	err = h.roleService.Create(c, authUserID, &req)
 	if err != nil {
-		status := http.StatusInternalServerError
-		message := common.MessInternalServerError
-
-		if errors.Is(err, common.ErrRoleNameAlreadyExists) {
-			status = http.StatusConflict
-			message = "Role name already exists"
-		}
-
-		logrus.WithError(err).Error("failed to create role")
-		c.JSON(status, response.Status{
-			IsSuccessful: false,
-			Message:      message,
-			Error:        err.Error(),
-		})
+		writeAppError(c, err)
 		return
 	}
 

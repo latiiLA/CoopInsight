@@ -14,7 +14,7 @@ const (
 )
 
 type Permission struct {
-	ID          primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
+	ID          primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
 	Name        string              `json:"name" bson:"name"`
 	Resource    string              `json:"resource" bson:"resource"`
 	Action      string              `json:"action" bson:"action"`

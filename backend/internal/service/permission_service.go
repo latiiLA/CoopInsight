@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type PermissionService interface {
@@ -48,12 +46,12 @@ func (s *permissionService) Create(ctx context.Context, createdBy primitive.Obje
 	action := strings.ToLower(strings.TrimSpace(req.Action))
 	description := strings.TrimSpace(req.Description)
 
-	_, err := s.permissionRepository.FindByName(ctx, name)
-	if err == nil {
-		return common.ErrPermissionAlreadyExists
-	}
-	if !errors.Is(err, mongo.ErrNoDocuments) {
+	existing, err := s.permissionRepository.FindByName(ctx, name)
+	if err != nil {
 		return err
+	}
+	if existing != nil {
+		return common.ErrPermissionAlreadyExists
 	}
 
 	now := time.Now()

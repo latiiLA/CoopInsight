@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"crypto/subtle"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -17,7 +16,6 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/utils"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -26,8 +24,9 @@ type UserService interface {
 	AuthenticateLocal(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error)
 	Register(ctx context.Context, createdBy primitive.ObjectID, req *dto.RegisterRequest) error
 	GetUserDetails(ctx context.Context, username string) (*dto.UserResponse, error)
-	GetByID(ctx context.Context, id string) (*model.User, error)
+	GetByID(ctx context.Context, userID primitive.ObjectID) (*model.User, error)
 	GetAll(ctx context.Context) ([]model.User, error)
+	Update(ctx context.Context, updatedBy primitive.ObjectID, userID primitive.ObjectID, req *dto.UpdateUserRequest) error
 }
 
 type userService struct {
@@ -131,12 +130,10 @@ func (s *userService) AuthenticateLocal(ctx context.Context, username, password,
 func (s *userService) findEligibleUser(ctx context.Context, username string) (*model.User, error) {
 	existingUser, err := s.userRepository.FindByUsername(ctx, username)
 	if err != nil {
-		logrus.Println("invalid username or user", err)
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, common.ErrUserNotFound
-		}
-
-		return nil, common.ErrInvalidCredentials
+		return nil, err
+	}
+	if existingUser == nil {
+		return nil, common.ErrUserNotFound
 	}
 
 	if existingUser.Status != model.StatusNew && existingUser.Status != model.StatusActive {
@@ -249,22 +246,25 @@ func (s *userService) GetUserDetails(ctx context.Context, username string) (*dto
 	return user, nil
 }
 
-func (s *userService) GetByID(ctx context.Context, id string) (*model.User, error) {
-	return s.userRepository.FindByID(ctx, id)
+func (s *userService) GetByID(ctx context.Context, userID primitive.ObjectID) (*model.User, error) {
+	user, err := s.userRepository.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, common.ErrUserNotFound
+	}
+
+	return user, nil
 }
 
 func (s *userService) GetAll(ctx context.Context) ([]model.User, error) {
 	return s.userRepository.FindAll(ctx)
 }
 
-func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID, req *dto.RegisterRequest) error {
-	username := strings.ToLower(strings.TrimSpace(req.Username))
-
-	_, err := s.userRepository.FindByUsername(ctx, username)
-	if err == nil {
-		return common.ErrUsernameAlreadyExists
-	}
-	if !errors.Is(err, mongo.ErrNoDocuments) {
+func (s *userService) Update(ctx context.Context, updatedBy primitive.ObjectID, userID primitive.ObjectID, req *dto.UpdateUserRequest) error {
+	existing, err := s.GetByID(ctx, userID)
+	if err != nil {
 		return err
 	}
 
@@ -273,12 +273,55 @@ func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID
 		return common.ErrRoleNotFound
 	}
 
-	if _, err := s.roleRepository.FindByID(ctx, roleID); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return common.ErrRoleNotFound
-		}
-
+	role, err := s.roleRepository.FindByID(ctx, roleID)
+	if err != nil {
 		return err
+	}
+	if role == nil {
+		return common.ErrRoleNotFound
+	}
+
+	permissions := req.Permissions
+	if permissions == nil {
+		permissions = []string{}
+	}
+
+	now := time.Now()
+	existing.FirstName = strings.TrimSpace(req.FirstName)
+	existing.MiddleName = strings.TrimSpace(req.MiddleName)
+	existing.LastName = strings.TrimSpace(req.LastName)
+	existing.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	existing.RoleID = roleID
+	existing.Permissions = permissions
+	existing.Status = model.UserStatus(req.Status)
+	existing.UpdatedAt = now
+	existing.UpdatedBy = &updatedBy
+
+	return s.userRepository.Update(ctx, existing)
+}
+
+func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID, req *dto.RegisterRequest) error {
+	username := strings.ToLower(strings.TrimSpace(req.Username))
+
+	existing, err := s.userRepository.FindByUsername(ctx, username)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		return common.ErrUsernameAlreadyExists
+	}
+
+	roleID, err := primitive.ObjectIDFromHex(req.Role)
+	if err != nil {
+		return common.ErrRoleNotFound
+	}
+
+	role, err := s.roleRepository.FindByID(ctx, roleID)
+	if err != nil {
+		return err
+	}
+	if role == nil {
+		return common.ErrRoleNotFound
 	}
 
 	email := strings.ToLower(strings.TrimSpace(req.Email))

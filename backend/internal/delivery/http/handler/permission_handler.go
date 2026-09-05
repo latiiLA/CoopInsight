@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/utils"
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
-	"github.com/sirupsen/logrus"
 )
 
 type PermissionHandler interface {
@@ -34,12 +32,7 @@ func NewPermissionHandler(permissionService service.PermissionService) Permissio
 func (h *permissionHandler) GetAll(c *gin.Context) {
 	permissions, err := h.permissionService.GetAll(c)
 	if err != nil {
-		logrus.WithError(err).Error("failed to fetch permissions")
-		c.JSON(http.StatusInternalServerError, response.Status{
-			IsSuccessful: false,
-			Message:      "Failed to fetch permissions",
-			Data:         nil,
-		})
+		writeAppError(c, err)
 		return
 	}
 
@@ -91,20 +84,7 @@ func (h *permissionHandler) Create(c *gin.Context) {
 
 	err = h.permissionService.Create(c, authUserID, &req)
 	if err != nil {
-		status := http.StatusInternalServerError
-		message := common.MessInternalServerError
-
-		if errors.Is(err, common.ErrPermissionAlreadyExists) {
-			status = http.StatusConflict
-			message = "Permission already exists"
-		}
-
-		logrus.WithError(err).Error("failed to create permission")
-		c.JSON(status, response.Status{
-			IsSuccessful: false,
-			Message:      message,
-			Error:        err.Error(),
-		})
+		writeAppError(c, err)
 		return
 	}
 

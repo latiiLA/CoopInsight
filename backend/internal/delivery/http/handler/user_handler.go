@@ -14,7 +14,7 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/utils"
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
-	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UserHandler interface {
@@ -233,12 +233,7 @@ func (a *userHandler) writeLoginResult(c *gin.Context, user *dto.LoginResponse, 
 func (h *userHandler) GetAll(c *gin.Context) {
 	users, err := h.userService.GetAll(c)
 	if err != nil {
-		logrus.WithError(err).Error("failed to fetch users")
-		c.JSON(http.StatusInternalServerError, response.Status{
-			IsSuccessful: false,
-			Message:      "Failed to fetch users",
-			Data:         nil,
-		})
+		writeAppError(c, err)
 		return
 	}
 
@@ -254,12 +249,36 @@ func (h *userHandler) GetAll(c *gin.Context) {
 	})
 }
 
-func (h *userHandler) GetByID(c *gin.Context) {
-	id := c.Param("id")
+func parseObjectIDParam(c *gin.Context, name string) (primitive.ObjectID, bool) {
+	objectID, err := primitive.ObjectIDFromHex(c.Param(name))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessInvalidRequest,
+			Error:        "invalid id",
+		})
+		return primitive.NilObjectID, false
+	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Get user",
-		"id":      id,
+	return objectID, true
+}
+
+func (h *userHandler) GetByID(c *gin.Context) {
+	userID, ok := parseObjectIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	user, err := h.userService.GetByID(c, userID)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "User fetched successfully",
+		Data:         user,
 	})
 }
 
@@ -300,25 +319,7 @@ func (h *userHandler) Create(c *gin.Context) {
 
 	err = h.userService.Register(c, authUserID, &req)
 	if err != nil {
-		status := http.StatusInternalServerError
-		message := common.MessInternalServerError
-
-		switch {
-		case errors.Is(err, common.ErrUsernameAlreadyExists):
-			status = http.StatusConflict
-			message = "Username already has been registered"
-
-		case errors.Is(err, common.ErrRoleNotFound):
-			status = http.StatusBadRequest
-			message = "Selected role was not found"
-		}
-
-		logrus.WithError(err).Error("failed to register user")
-		c.JSON(status, response.Status{
-			IsSuccessful: false,
-			Message:      message,
-			Error:        err.Error(),
-		})
+		writeAppError(c, err)
 		return
 	}
 
@@ -329,11 +330,54 @@ func (h *userHandler) Create(c *gin.Context) {
 }
 
 func (h *userHandler) Update(c *gin.Context) {
-	id := c.Param("id")
+	userID, ok := parseObjectIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Update user",
-		"id":      id,
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessUnauthorized,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	var req dto.UpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			message := fmt.Sprintf(
+				"%s failed on %s validation",
+				e.Field(),
+				e.Tag(),
+			)
+
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: message,
+				Error:   err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: common.MessInvalidRequest,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	err = h.userService.Update(c, authUserID, userID, &req)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "User updated successfully",
 	})
 }
 

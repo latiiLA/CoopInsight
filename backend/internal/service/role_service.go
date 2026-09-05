@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type RoleService interface {
@@ -45,12 +43,12 @@ func (s *roleService) GetAll(ctx context.Context) ([]model.Role, error) {
 func (s *roleService) Create(ctx context.Context, createdBy primitive.ObjectID, req *dto.CreateRoleRequest) error {
 	name := strings.TrimSpace(req.Name)
 
-	_, err := s.roleRepository.FindByName(ctx, name)
-	if err == nil {
-		return common.ErrRoleNameAlreadyExists
-	}
-	if !errors.Is(err, mongo.ErrNoDocuments) {
+	existing, err := s.roleRepository.FindByName(ctx, name)
+	if err != nil {
 		return err
+	}
+	if existing != nil {
+		return common.ErrRoleNameAlreadyExists
 	}
 
 	permissions := req.Permissions
@@ -63,7 +61,7 @@ func (s *roleService) Create(ctx context.Context, createdBy primitive.ObjectID, 
 		ID:          primitive.NewObjectID(),
 		Name:        name,
 		Permissions: permissions,
-		Status:      "active",
+		Status:      model.RoleStatusActive,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 		CreatedBy:   createdBy,

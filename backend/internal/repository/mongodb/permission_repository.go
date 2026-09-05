@@ -2,9 +2,8 @@ package mongodb
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
+	"github.com/latiiLA/CoopInsight/backend/internal/common"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 	"go.mongodb.org/mongo-driver/bson"
@@ -31,7 +30,7 @@ func (r *permissionRepository) Create(ctx context.Context, permission *model.Per
 
 	_, err := r.collection.InsertOne(ctx, permission)
 	if err != nil {
-		return fmt.Errorf("failed to create permission: %w", err)
+		return wrapDBError(common.ErrFailedToCreatePermission, err)
 	}
 
 	return nil
@@ -47,12 +46,11 @@ func (r *permissionRepository) FindByID(ctx context.Context, permissionID primit
 		},
 	}).Decode(&permission)
 
+	if isNoDocuments(err) {
+		return nil, nil
+	}
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, mongo.ErrNoDocuments
-		}
-
-		return nil, err
+		return nil, wrapDBError(common.ErrFailedToFetchPermission, err)
 	}
 
 	return &permission, nil
@@ -68,12 +66,11 @@ func (r *permissionRepository) FindByName(ctx context.Context, name string) (*mo
 		},
 	}).Decode(&permission)
 
+	if isNoDocuments(err) {
+		return nil, nil
+	}
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, mongo.ErrNoDocuments
-		}
-
-		return nil, err
+		return nil, wrapDBError(common.ErrFailedToFetchPermission, err)
 	}
 
 	return &permission, nil
@@ -137,13 +134,13 @@ func (r *permissionRepository) FindAll(ctx context.Context) ([]model.Permission,
 
 	cursor, err := r.collection.Aggregate(ctx, pipeline)
 	if err != nil {
-		return nil, err
+		return nil, wrapDBError(common.ErrFailedToFetchPermissions, err)
 	}
 	defer cursor.Close(ctx)
 
 	var permissions []model.Permission
 	if err := cursor.All(ctx, &permissions); err != nil {
-		return nil, err
+		return nil, wrapDBError(common.ErrFailedToFetchPermissions, err)
 	}
 
 	if permissions == nil {
