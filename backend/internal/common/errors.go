@@ -25,9 +25,12 @@ var (
 
 	ErrPermissionNotFound       = errors.New("permission not found")
 	ErrPermissionAlreadyExists  = errors.New("permission already exists")
+	ErrPermissionInUse          = errors.New("permission is assigned to a role or user")
 	ErrFailedToFetchPermission  = errors.New("failed to fetch permission")
 	ErrFailedToFetchPermissions = errors.New("failed to fetch permissions")
 	ErrFailedToCreatePermission = errors.New("failed to create permission")
+	ErrFailedToUpdatePermission = errors.New("failed to update permission")
+	ErrFailedToDeletePermission = errors.New("failed to delete permission")
 	ErrFailedToDecodePermission = errors.New("failed to decode permission")
 
 	ErrUnauthorized        = errors.New("unauthorized")

@@ -149,3 +149,63 @@ func (r *permissionRepository) FindAll(ctx context.Context) ([]model.Permission,
 
 	return permissions, nil
 }
+
+func (r *permissionRepository) Update(ctx context.Context, permission *model.Permission) error {
+	result, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{
+			"_id": permission.ID,
+			"status": bson.M{
+				"$ne": model.PermissionStatusDeleted,
+			},
+		},
+		bson.M{
+			"$set": bson.M{
+				"name":        permission.Name,
+				"resource":    permission.Resource,
+				"action":      permission.Action,
+				"description": permission.Description,
+				"updatedAt":   permission.UpdatedAt,
+				"updatedBy":   permission.UpdatedBy,
+			},
+		},
+	)
+	if err != nil {
+		return wrapDBError(common.ErrFailedToUpdatePermission, err)
+	}
+
+	if result.MatchedCount == 0 {
+		return common.ErrPermissionNotFound
+	}
+
+	return nil
+}
+
+func (r *permissionRepository) Delete(ctx context.Context, permission *model.Permission) error {
+	result, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{
+			"_id": permission.ID,
+			"status": bson.M{
+				"$ne": model.PermissionStatusDeleted,
+			},
+		},
+		bson.M{
+			"$set": bson.M{
+				"status":    model.PermissionStatusDeleted,
+				"deletedAt": permission.DeletedAt,
+				"deletedBy": permission.DeletedBy,
+				"updatedAt": permission.UpdatedAt,
+			},
+		},
+	)
+	if err != nil {
+		return wrapDBError(common.ErrFailedToDeletePermission, err)
+	}
+
+	if result.MatchedCount == 0 {
+		return common.ErrPermissionNotFound
+	}
+
+	return nil
+}

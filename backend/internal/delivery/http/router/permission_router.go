@@ -10,5 +10,20 @@ func registerPermissionRoutes(protected *gin.RouterGroup, permissionHandler hand
 	permissions := protected.Group("/permissions")
 
 	permissions.GET("", permissionHandler.GetAll)
+	permissions.GET(
+		"/:id",
+		middleware.AuthorizeRolesOrPermissions([]string{}, []string{"permission:view", "permission:view-details", "permission:update"}),
+		permissionHandler.GetByID,
+	)
 	permissions.POST("", middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"permission:create"}), permissionHandler.Create)
+	permissions.PUT(
+		"/:id",
+		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"permission:update"}),
+		permissionHandler.Update,
+	)
+	permissions.DELETE(
+		"/:id",
+		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"permission:delete"}),
+		permissionHandler.Delete,
+	)
 }

@@ -13,4 +13,5 @@ type UserRepository interface {
 	FindAll(ctx context.Context) ([]model.User, error)
 	Create(ctx context.Context, user *model.User) error
 	Update(ctx context.Context, user *model.User) error
+	CountByPermission(ctx context.Context, permissionName string) (int64, error)
 }

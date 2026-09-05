@@ -127,3 +127,17 @@ func (r *roleRepository) Update(ctx context.Context, role *model.Role) error {
 
 	return nil
 }
+
+func (r *roleRepository) CountByPermission(ctx context.Context, permissionName string) (int64, error) {
+	count, err := r.collection.CountDocuments(ctx, bson.M{
+		"permissions": permissionName,
+		"status": bson.M{
+			"$ne": model.RoleStatusDeleted,
+		},
+	})
+	if err != nil {
+		return 0, wrapDBError(common.ErrFailedToFetchRoles, err)
+	}
+
+	return count, nil
+}

@@ -28,4 +28,5 @@ type Permission struct {
 	Updater     *User               `json:"updater,omitempty" bson:"updater,omitempty"`
 	DeletedBy   *primitive.ObjectID `json:"deletedBy,omitempty" bson:"deletedBy,omitempty"`
 	DeletedAt   *time.Time          `json:"deletedAt,omitempty" bson:"deletedAt,omitempty"`
+	Assigned    bool                `json:"assigned" bson:"-"`
 }

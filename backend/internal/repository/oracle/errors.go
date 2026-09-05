@@ -1,10 +1,10 @@
-package repository
+package oracle
 
 import (
 	"fmt"
 )
 
-func Wrap(sentinel error, err error) error {
+func wrapError(sentinel error, err error) error {
 	if err == nil {
 		return sentinel
 	}

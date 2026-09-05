@@ -16,7 +16,10 @@ import (
 
 type PermissionHandler interface {
 	GetAll(c *gin.Context)
+	GetByID(c *gin.Context)
 	Create(c *gin.Context)
+	Update(c *gin.Context)
+	Delete(c *gin.Context)
 }
 
 type permissionHandler struct {
@@ -47,6 +50,25 @@ func (h *permissionHandler) GetAll(c *gin.Context) {
 	})
 }
 
+func (h *permissionHandler) GetByID(c *gin.Context) {
+	permissionID, ok := parseObjectIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	permission, err := h.permissionService.GetByID(c, permissionID)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Permission fetched successfully",
+		Data:         permission,
+	})
+}
+
 func (h *permissionHandler) Create(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
@@ -59,26 +81,7 @@ func (h *permissionHandler) Create(c *gin.Context) {
 	}
 
 	var req dto.CreatePermissionRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		if validationErrors, ok := err.(validator.ValidationErrors); ok {
-			e := validationErrors[0]
-			message := fmt.Sprintf(
-				"%s failed on %s validation",
-				e.Field(),
-				e.Tag(),
-			)
-
-			c.JSON(http.StatusBadRequest, response.Status{
-				Message: message,
-				Error:   err.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusBadRequest, response.Status{
-			Message: common.MessInvalidRequest,
-			Error:   err.Error(),
-		})
+	if !bindPermissionRequest(c, &req) {
 		return
 	}
 
@@ -92,4 +95,92 @@ func (h *permissionHandler) Create(c *gin.Context) {
 		IsSuccessful: true,
 		Message:      "Permission created successfully",
 	})
+}
+
+func (h *permissionHandler) Update(c *gin.Context) {
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessUnauthorized,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	permissionID, ok := parseObjectIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req dto.UpdatePermissionRequest
+	if !bindPermissionRequest(c, &req) {
+		return
+	}
+
+	err = h.permissionService.Update(c, authUserID, permissionID, &req)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Permission updated successfully",
+	})
+}
+
+func (h *permissionHandler) Delete(c *gin.Context) {
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessUnauthorized,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	permissionID, ok := parseObjectIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	err = h.permissionService.Delete(c, authUserID, permissionID)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Permission deleted successfully",
+	})
+}
+
+func bindPermissionRequest(c *gin.Context, req any) bool {
+	if err := c.ShouldBindJSON(req); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			message := fmt.Sprintf(
+				"%s failed on %s validation",
+				e.Field(),
+				e.Tag(),
+			)
+
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: message,
+				Error:   err.Error(),
+			})
+			return false
+		}
+
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: common.MessInvalidRequest,
+			Error:   err.Error(),
+		})
+		return false
+	}
+
+	return true
 }

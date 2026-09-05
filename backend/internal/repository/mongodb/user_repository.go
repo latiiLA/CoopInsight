@@ -359,3 +359,17 @@ func (ur *userRepository) Update(ctx context.Context, user *model.User) error {
 
 	return nil
 }
+
+func (ur *userRepository) CountByPermission(ctx context.Context, permissionName string) (int64, error) {
+	count, err := ur.collection.CountDocuments(ctx, bson.M{
+		"permissions": permissionName,
+		"status": bson.M{
+			"$ne": model.StatusDeleted,
+		},
+	})
+	if err != nil {
+		return 0, wrapDBError(common.ErrFailedToFetchUsers, err)
+	}
+
+	return count, nil
+}

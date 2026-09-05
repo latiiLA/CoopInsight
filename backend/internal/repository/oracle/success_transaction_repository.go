@@ -7,7 +7,6 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
-	dbrepo "github.com/latiiLA/CoopInsight/backend/internal/repository"
 )
 
 const approvedRespCodes = `'0','2','11','12','13','17','41','42','43','44','46','51','54','55','59','61','62','65','67','75','76','80','89','98','115','251','252','503','902','904'`
@@ -203,7 +202,7 @@ func (r *successTransactionRepository) GetReport(ctx context.Context, dateFrom, 
 		&row.TotalAmount,
 	)
 	if err != nil {
-		return nil, dbrepo.Wrap(common.ErrFailedToFetchReport, err)
+		return nil, wrapError(common.ErrFailedToFetchReport, err)
 	}
 
 	return &model.SuccessTransactionReport{

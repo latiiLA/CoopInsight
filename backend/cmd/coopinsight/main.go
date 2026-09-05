@@ -124,7 +124,11 @@ func main() {
 	userHandler := handler.NewUserHandler(userService)
 
 	permissionRepository := mongodb.NewPermissionRepository(db)
-	permissionService := service.NewPermissionService(permissionRepository)
+	permissionService := service.NewPermissionService(
+		permissionRepository,
+		roleRepository,
+		userRepository,
+	)
 	permissionHandler := handler.NewPermissionHandler(permissionService)
 
 	roleService := service.NewRoleService(roleRepository)

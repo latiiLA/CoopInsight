@@ -12,4 +12,6 @@ type PermissionRepository interface {
 	FindByID(ctx context.Context, permissionID primitive.ObjectID) (*model.Permission, error)
 	FindByName(ctx context.Context, name string) (*model.Permission, error)
 	FindAll(ctx context.Context) ([]model.Permission, error)
+	Update(ctx context.Context, permission *model.Permission) error
+	Delete(ctx context.Context, permission *model.Permission) error
 }
