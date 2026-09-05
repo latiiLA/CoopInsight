@@ -10,5 +10,7 @@ func registerRoleRoutes(protected *gin.RouterGroup, roleHandler handler.RoleHand
 	roles := protected.Group("/roles")
 
 	roles.GET("", roleHandler.GetAll)
+	roles.GET("/:id", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"role:view", "role:view-details", "role:update"}), roleHandler.GetByID)
 	roles.POST("", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"role:create"}), roleHandler.Create)
+	roles.PUT("/:id", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"role:update"}), roleHandler.Update)
 }

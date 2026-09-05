@@ -98,3 +98,32 @@ func (r *roleRepository) Create(ctx context.Context, role *model.Role) error {
 
 	return nil
 }
+
+func (r *roleRepository) Update(ctx context.Context, role *model.Role) error {
+	result, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{
+			"_id": role.ID,
+			"status": bson.M{
+				"$ne": model.RoleStatusDeleted,
+			},
+		},
+		bson.M{
+			"$set": bson.M{
+				"name":        role.Name,
+				"permissions": role.Permissions,
+				"updatedAt":   role.UpdatedAt,
+				"updatedBy":   role.UpdatedBy,
+			},
+		},
+	)
+	if err != nil {
+		return wrapDBError(common.ErrFailedToUpdateRole, err)
+	}
+
+	if result.MatchedCount == 0 {
+		return common.ErrRoleNotFound
+	}
+
+	return nil
+}

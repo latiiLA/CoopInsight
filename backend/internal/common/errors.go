@@ -20,6 +20,7 @@ var (
 	ErrFailedToFetchRole     = errors.New("failed to fetch role")
 	ErrFailedToFetchRoles    = errors.New("failed to fetch roles")
 	ErrFailedToCreateRole    = errors.New("failed to create role")
+	ErrFailedToUpdateRole    = errors.New("failed to update role")
 	ErrFailedToDecodeRole    = errors.New("failed to decode role")
 
 	ErrPermissionNotFound       = errors.New("permission not found")

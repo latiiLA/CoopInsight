@@ -14,7 +14,9 @@ import (
 
 type RoleService interface {
 	GetAll(ctx context.Context) ([]model.Role, error)
+	GetByID(ctx context.Context, roleID primitive.ObjectID) (*model.Role, error)
 	Create(ctx context.Context, createdBy primitive.ObjectID, req *dto.CreateRoleRequest) error
+	Update(ctx context.Context, updatedBy primitive.ObjectID, roleID primitive.ObjectID, req *dto.UpdateRoleRequest) error
 }
 
 type roleService struct {
@@ -38,6 +40,18 @@ func (s *roleService) GetAll(ctx context.Context) ([]model.Role, error) {
 	}
 
 	return roles, nil
+}
+
+func (s *roleService) GetByID(ctx context.Context, roleID primitive.ObjectID) (*model.Role, error) {
+	role, err := s.roleRepository.FindByID(ctx, roleID)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, common.ErrRoleNotFound
+	}
+
+	return role, nil
 }
 
 func (s *roleService) Create(ctx context.Context, createdBy primitive.ObjectID, req *dto.CreateRoleRequest) error {
@@ -68,4 +82,37 @@ func (s *roleService) Create(ctx context.Context, createdBy primitive.ObjectID, 
 	}
 
 	return s.roleRepository.Create(ctx, role)
+}
+
+func (s *roleService) Update(ctx context.Context, updatedBy primitive.ObjectID, roleID primitive.ObjectID, req *dto.UpdateRoleRequest) error {
+	existing, err := s.GetByID(ctx, roleID)
+	if err != nil {
+		return err
+	}
+
+	name := strings.TrimSpace(req.Name)
+
+	if strings.EqualFold(existing.Name, "SUPERADMIN") && !strings.EqualFold(name, existing.Name) {
+		return common.ErrRoleNameNotAllowed
+	}
+
+	other, err := s.roleRepository.FindByName(ctx, name)
+	if err != nil {
+		return err
+	}
+	if other != nil && other.ID != roleID {
+		return common.ErrRoleNameAlreadyExists
+	}
+
+	permissions := req.Permissions
+	if permissions == nil {
+		permissions = []string{}
+	}
+
+	existing.Name = name
+	existing.Permissions = permissions
+	existing.UpdatedAt = time.Now()
+	existing.UpdatedBy = &updatedBy
+
+	return s.roleRepository.Update(ctx, existing)
 }

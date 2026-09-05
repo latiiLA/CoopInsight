@@ -12,4 +12,5 @@ type RoleRepository interface {
 	FindByName(ctx context.Context, name string) (*model.Role, error)
 	FindAll(ctx context.Context) ([]model.Role, error)
 	Create(ctx context.Context, role *model.Role) error
+	Update(ctx context.Context, role *model.Role) error
 }
