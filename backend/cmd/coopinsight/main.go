@@ -131,12 +131,19 @@ func main() {
 	roleHandler := handler.NewRoleHandler(roleService)
 
 	var testHandler handler.TestHandler
+	var successTransactionHandler handler.SuccessTransactionHandler
 	if oracleDB != nil {
 		testHandler = handler.NewTestHandler(
 			service.NewTestService(oracle.NewTestRepository(oracleDB)),
 		)
+		successTransactionHandler = handler.NewSuccessTransactionHandler(
+			service.NewSuccessTransactionService(oracle.NewSuccessTransactionRepository(oracleDB)),
+		)
 	} else {
 		testHandler = handler.NewTestHandler(service.NewTestService(nil))
+		successTransactionHandler = handler.NewSuccessTransactionHandler(
+			service.NewSuccessTransactionService(nil),
+		)
 	}
 
 	// --------------------------------------------------
@@ -144,10 +151,11 @@ func main() {
 	// --------------------------------------------------
 
 	r := router.SetupRouter(router.Handlers{
-		User:       userHandler,
-		Permission: permissionHandler,
-		Role:       roleHandler,
-		Test:       testHandler,
+		User:               userHandler,
+		Permission:         permissionHandler,
+		Role:               roleHandler,
+		Test:               testHandler,
+		SuccessTransaction: successTransactionHandler,
 	})
 
 	// --------------------------------------------------

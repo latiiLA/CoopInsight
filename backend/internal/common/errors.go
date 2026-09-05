@@ -30,9 +30,12 @@ var (
 	ErrFailedToCreatePermission = errors.New("failed to create permission")
 	ErrFailedToDecodePermission = errors.New("failed to decode permission")
 
-	ErrUnauthorized      = errors.New("unauthorized")
-	ErrInternalServer    = errors.New("internal server error")
-	ErrOracleUnavailable = errors.New("oracle is unavailable")
+	ErrUnauthorized        = errors.New("unauthorized")
+	ErrInternalServer      = errors.New("internal server error")
+	ErrOracleUnavailable   = errors.New("oracle is unavailable")
+	ErrInvalidReportDate   = errors.New("dateFrom and dateTo must be MM-DD-YYYY")
+	ErrInvalidDateRange    = errors.New("dateFrom must be on or before dateTo")
+	ErrFailedToFetchReport = errors.New("failed to fetch report")
 )
 
 var (

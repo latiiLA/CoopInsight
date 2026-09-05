@@ -12,10 +12,11 @@ import (
 )
 
 type Handlers struct {
-	User       handler.UserHandler
-	Permission handler.PermissionHandler
-	Role       handler.RoleHandler
-	Test       handler.TestHandler
+	User               handler.UserHandler
+	Permission         handler.PermissionHandler
+	Role               handler.RoleHandler
+	Test               handler.TestHandler
+	SuccessTransaction handler.SuccessTransactionHandler
 }
 
 func SetupRouter(handlers Handlers) *gin.Engine {
@@ -119,5 +120,6 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	)
 
 	registerTestRoutes(oracleProtected, handlers.Test)
+	registerReportRoutes(oracleProtected, handlers.SuccessTransaction)
 	return router
 }

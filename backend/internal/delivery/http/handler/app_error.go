@@ -39,6 +39,10 @@ var appErrors = []struct {
 	{common.ErrFailedToFetchPermissions, http.StatusInternalServerError},
 	{common.ErrFailedToCreatePermission, http.StatusInternalServerError},
 	{common.ErrFailedToDecodePermission, http.StatusInternalServerError},
+	{common.ErrOracleUnavailable, http.StatusServiceUnavailable},
+	{common.ErrInvalidReportDate, http.StatusBadRequest},
+	{common.ErrInvalidDateRange, http.StatusBadRequest},
+	{common.ErrFailedToFetchReport, http.StatusInternalServerError},
 }
 
 func writeAppError(c *gin.Context, err error) {
