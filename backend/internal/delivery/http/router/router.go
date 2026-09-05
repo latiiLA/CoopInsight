@@ -1,6 +1,8 @@
 package router
 
 import (
+	"strings"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/latiiLA/CoopInsight/backend/configs"
@@ -28,13 +30,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 
 	allowed := configs.AllowedOrigins
 
-	if len(allowed) == 0 {
-		logrus.Warn("AllowedOrigins is empty. Falling back to '*'")
-		allowed = []string{"*"}
-	}
-
-	router.Use(cors.New(cors.Config{
-		AllowOrigins: allowed,
+	corsConfig := cors.Config{
 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 		AllowHeaders: []string{
 			"Origin",
@@ -43,7 +39,19 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 			"Content-Disposition",
 		},
 		AllowCredentials: true,
-	}))
+	}
+
+	if len(allowed) == 0 || (len(allowed) == 1 && allowed[0] == "*") {
+		logrus.Warn("AllowedOrigins is empty or wildcard. Allowing localhost origins.")
+		corsConfig.AllowOriginFunc = func(origin string) bool {
+			return strings.HasPrefix(origin, "http://localhost:") ||
+				strings.HasPrefix(origin, "http://127.0.0.1:")
+		}
+	} else {
+		corsConfig.AllowOrigins = allowed
+	}
+
+	router.Use(cors.New(corsConfig))
 
 	router.Use(middleware.RequestLogger())
 

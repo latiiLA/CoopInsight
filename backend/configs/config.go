@@ -324,7 +324,12 @@ func LoadConfig() {
 	// Read allowed origins from environment and split into slice
 	originsEnv := os.Getenv("ALLOWED_ORIGINS")
 	if originsEnv != "" {
-		AllowedOrigins = strings.Split(originsEnv, ",")
+		for _, origin := range strings.Split(originsEnv, ",") {
+			origin = strings.TrimSpace(origin)
+			if origin != "" {
+				AllowedOrigins = append(AllowedOrigins, origin)
+			}
+		}
 	}
 
 	// oracle — optional. Login and user features use Mongo only.

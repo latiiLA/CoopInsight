@@ -14,6 +14,7 @@ type RegisterRequest struct {
 	FirstName   string   `json:"firstName" binding:"required,min=3,max=50"`
 	MiddleName  string   `json:"middleName" binding:"required,min=3,max=50"`
 	LastName    string   `json:"lastName" binding:"required,min=3,max=50"`
+	Email       string   `json:"email" binding:"required,email"`
 	Role        string   `json:"role" binding:"required"`
 	Permissions []string `json:"permissions"`
 }

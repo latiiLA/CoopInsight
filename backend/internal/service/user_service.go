@@ -281,9 +281,11 @@ func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID
 		return err
 	}
 
-	email := ""
-	if adUser, adErr := s.GetUserDetails(ctx, username); adErr == nil && adUser != nil {
-		email = adUser.Email
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	if email == "" {
+		if adUser, adErr := s.GetUserDetails(ctx, username); adErr == nil && adUser != nil {
+			email = adUser.Email
+		}
 	}
 
 	now := time.Now()
