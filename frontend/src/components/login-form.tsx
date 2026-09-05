@@ -97,11 +97,13 @@ export function LoginForm({
                     {...register("username")}
                   />
 
-                  {errors.username && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {errors.username.message}
-                    </p>
-                  )}
+                  <p
+                    className={`mt-1 min-h-5 text-xs leading-5 break-words text-red-600 ${
+                      errors.username?.message ? "" : "invisible"
+                    }`}
+                  >
+                    {errors.username?.message || "\u00A0"}
+                  </p>
                 </div>
               </div>
 
@@ -135,11 +137,13 @@ export function LoginForm({
                   </button>
                 </div>
 
-                {errors.password && (
-                  <p className="text-xs text-red-600">
-                    {errors.password.message}
-                  </p>
-                )}
+                <p
+                  className={`min-h-5 text-xs leading-5 break-words text-red-600 ${
+                    errors.password?.message ? "" : "invisible"
+                  }`}
+                >
+                  {errors.password?.message || "\u00A0"}
+                </p>
               </div>
 
               {/* Submit */}

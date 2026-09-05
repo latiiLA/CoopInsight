@@ -148,7 +148,7 @@ const CreatePermission = () => {
 
               <Separator />
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="resource"
@@ -174,10 +174,10 @@ const CreatePermission = () => {
                     <FormItem>
                       <FormLabel>Action</FormLabel>
                       <FormControl>
-                        <Input placeholder="add" {...field} />
+                        <Input placeholder="create" {...field} />
                       </FormControl>
                       <FormDescription>
-                        The operation being allowed, such as add, edit, or
+                        The operation being allowed, such as create, edit, or
                         delete.
                       </FormDescription>
                       <FormMessage />
@@ -189,7 +189,7 @@ const CreatePermission = () => {
                   <FormLabel>Permission Name</FormLabel>
                   <Input
                     value={permissionName}
-                    placeholder="user:add"
+                    placeholder="user:create"
                     readOnly
                     disabled
                   />

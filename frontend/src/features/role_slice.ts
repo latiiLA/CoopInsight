@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { RootState } from "../../app/store/store";
 import { CreateRoleDTO, Role } from "@/types/role";
 import getErrorMessage from "../../utility/error-message";
-import { getTokenFromAuth } from "../../utility/auth-token";
+import { getTokenFromAuth, withAuthHeader } from "../../utility/auth-token";
 import api from "@/lib/api";
 
 interface RoleState {
@@ -36,7 +36,7 @@ export const fetchRoles = createAsyncThunk<
       return thunkAPI.rejectWithValue("Authentication token not found");
     }
 
-    const response = await api.get("/roles");
+    const response = await api.get("/roles", withAuthHeader(token));
 
     return response.data.data ?? [];
   } catch (error) {
@@ -62,7 +62,7 @@ export const createRole = createAsyncThunk<
     const response = await api.post<{
       isSuccessful: boolean;
       message: string;
-    }>("/roles", payload);
+    }>("/roles", payload, withAuthHeader(token));
 
     return response.data.message || "Role created successfully";
   } catch (error) {

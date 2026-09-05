@@ -34,7 +34,7 @@ const ManageUsers = () => {
       <div className="flex align-items-center justify-between">
         <h1 className="text-lg font-semibold">User Management</h1>
         <div className="flex gap-2">
-          {authUser && hasPermission(["user:add"]) && (
+          {authUser && hasPermission(["user:create"]) && (
             <Button onClick={() => navigate("/user")}>
               <PlusCircle />
               Add User

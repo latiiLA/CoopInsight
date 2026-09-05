@@ -80,7 +80,7 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
     <FormItemContext.Provider value={{ id }}>
       <div
         data-slot="form-item"
-        className={cn("grid gap-2", className)}
+        className={cn("grid content-start gap-2", className)}
         {...props}
       />
     </FormItemContext.Provider>
@@ -139,18 +139,18 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField()
   const body = error ? String(error?.message ?? "") : props.children
 
-  if (!body) {
-    return null
-  }
-
   return (
     <p
       data-slot="form-message"
       id={formMessageId}
-      className={cn("text-sm text-destructive", className)}
+      className={cn(
+        "min-h-5 text-sm leading-5 break-words text-destructive",
+        !body && "invisible",
+        className
+      )}
       {...props}
     >
-      {body}
+      {body || "\u00A0"}
     </p>
   )
 }

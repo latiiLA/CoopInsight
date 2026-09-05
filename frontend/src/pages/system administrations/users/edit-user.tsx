@@ -257,7 +257,7 @@ const EditUser = () => {
 
               <Separator />
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="firstName"
@@ -324,7 +324,7 @@ const EditUser = () => {
 
               <Separator />
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <FormItem>
                   <FormLabel>Username</FormLabel>
                   <FormControl>

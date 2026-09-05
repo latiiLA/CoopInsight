@@ -20,6 +20,14 @@ export function getTokenFromAuth(auth: unknown): string | undefined {
   return typeof token === "string" && token.length > 0 ? token : undefined;
 }
 
+export function withAuthHeader(token: string) {
+  return {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+}
+
 export function getStoredAuthToken(): string | undefined {
   if (typeof window === "undefined") {
     return undefined;

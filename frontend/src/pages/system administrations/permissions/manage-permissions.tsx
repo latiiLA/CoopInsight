@@ -35,7 +35,7 @@ const ManagePermissions = () => {
       <div className="flex align-items-center justify-between">
         <h1 className="text-lg font-semibold">Permission Management</h1>
         <div className="flex gap-2">
-          {authUser && hasPermission(["permission:add"]) && (
+          {authUser && hasPermission(["permission:create"]) && (
             <Button onClick={() => navigate("/permission")}>
               <PlusCircle />
               Add Permission

@@ -7,7 +7,7 @@ import {
 } from "@/types/user";
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import getErrorMessage from "../../utility/error-message";
-import { AUTH_STORAGE_KEY, getTokenFromAuth } from "../../utility/auth-token";
+import { AUTH_STORAGE_KEY, getTokenFromAuth, withAuthHeader } from "../../utility/auth-token";
 import { RootState } from "../../app/store/store";
 import { jwtDecode } from "jwt-decode";
 import api from "@/lib/api";
@@ -138,7 +138,7 @@ export const registerAuth = createAsyncThunk<
     const response = await api.post<{
       isSuccessful: boolean;
       message: string;
-    }>("/users", payload);
+    }>("/users", payload, withAuthHeader(token));
 
     return response.data.message || "User registered successfully";
   } catch (error: unknown) {
@@ -162,7 +162,7 @@ export const fetchUsers = createAsyncThunk<
       isSuccessful: boolean;
       message: string;
       data: User[];
-    }>("/users");
+    }>("/users", withAuthHeader(token));
 
     return response.data.data ?? [];
   } catch (error: unknown) {
@@ -186,7 +186,7 @@ export const fetchUserById = createAsyncThunk<
       isSuccessful: boolean;
       message: string;
       data: User;
-    }>(`/users/${id}`);
+    }>(`/users/${id}`, withAuthHeader(token));
 
     const user = response.data.data;
 
@@ -215,7 +215,7 @@ export const updateUser = createAsyncThunk<
     const response = await api.put<{
       isSuccessful: boolean;
       message: string;
-    }>(`/users/${id}`, payload);
+    }>(`/users/${id}`, payload, withAuthHeader(token));
 
     return response.data.message || "User updated successfully";
   } catch (error: unknown) {

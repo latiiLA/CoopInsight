@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { RootState } from "../../app/store/store";
-import { getTokenFromAuth } from "../../utility/auth-token";
+import { getTokenFromAuth, withAuthHeader } from "../../utility/auth-token";
 import api from "@/lib/api";
 
 export interface DepositPerTerminal {
@@ -49,6 +49,7 @@ export const fetchDepositPerTerminal = createAsyncThunk<
       }
 
       const response = await api.get("/tests/test", {
+        ...withAuthHeader(token),
         params: {
           dateFrom,
           dateTo,

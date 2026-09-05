@@ -33,7 +33,7 @@ const ManageRoles = () => {
       <div className="flex align-items-center justify-between">
         <h1 className="text-lg font-semibold">Role Management</h1>
         <div className="flex gap-2">
-          {authUser && hasPermission(["role:add"]) && (
+          {authUser && hasPermission(["role:create"]) && (
             <Button onClick={() => navigate("/role")}>
               <PlusCircle />
               Add Role

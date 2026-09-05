@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { RootState } from "../../app/store/store";
 import { CreatePermissionDTO, Permission } from "@/types/permission";
 import getErrorMessage from "../../utility/error-message";
-import { getTokenFromAuth } from "../../utility/auth-token";
+import { getTokenFromAuth, withAuthHeader } from "../../utility/auth-token";
 import api from "@/lib/api";
 
 interface PermissionState {
@@ -36,7 +36,7 @@ export const fetchPermissions = createAsyncThunk<
       return thunkAPI.rejectWithValue("Authentication token not found");
     }
 
-    const response = await api.get("/permissions");
+    const response = await api.get("/permissions", withAuthHeader(token));
 
     return response.data.data ?? [];
   } catch (error) {
@@ -62,7 +62,7 @@ export const createPermission = createAsyncThunk<
     const response = await api.post<{
       isSuccessful: boolean;
       message: string;
-    }>("/permissions", payload);
+    }>("/permissions", payload, withAuthHeader(token));
 
     return response.data.message || "Permission created successfully";
   } catch (error) {
