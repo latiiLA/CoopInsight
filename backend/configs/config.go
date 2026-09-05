@@ -11,16 +11,20 @@ import (
 )
 
 var (
-	JwtSecret          string
-	RefreshJwtSecret   string
-	AccessTokenExpiry  time.Duration
-	RefreshTokenExpiry time.Duration
-	DBName             string
-	MongoURL           string
-	Timeout            time.Duration
-	DisableMigration   string
-	FileUploadPath     string
-	LogLevel           string
+	JwtSecret            string
+	RefreshJwtSecret     string
+	AccessTokenExpiry    time.Duration
+	RefreshTokenExpiry   time.Duration
+	DBName               string
+	MongoURL             string
+	SourceMongoEnabled   bool
+	SourceMongoConnected bool
+	SourceDBName         string
+	SourceMongoURL       string
+	Timeout              time.Duration
+	DisableMigration     string
+	FileUploadPath       string
+	LogLevel             string
 
 	// Mail env
 	MailServer   string
@@ -400,6 +404,25 @@ func LoadConfig() {
 			OracleTimeout = 30 * time.Second
 		}
 		log.Print("Oracle is disabled; report features that need Oracle will be unavailable")
+	}
+
+	// source Mongo — optional read-only TMS data (same pattern as Oracle).
+	SourceDBName = strings.TrimSpace(os.Getenv("SOURCE_DB_NAME"))
+	SourceMongoURL = strings.TrimSpace(os.Getenv("SOURCE_MONGO_URL"))
+
+	explicitSourceMongo, sourceMongoEnabled := parseBoolEnv("SOURCE_MONGO_ENABLED")
+	if explicitSourceMongo {
+		SourceMongoEnabled = sourceMongoEnabled
+	} else {
+		SourceMongoEnabled = SourceDBName != ""
+	}
+
+	if SourceMongoEnabled {
+		if SourceDBName == "" {
+			log.Fatal("SOURCE_DB_NAME is required when source Mongo is enabled")
+		}
+	} else {
+		log.Print("Source Mongo is disabled; TMS report features that need coop_tms_db will be unavailable")
 	}
 
 	explicitSSHEnabled, sshEnabled := parseBoolEnv("SSH_SWITCH_ENABLED")

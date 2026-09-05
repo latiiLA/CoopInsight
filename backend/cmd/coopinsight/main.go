@@ -14,6 +14,7 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/repository/oracle"
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func main() {
@@ -69,6 +70,37 @@ func main() {
 	}
 
 	db := mongoClient.Database(dbName)
+
+	sourceClient, tmsDB, sourceErr := database.OpenSourceMongo(ctx, mongoClient)
+	if !configs.SourceMongoEnabled {
+		logrus.Info("Source Mongo is disabled; skipping connection")
+	} else if sourceErr != nil {
+		logrus.WithError(sourceErr).Warn("Source Mongo connection failed; TMS report features will be unavailable")
+	} else if tmsDB != nil {
+		if sourceClient != nil {
+			defer func() {
+				if err := sourceClient.Disconnect(ctx); err != nil {
+					logrus.Printf(
+						"Warning: failed to disconnect from source MongoDB: %v",
+						err,
+					)
+				}
+			}()
+		}
+
+		configs.SourceMongoConnected = true
+
+		names, listErr := tmsDB.ListCollectionNames(ctx, bson.D{})
+		if listErr != nil {
+			logrus.WithError(listErr).WithField("database", tmsDB.Name()).
+				Warn("Connected to source Mongo but failed to list collections")
+		} else {
+			logrus.WithFields(logrus.Fields{
+				"database":    tmsDB.Name(),
+				"collections": names,
+			}).Info("Source Mongo connected successfully")
+		}
+	}
 
 	// Oracle is optional. Login and user administration depend on Mongo only.
 	var oracleDB *sql.DB
@@ -135,6 +167,15 @@ func main() {
 	roleService := service.NewRoleService(roleRepository)
 	roleHandler := handler.NewRoleHandler(roleService)
 
+	var atmTerminalHandler handler.AtmTerminalHandler
+	if tmsDB != nil {
+		atmTerminalHandler = handler.NewAtmTerminalHandler(
+			service.NewAtmTerminalService(mongodb.NewAtmTerminalRepository(tmsDB)),
+		)
+	} else {
+		atmTerminalHandler = handler.NewAtmTerminalHandler(service.NewAtmTerminalService(nil))
+	}
+
 	var testHandler handler.TestHandler
 	var successTransactionHandler handler.SuccessTransactionHandler
 	if oracleDB != nil {
@@ -193,6 +234,7 @@ func main() {
 		Role:               roleHandler,
 		Test:               testHandler,
 		SuccessTransaction: successTransactionHandler,
+		AtmTerminal:        atmTerminalHandler,
 		OnusMonitoring:     onusHandler,
 		OffusMonitoring:    offusHandler,
 		SwitchCommand:      switchCommandHandler,

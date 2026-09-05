@@ -36,9 +36,11 @@ var (
 	ErrUnauthorized               = errors.New("unauthorized")
 	ErrInternalServer             = errors.New("internal server error")
 	ErrOracleUnavailable          = errors.New("oracle is unavailable")
+	ErrSourceMongoUnavailable     = errors.New("source mongo is unavailable")
 	ErrInvalidReportDate          = errors.New("dateFrom and dateTo must be MM-DD-YYYY")
 	ErrInvalidDateRange           = errors.New("dateFrom must be on or before dateTo")
 	ErrFailedToFetchReport        = errors.New("failed to fetch report")
+	ErrFailedToFetchAtmTerminals  = errors.New("failed to fetch ATM terminals")
 	ErrOnusMonitoringUnavailable  = errors.New("on-us monitoring is unavailable")
 	ErrOffusMonitoringUnavailable = errors.New("off-us monitoring is unavailable")
 	ErrSwitchCommandUnavailable   = errors.New("switch command is unavailable")
@@ -47,10 +49,11 @@ var (
 )
 
 var (
-	MessInternalServerError = "Internal server error"
-	MessUnauthorized        = "Unauthorized"
-	MessInvalidRequest      = "Invalid request"
-	MessInvalidRequestData  = "Invalid request data"
-	MessInvalidRequestFile  = "Invalid request data"
-	MessOracleUnavailable   = "Oracle is unavailable"
+	MessInternalServerError    = "Internal server error"
+	MessUnauthorized           = "Unauthorized"
+	MessInvalidRequest         = "Invalid request"
+	MessInvalidRequestData     = "Invalid request data"
+	MessInvalidRequestFile     = "Invalid request data"
+	MessOracleUnavailable      = "Oracle is unavailable"
+	MessSourceMongoUnavailable = "Source Mongo is unavailable"
 )

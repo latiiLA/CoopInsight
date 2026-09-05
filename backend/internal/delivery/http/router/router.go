@@ -17,6 +17,7 @@ type Handlers struct {
 	Role               handler.RoleHandler
 	Test               handler.TestHandler
 	SuccessTransaction handler.SuccessTransactionHandler
+	AtmTerminal        handler.AtmTerminalHandler
 	OnusMonitoring     handler.OnusMonitoringHandler
 	OffusMonitoring    handler.OnusMonitoringHandler
 	SwitchCommand      handler.SwitchCommandHandler
@@ -83,10 +84,20 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 			}
 		}
 
+		sourceMongoStatus := "disabled"
+		if configs.SourceMongoEnabled {
+			if configs.SourceMongoConnected {
+				sourceMongoStatus = "up"
+			} else {
+				sourceMongoStatus = "down"
+			}
+		}
+
 		c.JSON(200, gin.H{
-			"status": "ok",
-			"mongo":  "up",
-			"oracle": oracleStatus,
+			"status":      "ok",
+			"mongo":       "up",
+			"oracle":      oracleStatus,
+			"sourceMongo": sourceMongoStatus,
 		})
 	})
 
@@ -111,6 +122,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	registerUserRoutes(protected, handlers.User)
 	registerPermissionRoutes(protected, handlers.Permission)
 	registerRoleRoutes(protected, handlers.Role)
+	registerAtmTerminalRoutes(protected, handlers.AtmTerminal)
 
 	// --------------------------------------------------
 	// Protected Oracle routes - longer timeout
