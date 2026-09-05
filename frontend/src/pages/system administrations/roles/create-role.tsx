@@ -201,7 +201,7 @@ const CreateRole = () => {
 
                             return (
                               <label
-                                key={permission._id}
+                                key={permission.id}
                                 className="flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted/50"
                               >
                                 <Checkbox

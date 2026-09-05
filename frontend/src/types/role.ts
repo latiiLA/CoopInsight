@@ -1,5 +1,5 @@
 export type Role = {
-  _id: string;
+  id: string;
   name: string;
   permissions: string[];
   status?: string;
@@ -8,6 +8,10 @@ export type Role = {
   createdBy: string;
   updatedBy: string | null;
 };
+
+export function getRoleId(role?: Role | null) {
+  return role?.id ?? "";
+}
 
 export interface CreateRoleDTO {
   name: string;

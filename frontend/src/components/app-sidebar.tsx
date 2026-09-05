@@ -258,7 +258,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <NavUser
           user={{
-            name: `${authUser?.data?.user?.firstName ?? ""} ${authUser?.data?.user?.lastName ?? ""}`.trim(),
+            name: `${authUser?.data?.user?.firstName ?? ""} ${authUser?.data?.user?.middleName ?? ""}`.trim(),
             username: authUser?.data?.user?.username ?? "",
             avatar: "",
           }}

@@ -1,6 +1,10 @@
 import config from "@/configs/config";
 import { Auth } from "@/types/auth";
-import { CreateUserDTO, User } from "@/types/user";
+import {
+  CreateUserDTO,
+  UpdateUserDTO,
+  User,
+} from "@/types/user";
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import getErrorMessage from "../../utility/error-message";
 import { AUTH_STORAGE_KEY, getTokenFromAuth } from "../../utility/auth-token";
@@ -22,6 +26,13 @@ export interface UserSliceState {
   users: User[];
   usersLoading: boolean;
   usersError: string | null;
+
+  selectedUser: User | null;
+  userDetailLoading: boolean;
+  userDetailError: string | null;
+
+  updateLoading: boolean;
+  updateError: string | null;
 }
 
 interface LoginCredentials {
@@ -88,6 +99,13 @@ const initialState: UserSliceState = {
   users: [],
   usersLoading: false,
   usersError: null,
+
+  selectedUser: null,
+  userDetailLoading: false,
+  userDetailError: null,
+
+  updateLoading: false,
+  updateError: null,
 };
 
 export const loginUser = createAsyncThunk<
@@ -152,6 +170,59 @@ export const fetchUsers = createAsyncThunk<
   }
 });
 
+export const fetchUserById = createAsyncThunk<
+  User,
+  string,
+  { state: RootState; rejectValue: string }
+>("user/fetchUserById", async (id, thunkAPI) => {
+  try {
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
+    }
+
+    const response = await api.get<{
+      isSuccessful: boolean;
+      message: string;
+      data: User;
+    }>(`/users/${id}`);
+
+    const user = response.data.data;
+
+    if (!user) {
+      return thunkAPI.rejectWithValue("User not found");
+    }
+
+    return user;
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
+export const updateUser = createAsyncThunk<
+  string,
+  { id: string; payload: UpdateUserDTO },
+  { state: RootState; rejectValue: string }
+>("user/updateUser", async ({ id, payload }, thunkAPI) => {
+  try {
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
+    }
+
+    const response = await api.put<{
+      isSuccessful: boolean;
+      message: string;
+    }>(`/users/${id}`, payload);
+
+    return response.data.message || "User updated successfully";
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
 const userSlice = createSlice({
   name: "user",
   initialState,
@@ -171,6 +242,7 @@ const userSlice = createSlice({
       state.registerLoading = false;
       state.registerError = null;
       state.permissions = [];
+      state.selectedUser = null;
       persistAuth(null);
     },
 
@@ -184,6 +256,15 @@ const userSlice = createSlice({
 
     clearUsersError: (state) => {
       state.usersError = null;
+    },
+
+    clearSelectedUser: (state) => {
+      state.selectedUser = null;
+      state.userDetailError = null;
+    },
+
+    clearUpdateError: (state) => {
+      state.updateError = null;
     },
   },
 
@@ -235,6 +316,34 @@ const userSlice = createSlice({
       .addCase(fetchUsers.rejected, (state, action) => {
         state.usersLoading = false;
         state.usersError = action.payload || "Failed to fetch users";
+      })
+
+      .addCase(fetchUserById.pending, (state) => {
+        state.userDetailLoading = true;
+        state.userDetailError = null;
+      })
+      .addCase(fetchUserById.fulfilled, (state, action) => {
+        state.userDetailLoading = false;
+        state.selectedUser = action.payload;
+        state.userDetailError = null;
+      })
+      .addCase(fetchUserById.rejected, (state, action) => {
+        state.userDetailLoading = false;
+        state.selectedUser = null;
+        state.userDetailError = action.payload || "Failed to fetch user";
+      })
+
+      .addCase(updateUser.pending, (state) => {
+        state.updateLoading = true;
+        state.updateError = null;
+      })
+      .addCase(updateUser.fulfilled, (state) => {
+        state.updateLoading = false;
+        state.updateError = null;
+      })
+      .addCase(updateUser.rejected, (state, action) => {
+        state.updateLoading = false;
+        state.updateError = action.payload || "Failed to update user";
       });
   },
 });
@@ -245,6 +354,8 @@ export const {
   clearAuthError,
   clearRegisterError,
   clearUsersError,
+  clearSelectedUser,
+  clearUpdateError,
 } = userSlice.actions;
 
 export default userSlice.reducer;

@@ -1,5 +1,5 @@
 export type Permission = {
-  _id: string;
+  id: string;
   name: string;
   resource: string;
   action: string;

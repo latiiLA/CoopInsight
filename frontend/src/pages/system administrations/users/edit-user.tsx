@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Loader2, UserPlus } from "lucide-react";
+import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -28,36 +27,47 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 import {
-  clearRegisterError,
+  clearSelectedUser,
+  clearUpdateError,
+  fetchUserById,
   fetchUsers,
-  registerAuth,
+  updateUser,
 } from "@/features/user_slice";
 import { fetchRoles } from "@/features/role_slice";
 import { fetchPermissions } from "@/features/permission_slice";
 
 import { AppDispatch, RootState } from "../../../../app/store/store";
-import { CreateUserDTO } from "@/types/user";
+import { UpdateUserDTO, getUserId, resolveUserRoleId } from "@/types/user";
 import { getRoleId } from "@/types/role";
 import {
-  createUserFormSchema,
-  type CreateUserFormValues,
+  USER_STATUSES,
+  editUserFormSchema,
+  formatLabel,
+  type EditUserFormValues,
 } from "./user-form-schema";
 
-type FormValues = CreateUserFormValues;
-
-const formatName = (value?: string) => {
-  if (!value) return "";
-
-  return value.charAt(0).toUpperCase() + value.slice(1);
+const emptyFormValues: EditUserFormValues = {
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  email: "",
+  role: "",
+  permissions: [],
+  status: "new",
 };
 
-const CreateUser = () => {
+const EditUser = () => {
+  const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  const { isLoggedIn, registerLoading } = useSelector(
-    (state: RootState) => state.user,
-  );
+  const {
+    isLoggedIn,
+    selectedUser,
+    userDetailLoading,
+    userDetailError,
+    updateLoading,
+  } = useSelector((state: RootState) => state.user);
 
   const { allPermissions, permissionError, permissionLoading } = useSelector(
     (state: RootState) => state.permission,
@@ -67,23 +77,49 @@ const CreateUser = () => {
     (state: RootState) => state.role,
   );
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(createUserFormSchema),
-    defaultValues: {
-      firstName: "",
-      middleName: "",
-      lastName: "",
-      username: "",
-      email: "",
-      role: "",
-      permissions: [],
+  const formValues = useMemo<EditUserFormValues>(() => {
+    if (!selectedUser) {
+      return emptyFormValues;
+    }
+
+    const roleId = resolveUserRoleId(selectedUser, roles);
+    const rolePermissions =
+      roles.find((role) => getRoleId(role) === roleId)?.permissions ??
+      selectedUser.role?.permissions ??
+      [];
+
+    return {
+      firstName: selectedUser.firstName ?? "",
+      middleName: selectedUser.middleName ?? "",
+      lastName: selectedUser.lastName ?? "",
+      email: selectedUser.email ?? "",
+      role: roleId,
+      permissions: (selectedUser.permissions ?? []).filter(
+        (permission) => !rolePermissions.includes(permission),
+      ),
+      status: USER_STATUSES.includes(
+        selectedUser.status as (typeof USER_STATUSES)[number],
+      )
+        ? (selectedUser.status as (typeof USER_STATUSES)[number])
+        : "new",
+    };
+  }, [roles, selectedUser]);
+
+  const form = useForm<EditUserFormValues>({
+    resolver: zodResolver(editUserFormSchema),
+    defaultValues: emptyFormValues,
+    values: formValues,
+    resetOptions: {
+      keepDirtyValues: true,
     },
   });
 
   const selectedRole = form.watch("role");
 
   const selectedRolePermissions = useMemo(() => {
-    return roles.find((role) => getRoleId(role) === selectedRole)?.permissions ?? [];
+    return (
+      roles.find((role) => getRoleId(role) === selectedRole)?.permissions ?? []
+    );
   }, [roles, selectedRole]);
 
   const extraPermissions = useMemo(() => {
@@ -99,15 +135,19 @@ const CreateUser = () => {
   }, [allPermissions, selectedRolePermissions]);
 
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || !id) {
+      return;
+    }
 
+    dispatch(fetchUserById(id));
     dispatch(fetchRoles());
     dispatch(fetchPermissions());
-  }, [dispatch, isLoggedIn]);
 
-  useEffect(() => {
-    form.setValue("permissions", []);
-  }, [selectedRole, form]);
+    return () => {
+      dispatch(clearSelectedUser());
+      dispatch(clearUpdateError());
+    };
+  }, [dispatch, id, isLoggedIn]);
 
   useEffect(() => {
     if (roleError) {
@@ -121,44 +161,67 @@ const CreateUser = () => {
     }
   }, [permissionError]);
 
-  async function onSubmit(values: FormValues) {
-    const payload: CreateUserDTO = {
-      username: values.username.trim(),
+  useEffect(() => {
+    if (userDetailError) {
+      toast.error(userDetailError);
+    }
+  }, [userDetailError]);
+
+  async function onSubmit(values: EditUserFormValues) {
+    const userId = id || getUserId(selectedUser);
+
+    if (!userId) {
+      toast.error("User id is missing");
+      return;
+    }
+
+    const payload: UpdateUserDTO = {
       firstName: values.firstName.trim(),
       middleName: values.middleName.trim(),
       lastName: values.lastName.trim(),
       email: values.email.trim().toLowerCase(),
       role: values.role,
       permissions: values.permissions ?? [],
+      status: values.status,
     };
 
-    const resultAction = await dispatch(registerAuth(payload));
+    const resultAction = await dispatch(updateUser({ id: userId, payload }));
 
-    if (registerAuth.fulfilled.match(resultAction)) {
-      form.reset();
+    if (updateUser.fulfilled.match(resultAction)) {
       dispatch(fetchUsers());
-
-      toast.success("User created successfully", {
-        id: "user-add-success",
-        description: `${payload.firstName} ${payload.middleName} has been added to CoopInsight.`,
+      toast.success("User updated successfully", {
+        description: `${payload.firstName} ${payload.middleName} has been updated.`,
       });
-
-      navigate("/users");
+      navigate(`/user/${userId}`);
       return;
     }
 
-    const errorMessage =
-      (resultAction.payload as string) ||
-      "Unable to create the user. Please try again.";
-
-    toast.error("User creation failed", {
-      description: errorMessage,
+    toast.error("User update failed", {
+      description:
+        (resultAction.payload as string) ||
+        "Unable to update the user. Please try again.",
     });
 
-    dispatch(clearRegisterError());
+    dispatch(clearUpdateError());
   }
 
-  const isSubmitting = form.formState.isSubmitting || registerLoading;
+  const isSubmitting = form.formState.isSubmitting || updateLoading;
+
+  if (userDetailLoading && !selectedUser) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!selectedUser) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <p className="text-sm text-muted-foreground">User not found.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full pb-8">
@@ -166,14 +229,13 @@ const CreateUser = () => {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
+              <Save className="h-5 w-5" />
               <h1 className="text-2xl font-semibold tracking-tight">
-                Add User
+                Edit User
               </h1>
             </div>
-
             <p className="mt-1 text-sm text-muted-foreground">
-              Create a CoopInsight user and assign their role and permissions.
+              Update this user's profile, role, status, and extra permissions.
             </p>
           </div>
 
@@ -187,11 +249,9 @@ const CreateUser = () => {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <section className="space-y-4">
               <div>
-                <h2 className="text-base font-semibold">
-                  Personal Information
-                </h2>
+                <h2 className="text-base font-semibold">Personal Information</h2>
                 <p className="text-sm text-muted-foreground">
-                  Enter the user's name information.
+                  Update the user's name information.
                 </p>
               </div>
 
@@ -257,38 +317,20 @@ const CreateUser = () => {
             <section className="space-y-4">
               <div>
                 <h2 className="text-base font-semibold">Account</h2>
-
                 <p className="text-sm text-muted-foreground">
-                  Configure the user's login identity and system role.
+                  Username cannot be changed. Update email, role, and status.
                 </p>
               </div>
 
               <Separator />
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Username</FormLabel>
-
-                      <FormControl>
-                        <Input
-                          placeholder="Enter username"
-                          autoComplete="username"
-                          {...field}
-                        />
-                      </FormControl>
-
-                      <FormDescription>
-                        Use the username the user will use to sign in.
-                      </FormDescription>
-
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input value={selectedUser.username} disabled readOnly />
+                  </FormControl>
+                </FormItem>
 
                 <FormField
                   control={form.control}
@@ -296,7 +338,6 @@ const CreateUser = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Email</FormLabel>
-
                       <FormControl>
                         <Input
                           type="email"
@@ -305,11 +346,6 @@ const CreateUser = () => {
                           {...field}
                         />
                       </FormControl>
-
-                      <FormDescription>
-                        Used for notifications and account identification.
-                      </FormDescription>
-
                       <FormMessage />
                     </FormItem>
                   )}
@@ -321,10 +357,15 @@ const CreateUser = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Role</FormLabel>
-
                       <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
+                        key={field.value || "role"}
+                        value={field.value || undefined}
+                        onValueChange={(value) => {
+                          if (value !== field.value) {
+                            form.setValue("permissions", []);
+                          }
+                          field.onChange(value);
+                        }}
                         disabled={roleLoading}
                       >
                         <FormControl>
@@ -336,7 +377,6 @@ const CreateUser = () => {
                             />
                           </SelectTrigger>
                         </FormControl>
-
                         <SelectContent>
                           {roles.length > 0 ? (
                             roles.map((role) => {
@@ -348,7 +388,7 @@ const CreateUser = () => {
 
                               return (
                                 <SelectItem key={roleId} value={roleId}>
-                                  {formatName(role.name)}
+                                  {formatLabel(role.name)}
                                 </SelectItem>
                               );
                             })
@@ -361,12 +401,35 @@ const CreateUser = () => {
                           )}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                      <FormDescription>
-                        The selected role provides the user's default
-                        permissions.
-                      </FormDescription>
-
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select
+                        key={field.value || "status"}
+                        value={field.value || undefined}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {USER_STATUSES.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {formatLabel(status)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -379,10 +442,8 @@ const CreateUser = () => {
                 <h2 className="text-base font-semibold">
                   Additional Permissions
                 </h2>
-
                 <p className="text-sm text-muted-foreground">
                   Optionally grant extra permissions beyond the selected role.
-                  Permissions included with the role are already checked.
                 </p>
               </div>
 
@@ -501,7 +562,6 @@ const CreateUser = () => {
                         </div>
                       )}
                     </div>
-
                     <FormMessage />
                   </FormItem>
                 )}
@@ -512,12 +572,11 @@ const CreateUser = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate(`/user/${getUserId(selectedUser)}`)}
                 disabled={isSubmitting}
               >
                 Cancel
               </Button>
-
               <Button
                 type="submit"
                 disabled={isSubmitting || roleLoading}
@@ -526,12 +585,12 @@ const CreateUser = () => {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    Saving...
                   </>
                 ) : (
                   <>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Create User
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
                   </>
                 )}
               </Button>
@@ -543,4 +602,4 @@ const CreateUser = () => {
   );
 };
 
-export default CreateUser;
+export default EditUser;

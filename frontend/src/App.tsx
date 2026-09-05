@@ -7,6 +7,8 @@ import Transaction from "./pages/transaction/Transaction";
 import DepositPerTerminal from "./pages/reports/deposit-per-terminal";
 import ManageUsers from "./pages/system administrations/users/manage-users";
 import CreateUser from "./pages/system administrations/users/create-user";
+import ViewUser from "./pages/system administrations/users/view-user";
+import EditUser from "./pages/system administrations/users/edit-user";
 import ManageRoles from "./pages/system administrations/roles/manage-roles";
 import CreateRole from "./pages/system administrations/roles/create-role";
 import ManagePermissions from "./pages/system administrations/permissions/manage-permissions";
@@ -34,6 +36,14 @@ function App() {
           <Route
             path="/user"
             element={<CreateUser />}
+          />
+          <Route
+            path="/user/:id"
+            element={<ViewUser />}
+          />
+          <Route
+            path="/user/:id/edit"
+            element={<EditUser />}
           />
           <Route
             path="/roles"

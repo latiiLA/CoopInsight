@@ -177,7 +177,7 @@ const CreatePermission = () => {
                         <Input placeholder="add" {...field} />
                       </FormControl>
                       <FormDescription>
-                        The operation being allowed, such as add, update, or
+                        The operation being allowed, such as add, edit, or
                         delete.
                       </FormDescription>
                       <FormMessage />

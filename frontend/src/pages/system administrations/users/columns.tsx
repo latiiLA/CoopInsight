@@ -5,7 +5,7 @@ import { ArrowUpDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataRowActions } from "@/components/data-row-actions";
 import { DataTableFeatures } from "@/components/data-table-features";
-import { User } from "@/types/user";
+import { User, getUserId } from "@/types/user";
 
 // Use `accessor` for data columns and `display` for columns without one.
 const columnHelper = createColumnHelper<DataTableFeatures, User>();
@@ -117,7 +117,6 @@ export const columns = columnHelper.columns([
       return (
         <Button
           variant="ghost"
-
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Status
@@ -126,24 +125,29 @@ export const columns = columnHelper.columns([
       );
     },
   }),
-  {
+  columnHelper.display({
     id: "actions",
+    header: "Actions",
     enableHiding: false,
-    cell: ({ row }) => (
-      <DataRowActions
-        row={row.original}
-        viewPath="/user/details"
-        viewPermission={["user:view-details"]}
-        editPath="/user/edit"
-        editPermission={["user:update"]}
-        deleteLabel="Delete"
-        deleteTitle="Delete User"
-        deleteDescription="Are you sure you want to delete this user?"
-        deletePermission={["user:delete"]}
-        onDelete={async (row) => {
-          // delete user here
-        }}
-      />
-    ),
-  },
+    cell: ({ row }) => {
+      const userId = getUserId(row.original);
+
+      return (
+        <DataRowActions
+          row={row.original}
+          viewPath={`/user/${userId}`}
+          viewPermission={["user:view-details"]}
+          editPath={`/user/${userId}/edit`}
+          editPermission={["user:update"]}
+          deleteLabel="Delete"
+          deleteTitle="Delete User"
+          deleteDescription="Are you sure you want to delete this user?"
+          deletePermission={["user:delete"]}
+          onDelete={async () => {
+            // delete user here
+          }}
+        />
+      );
+    },
+  }),
 ]);
