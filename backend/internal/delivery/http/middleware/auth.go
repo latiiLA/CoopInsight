@@ -16,10 +16,8 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		logEntry := utils.GetLogger(c)
 
-		authHeader := c.GetHeader("Authorization")
-		parts := strings.Fields(authHeader)
-
-		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		token := bearerToken(c)
+		if token == "" {
 			logrus.Warn("JWT middleware rejected request")
 
 			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{
@@ -28,8 +26,6 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 			})
 			return
 		}
-
-		token := parts[1]
 
 		clientIP, err := utils.GetIPAddress(c)
 		if err != nil {
@@ -154,6 +150,27 @@ func containsPermission(permissions []string, required string) bool {
 	return false
 }
 
+func bearerToken(c *gin.Context) string {
+	authHeader := c.GetHeader("Authorization")
+	parts := strings.Fields(authHeader)
+	if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+		return parts[1]
+	}
+
+	if token := strings.TrimSpace(c.Query("token")); token != "" {
+		return token
+	}
+
+	for _, proto := range strings.Split(c.GetHeader("Sec-WebSocket-Protocol"), ",") {
+		proto = strings.TrimSpace(proto)
+		if strings.HasPrefix(proto, "jwt.") {
+			return strings.TrimPrefix(proto, "jwt.")
+		}
+	}
+
+	return ""
+}
+
 func toClaimsMap(value interface{}) (map[string]interface{}, bool) {
 	switch claims := value.(type) {
 	case jwt.MapClaims:
@@ -164,4 +181,3 @@ func toClaimsMap(value interface{}) (map[string]interface{}, bool) {
 		return nil, false
 	}
 }
-

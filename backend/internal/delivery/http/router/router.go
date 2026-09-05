@@ -17,6 +17,7 @@ type Handlers struct {
 	Role               handler.RoleHandler
 	Test               handler.TestHandler
 	SuccessTransaction handler.SuccessTransactionHandler
+	OnusMonitoring     handler.OnusMonitoringHandler
 }
 
 func SetupRouter(handlers Handlers) *gin.Engine {
@@ -121,5 +122,10 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 
 	registerTestRoutes(oracleProtected, handlers.Test)
 	registerReportRoutes(oracleProtected, handlers.SuccessTransaction)
+
+	live := api.Group("")
+	live.Use(middleware.JwtAuthMiddleware())
+	registerMonitoringRoutes(live, handlers.OnusMonitoring)
+
 	return router
 }

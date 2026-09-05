@@ -3,6 +3,7 @@ package configs
 import (
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -81,6 +82,19 @@ var (
 	OracleUsername    string
 	OraclePassword    string
 	OracleTimeout     time.Duration
+
+	// SSH switch debug collector (on-us monitoring)
+	SSHSwitchEnabled     bool
+	SSHSwitchHost        string
+	SSHSwitchPort        string
+	SSHSwitchUser        string
+	SSHSwitchKeyPath     string
+	SSHSwitchPassword    string
+	SSHSwitchDebugPath   string
+	SSHSwitchTailLines   int
+	SSHSwitchPollSeconds int
+	SSHSwitchInsecure    bool
+	SSHSwitchKnownHosts  string
 )
 
 func LoadConfig() {
@@ -385,6 +399,70 @@ func LoadConfig() {
 		}
 		log.Print("Oracle is disabled; report features that need Oracle will be unavailable")
 	}
+
+	explicitSSHEnabled, sshEnabled := parseBoolEnv("SSH_SWITCH_ENABLED")
+	SSHSwitchHost = strings.TrimSpace(os.Getenv("SSH_SWITCH_HOST"))
+
+	if explicitSSHEnabled {
+		SSHSwitchEnabled = sshEnabled
+	} else {
+		SSHSwitchEnabled = SSHSwitchHost != ""
+	}
+
+	if SSHSwitchEnabled {
+		if SSHSwitchHost == "" {
+			log.Fatal("SSH_SWITCH_HOST is required when SSH switch monitoring is enabled")
+		}
+
+		SSHSwitchPort = strings.TrimSpace(os.Getenv("SSH_SWITCH_PORT"))
+		if SSHSwitchPort == "" {
+			SSHSwitchPort = "22"
+		}
+
+		SSHSwitchUser = strings.TrimSpace(os.Getenv("SSH_SWITCH_USER"))
+		if SSHSwitchUser == "" {
+			log.Fatal("SSH_SWITCH_USER is required when SSH switch monitoring is enabled")
+		}
+
+		SSHSwitchKeyPath = strings.TrimSpace(os.Getenv("SSH_SWITCH_KEY_PATH"))
+		SSHSwitchPassword = os.Getenv("SSH_SWITCH_PASSWORD")
+		if SSHSwitchKeyPath == "" && SSHSwitchPassword == "" {
+			log.Fatal("SSH_SWITCH_KEY_PATH or SSH_SWITCH_PASSWORD is required when SSH switch monitoring is enabled")
+		}
+
+		SSHSwitchDebugPath = strings.TrimSpace(os.Getenv("SSH_SWITCH_DEBUG_PATH"))
+		if SSHSwitchDebugPath == "" {
+			SSHSwitchDebugPath = "pdir/log/debug/ctxxmldump.debug"
+		}
+
+		SSHSwitchTailLines = parseIntEnv("SSH_SWITCH_TAIL_LINES", 400)
+		SSHSwitchPollSeconds = parseIntEnv("SSH_SWITCH_POLL_SECONDS", 8)
+		SSHSwitchKnownHosts = strings.TrimSpace(os.Getenv("SSH_SWITCH_KNOWN_HOSTS"))
+
+		_, sshInsecure := parseBoolEnv("SSH_SWITCH_INSECURE")
+		if SSHSwitchKnownHosts == "" && !sshInsecure {
+			log.Print("SSH_SWITCH_KNOWN_HOSTS is empty; allowing insecure host key check. Set SSH_SWITCH_INSECURE=false and SSH_SWITCH_KNOWN_HOSTS in production")
+			SSHSwitchInsecure = true
+		} else {
+			SSHSwitchInsecure = sshInsecure
+		}
+	} else {
+		log.Print("SSH switch monitoring is disabled")
+	}
+}
+
+func parseIntEnv(key string, fallback int) int {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback
+	}
+
+	n, err := strconv.Atoi(raw)
+	if err != nil || n <= 0 {
+		log.Fatalf("invalid %s value %q; use a positive integer", key, raw)
+	}
+
+	return n
 }
 
 func parseBoolEnv(key string) (set bool, value bool) {

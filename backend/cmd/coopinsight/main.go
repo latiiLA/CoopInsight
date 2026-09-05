@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/latiiLA/CoopInsight/backend/configs"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/handler"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/router"
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/database"
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/logger"
+	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/sshswitch"
 	"github.com/latiiLA/CoopInsight/backend/internal/repository/mongodb"
 	"github.com/latiiLA/CoopInsight/backend/internal/repository/oracle"
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
@@ -150,6 +152,33 @@ func main() {
 		)
 	}
 
+	var onusCollector *sshswitch.Collector
+	if configs.SSHSwitchEnabled {
+		onusCollector = sshswitch.NewCollector(
+			sshswitch.NewClient(sshswitch.ClientConfig{
+				Host:       configs.SSHSwitchHost,
+				Port:       configs.SSHSwitchPort,
+				User:       configs.SSHSwitchUser,
+				KeyPath:    configs.SSHSwitchKeyPath,
+				Password:   configs.SSHSwitchPassword,
+				DebugPath:  configs.SSHSwitchDebugPath,
+				TailLines:  configs.SSHSwitchTailLines,
+				Insecure:   configs.SSHSwitchInsecure,
+				KnownHosts: configs.SSHSwitchKnownHosts,
+			}),
+			configs.SSHSwitchHost,
+			time.Duration(configs.SSHSwitchPollSeconds)*time.Second,
+		)
+		onusCollector.Start(ctx)
+		defer onusCollector.Close()
+		logrus.Info("On-us SSH monitoring collector started")
+	} else {
+		logrus.Info("On-us SSH monitoring is disabled")
+	}
+	onusHandler := handler.NewOnusMonitoringHandler(
+		service.NewOnusMonitoringService(onusCollector),
+	)
+
 	// --------------------------------------------------
 	// Router
 	// --------------------------------------------------
@@ -160,6 +189,7 @@ func main() {
 		Role:               roleHandler,
 		Test:               testHandler,
 		SuccessTransaction: successTransactionHandler,
+		OnusMonitoring:     onusHandler,
 	})
 
 	// --------------------------------------------------

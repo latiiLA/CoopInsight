@@ -46,6 +46,7 @@ var appErrors = []struct {
 	{common.ErrInvalidReportDate, http.StatusBadRequest},
 	{common.ErrInvalidDateRange, http.StatusBadRequest},
 	{common.ErrFailedToFetchReport, http.StatusInternalServerError},
+	{common.ErrOnusMonitoringUnavailable, http.StatusServiceUnavailable},
 }
 
 func writeAppError(c *gin.Context, err error) {
@@ -60,10 +61,18 @@ func writeAppError(c *gin.Context, err error) {
 		}
 	}
 
-	logrus.WithError(err).Error(message)
+	logrus.WithError(err).Log(logLevelForStatus(status), message)
 	c.JSON(status, response.Status{
 		IsSuccessful: false,
 		Message:      message,
 		Error:        err.Error(),
 	})
+}
+
+func logLevelForStatus(status int) logrus.Level {
+	if status >= 500 && status != http.StatusServiceUnavailable {
+		return logrus.ErrorLevel
+	}
+
+	return logrus.WarnLevel
 }
