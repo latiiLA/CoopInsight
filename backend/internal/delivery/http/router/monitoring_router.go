@@ -6,12 +6,21 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/middleware"
 )
 
-func registerMonitoringRoutes(live *gin.RouterGroup, onusHandler handler.OnusMonitoringHandler) {
+func registerMonitoringRoutes(
+	live *gin.RouterGroup,
+	onusHandler handler.OnusMonitoringHandler,
+	offusHandler handler.OnusMonitoringHandler,
+) {
 	monitoring := live.Group("/monitoring")
 
 	monitoring.GET(
 		"/onus/ws",
 		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"monitoring:view-onus"}),
 		onusHandler.Stream,
+	)
+	monitoring.GET(
+		"/offus/ws",
+		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"monitoring:view-offus"}),
+		offusHandler.Stream,
 	)
 }

@@ -18,6 +18,7 @@ type Handlers struct {
 	Test               handler.TestHandler
 	SuccessTransaction handler.SuccessTransactionHandler
 	OnusMonitoring     handler.OnusMonitoringHandler
+	OffusMonitoring    handler.OnusMonitoringHandler
 }
 
 func SetupRouter(handlers Handlers) *gin.Engine {
@@ -125,7 +126,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 
 	live := api.Group("")
 	live.Use(middleware.JwtAuthMiddleware())
-	registerMonitoringRoutes(live, handlers.OnusMonitoring)
+	registerMonitoringRoutes(live, handlers.OnusMonitoring, handlers.OffusMonitoring)
 
 	return router
 }

@@ -16,6 +16,7 @@ type OnusEvent struct {
 	RRN            string  `json:"rrn"`
 	AuthCode       string  `json:"authCode"`
 	Acquirer       string  `json:"acquirer"`
+	BankID         string  `json:"bankId"`
 }
 
 type OnusFrame struct {

@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	headerRe = regexp.MustCompile(`(?m)^(\d{2}\.\d{2}\.\d{2} \d{2}:\d{2}:\d{2})\s+\[\s*(FromCTX|ToCTX):[^\]]*\]\*+\s+(INBOUND|OUTBOUND) MESSAGE ID\[([^\]]+)\]`)
+	headerRe = regexp.MustCompile(`(?m)^(\d{2}\.\d{2}\.\d{2} \d{2}:\d{2}:\d{2})\s+\[\s*(FromCTX|ToCTX|FromIso|ToIso):([^\]]*)\]\*+\s+(INBOUND|OUTBOUND) MESSAGE ID\[([^\]]*)\]`)
 	fieldRe  = regexp.MustCompile(`(?m)^\s*(in|out)\[\s*(\d+|amount):\s*\]<(.*)>$`)
 	msgnoRe  = regexp.MustCompile(`msgno\[\s*\d+\]<(\d+)>`)
 )
@@ -57,7 +57,7 @@ func parseDumpInOrder(raw string) []model.OnusEvent {
 
 	for i, loc := range indexes {
 		matches := headerRe.FindStringSubmatch(raw[loc[0]:loc[1]])
-		if len(matches) < 5 {
+		if len(matches) < 6 {
 			continue
 		}
 
@@ -67,7 +67,7 @@ func parseDumpInOrder(raw string) []model.OnusEvent {
 		}
 
 		body := raw[loc[1]:end]
-		event, ok := parseBlock(matches[1], matches[3], matches[4], body)
+		event, ok := parseBlock(matches[1], matches[4], matches[5], matches[3], body)
 		if ok {
 			events = append(events, event)
 		}
@@ -98,7 +98,7 @@ func (p *StreamParser) AddLine(line string) []model.OnusEvent {
 	return events
 }
 
-func parseBlock(timestamp, direction, messageID, body string) (model.OnusEvent, bool) {
+func parseBlock(timestamp, direction, messageID, seq, body string) (model.OnusEvent, bool) {
 	fields := map[string]string{}
 	amountRaw := ""
 
@@ -114,13 +114,20 @@ func parseBlock(timestamp, direction, messageID, body string) (model.OnusEvent, 
 		}
 
 		if key == "amount" {
-			if amountRaw == "" {
+			// Cortex puts the txn amount on in[amount:]. ETH dumps put DE54
+			// additional amounts there after field 54; prefer DE4 in that case.
+			if amountRaw == "" && fields["54"] == "" {
 				amountRaw = value
 			}
 			continue
 		}
 
 		if _, drop := droppedFields[key]; drop {
+			continue
+		}
+
+		if key == "32" || key == "33" || key == "100" {
+			fields[key] = keepInstitutionID(fields[key], value)
 			continue
 		}
 
@@ -136,7 +143,7 @@ func parseBlock(timestamp, direction, messageID, body string) (model.OnusEvent, 
 	}
 
 	responseCode := fields["39"]
-	if responseCode == "" || (mti != "" && mti != "0210") {
+	if responseCode == "" || (mti != "" && !isResponseMTI(mti)) {
 		return model.OnusEvent{}, false
 	}
 
@@ -155,25 +162,61 @@ func parseBlock(timestamp, direction, messageID, body string) (model.OnusEvent, 
 		}
 	}
 
+	terminal := strings.TrimSpace(fields["41"])
+	stan := strings.TrimSpace(fields["11"])
+	acquirer := institutionID(fields["32"])
 	event := model.OnusEvent{
-		ID:             messageID,
+		ID:             composeEventID(messageID, timestamp, seq, mti, stan, terminal, direction),
 		Time:           timestamp,
 		Direction:      strings.ToLower(direction),
 		MTI:            mti,
 		ResponseCode:   responseCode,
 		Approved:       isApproved(responseCode),
-		Terminal:       strings.TrimSpace(fields["41"]),
+		Terminal:       terminal,
 		ProcessingCode: processingCode,
-		Type:           processingType(processingCode),
+		Type:           eventType(mti, processingCode),
 		Amount:         amount,
 		MCC:            mcc,
-		STAN:           strings.TrimSpace(fields["11"]),
+		STAN:           stan,
 		RRN:            decodeMaybeHex(fields["37"]),
 		AuthCode:       strings.TrimSpace(fields["38"]),
-		Acquirer:       strings.TrimSpace(fields["32"]),
+		Acquirer:       acquirer,
+		BankID:         firstNonEmpty(institutionID(fields["100"]), institutionID(fields["33"]), acquirer),
 	}
 
 	return event, true
+}
+
+func isResponseMTI(mti string) bool {
+	switch mti {
+	case "0210", "0430":
+		return true
+	default:
+		return false
+	}
+}
+
+func composeEventID(messageID, timestamp, seq, mti, stan, terminal, direction string) string {
+	if id := strings.TrimSpace(messageID); id != "" {
+		return id
+	}
+
+	return strings.Join([]string{
+		strings.TrimSpace(timestamp),
+		strings.TrimSpace(seq),
+		strings.TrimSpace(mti),
+		strings.TrimSpace(stan),
+		strings.TrimSpace(terminal),
+		strings.ToLower(strings.TrimSpace(direction)),
+	}, "|")
+}
+
+func eventType(mti, processingCode string) string {
+	if mti == "0430" {
+		return "Reversal"
+	}
+
+	return processingType(processingCode)
 }
 
 func isApproved(code string) bool {
@@ -217,6 +260,48 @@ func padProcessingCode(value string) string {
 	}
 
 	return value
+}
+
+func keepInstitutionID(current, next string) string {
+	next = strings.TrimSpace(next)
+	if next == "" || isLengthPrefix(next) {
+		return current
+	}
+
+	return next
+}
+
+func institutionID(value string) string {
+	value = strings.TrimSpace(value)
+	if isLengthPrefix(value) {
+		return ""
+	}
+
+	return value
+}
+
+func isLengthPrefix(value string) bool {
+	if len(value) == 0 || len(value) > 2 {
+		return false
+	}
+
+	for _, r := range value {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+
+	return true
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+
+	return ""
 }
 
 func processingType(code string) string {

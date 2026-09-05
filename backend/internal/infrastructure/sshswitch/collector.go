@@ -20,6 +20,7 @@ type subscriber struct {
 
 type Collector struct {
 	client *Client
+	name   string
 
 	mu           sync.RWMutex
 	recent       []model.OnusEvent
@@ -29,9 +30,14 @@ type Collector struct {
 	lastErr      string
 }
 
-func NewCollector(client *Client, _ string, _ time.Duration) *Collector {
+func NewCollector(client *Client, name string) *Collector {
+	if name == "" {
+		name = "switch"
+	}
+
 	return &Collector{
 		client:      client,
+		name:        name,
 		subscribers: make(map[*subscriber]struct{}),
 	}
 }
@@ -90,10 +96,10 @@ func (c *Collector) loop(ctx context.Context) {
 			return
 		}
 
-		message := "on-us stream disconnected"
+		message := c.name + " stream disconnected"
 		if err != nil {
 			message = err.Error()
-			logrus.WithError(err).Warn("on-us live tail failed")
+			logrus.WithError(err).Warn(c.name + " live tail failed")
 		}
 		c.setStatus(false, message)
 

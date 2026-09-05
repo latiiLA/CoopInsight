@@ -11,16 +11,27 @@ type OnusMonitoringService interface {
 }
 
 type onusMonitoringService struct {
-	collector *sshswitch.Collector
+	collector   *sshswitch.Collector
+	unavailable error
 }
 
 func NewOnusMonitoringService(collector *sshswitch.Collector) OnusMonitoringService {
-	return &onusMonitoringService{collector: collector}
+	return &onusMonitoringService{
+		collector:   collector,
+		unavailable: common.ErrOnusMonitoringUnavailable,
+	}
+}
+
+func NewOffusMonitoringService(collector *sshswitch.Collector) OnusMonitoringService {
+	return &onusMonitoringService{
+		collector:   collector,
+		unavailable: common.ErrOffusMonitoringUnavailable,
+	}
 }
 
 func (s *onusMonitoringService) Subscribe() (<-chan model.OnusFrame, func(), error) {
 	if s.collector == nil {
-		return nil, nil, common.ErrOnusMonitoringUnavailable
+		return nil, nil, s.unavailable
 	}
 
 	frames, cancel := s.collector.Subscribe()

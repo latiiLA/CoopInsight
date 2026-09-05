@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/latiiLA/CoopInsight/backend/configs"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/handler"
@@ -153,30 +152,31 @@ func main() {
 	}
 
 	var onusCollector *sshswitch.Collector
+	var offusCollector *sshswitch.Collector
 	if configs.SSHSwitchEnabled {
 		onusCollector = sshswitch.NewCollector(
-			sshswitch.NewClient(sshswitch.ClientConfig{
-				Host:       configs.SSHSwitchHost,
-				Port:       configs.SSHSwitchPort,
-				User:       configs.SSHSwitchUser,
-				KeyPath:    configs.SSHSwitchKeyPath,
-				Password:   configs.SSHSwitchPassword,
-				DebugPath:  configs.SSHSwitchDebugPath,
-				TailLines:  configs.SSHSwitchTailLines,
-				Insecure:   configs.SSHSwitchInsecure,
-				KnownHosts: configs.SSHSwitchKnownHosts,
-			}),
-			configs.SSHSwitchHost,
-			time.Duration(configs.SSHSwitchPollSeconds)*time.Second,
+			newSwitchSSHClient(configs.SSHSwitchDebugPath),
+			"on-us",
 		)
 		onusCollector.Start(ctx)
 		defer onusCollector.Close()
-		logrus.Info("On-us SSH monitoring collector started")
+
+		offusCollector = sshswitch.NewCollector(
+			newSwitchSSHClient(configs.SSHSwitchOffusDebugPath),
+			"off-us",
+		)
+		offusCollector.Start(ctx)
+		defer offusCollector.Close()
+
+		logrus.Info("On-us and off-us SSH monitoring collectors started")
 	} else {
-		logrus.Info("On-us SSH monitoring is disabled")
+		logrus.Info("SSH switch monitoring is disabled")
 	}
 	onusHandler := handler.NewOnusMonitoringHandler(
 		service.NewOnusMonitoringService(onusCollector),
+	)
+	offusHandler := handler.NewOnusMonitoringHandler(
+		service.NewOffusMonitoringService(offusCollector),
 	)
 
 	// --------------------------------------------------
@@ -190,6 +190,7 @@ func main() {
 		Test:               testHandler,
 		SuccessTransaction: successTransactionHandler,
 		OnusMonitoring:     onusHandler,
+		OffusMonitoring:    offusHandler,
 	})
 
 	// --------------------------------------------------
@@ -203,4 +204,18 @@ func main() {
 	); err != nil {
 		logrus.Fatalf("Server failed to start: %v", err)
 	}
+}
+
+func newSwitchSSHClient(debugPath string) *sshswitch.Client {
+	return sshswitch.NewClient(sshswitch.ClientConfig{
+		Host:       configs.SSHSwitchHost,
+		Port:       configs.SSHSwitchPort,
+		User:       configs.SSHSwitchUser,
+		KeyPath:    configs.SSHSwitchKeyPath,
+		Password:   configs.SSHSwitchPassword,
+		DebugPath:  debugPath,
+		TailLines:  configs.SSHSwitchTailLines,
+		Insecure:   configs.SSHSwitchInsecure,
+		KnownHosts: configs.SSHSwitchKnownHosts,
+	})
 }

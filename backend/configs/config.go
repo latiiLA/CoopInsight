@@ -84,17 +84,18 @@ var (
 	OracleTimeout     time.Duration
 
 	// SSH switch debug collector (on-us monitoring)
-	SSHSwitchEnabled     bool
-	SSHSwitchHost        string
-	SSHSwitchPort        string
-	SSHSwitchUser        string
-	SSHSwitchKeyPath     string
-	SSHSwitchPassword    string
-	SSHSwitchDebugPath   string
-	SSHSwitchTailLines   int
-	SSHSwitchPollSeconds int
-	SSHSwitchInsecure    bool
-	SSHSwitchKnownHosts  string
+	SSHSwitchEnabled        bool
+	SSHSwitchHost           string
+	SSHSwitchPort           string
+	SSHSwitchUser           string
+	SSHSwitchKeyPath        string
+	SSHSwitchPassword       string
+	SSHSwitchDebugPath      string
+	SSHSwitchOffusDebugPath string
+	SSHSwitchTailLines      int
+	SSHSwitchPollSeconds    int
+	SSHSwitchInsecure       bool
+	SSHSwitchKnownHosts     string
 )
 
 func LoadConfig() {
@@ -433,6 +434,11 @@ func LoadConfig() {
 		SSHSwitchDebugPath = strings.TrimSpace(os.Getenv("SSH_SWITCH_DEBUG_PATH"))
 		if SSHSwitchDebugPath == "" {
 			SSHSwitchDebugPath = "pdir/log/debug/ctxxmldump.debug"
+		}
+
+		SSHSwitchOffusDebugPath = strings.TrimSpace(os.Getenv("SSH_SWITCH_OFFUS_DEBUG_PATH"))
+		if SSHSwitchOffusDebugPath == "" {
+			SSHSwitchOffusDebugPath = "pdir/log/debug/ethfmtdump.debug"
 		}
 
 		SSHSwitchTailLines = parseIntEnv("SSH_SWITCH_TAIL_LINES", 400)

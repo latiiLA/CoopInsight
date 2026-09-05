@@ -33,13 +33,14 @@ var (
 	ErrFailedToDeletePermission = errors.New("failed to delete permission")
 	ErrFailedToDecodePermission = errors.New("failed to decode permission")
 
-	ErrUnauthorized              = errors.New("unauthorized")
-	ErrInternalServer            = errors.New("internal server error")
-	ErrOracleUnavailable         = errors.New("oracle is unavailable")
-	ErrInvalidReportDate         = errors.New("dateFrom and dateTo must be MM-DD-YYYY")
-	ErrInvalidDateRange          = errors.New("dateFrom must be on or before dateTo")
-	ErrFailedToFetchReport       = errors.New("failed to fetch report")
-	ErrOnusMonitoringUnavailable = errors.New("on-us monitoring is unavailable")
+	ErrUnauthorized               = errors.New("unauthorized")
+	ErrInternalServer             = errors.New("internal server error")
+	ErrOracleUnavailable          = errors.New("oracle is unavailable")
+	ErrInvalidReportDate          = errors.New("dateFrom and dateTo must be MM-DD-YYYY")
+	ErrInvalidDateRange           = errors.New("dateFrom must be on or before dateTo")
+	ErrFailedToFetchReport        = errors.New("failed to fetch report")
+	ErrOnusMonitoringUnavailable  = errors.New("on-us monitoring is unavailable")
+	ErrOffusMonitoringUnavailable = errors.New("off-us monitoring is unavailable")
 )
 
 var (
