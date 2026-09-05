@@ -49,6 +49,7 @@ import { NavUser } from "./nav-user";
 import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../../app/store/store";
+import { hasPermission } from "../../utility/has-permission";
 
 // ------------------------------------
 // Types
@@ -59,6 +60,7 @@ type NavSubItem = {
   icon?: LucideIcon;
   url: string;
   isActive?: boolean;
+  permissions?: string[];
 };
 
 type NavItem = {
@@ -73,6 +75,18 @@ type NavHome = {
   icon?: LucideIcon;
   url: string;
 };
+
+function canSeeNavItem(item: NavSubItem, granted: string[]) {
+  if (!item.url || item.url === "#") {
+    return false;
+  }
+
+  if (!item.permissions?.length) {
+    return true;
+  }
+
+  return hasPermission(item.permissions, granted);
+}
 
 // ------------------------------------
 // Data
@@ -112,11 +126,13 @@ const data: {
           title: "Deposit Per Terminal",
           icon: SquareArrowOutDownRight,
           url: "deposit-per-terminal",
+          permissions: ["report:view-deposit-per-terminal"],
         },
         {
           title: "Success Rate",
           icon: Percent,
           url: "success-rate",
+          permissions: ["report:view-success-transactions"],
         },
       ],
     },
@@ -146,25 +162,28 @@ const data: {
           title: "Manage Users",
           url: "users",
           icon: Users,
+          permissions: ["user:view"],
         },
         {
           title: "Manage Roles",
           url: "roles",
           icon: Shield,
+          permissions: ["role:view"],
         },
         {
           title: "Manage Permissions",
           url: "permissions",
           icon: KeyRound,
+          permissions: ["permission:view"],
         },
         {
           title: "Analytics",
-          url: "analytics",
+          url: "#",
           icon: ChartNoAxesGantt,
         },
         {
           title: "Activity Log",
-          url: "activity",
+          url: "#",
           icon: Activity,
         },
       ],
@@ -245,8 +264,14 @@ function NavMainItem({ item }: { item: NavItem }) {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { authUser } = useSelector((state: RootState) => state.user);
+  const { authUser, permissions } = useSelector((state: RootState) => state.user);
   const HomeIcon = data.navHome.icon;
+  const navMain = data.navMain
+    .map((item) => ({
+      ...item,
+      items: item.items.filter((subItem) => canSeeNavItem(subItem, permissions)),
+    }))
+    .filter((item) => item.items.length > 0);
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -270,7 +295,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              {data.navMain.map((item) => (
+              {navMain.map((item) => (
                 <NavMainItem key={item.title} item={item} />
               ))}
             </SidebarMenu>

@@ -15,7 +15,7 @@ import CreateRole from "./pages/system administrations/roles/create-role";
 import EditRole from "./pages/system administrations/roles/edit-role";
 import ManagePermissions from "./pages/system administrations/permissions/manage-permissions";
 import CreatePermission from "./pages/system administrations/permissions/create-permission";
-
+import { RequirePermission } from "./components/require-permission";
 
 function App() {
   return (
@@ -23,53 +23,96 @@ function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
 
-        {/* Dashboard */}
         <Route element={<Layout />}>
           <Route path="/home" element={<Home />} />
           <Route path="/transaction" element={<Transaction />} />
           <Route
             path="/deposit-per-terminal"
-            element={<DepositPerTerminal />}
+            element={
+              <RequirePermission permissions={["report:view-deposit-per-terminal"]}>
+                <DepositPerTerminal />
+              </RequirePermission>
+            }
           />
           <Route
             path="/success-rate"
-            element={<SuccessRate />}
+            element={
+              <RequirePermission permissions={["report:view-success-transactions"]}>
+                <SuccessRate />
+              </RequirePermission>
+            }
           />
           <Route
             path="/users"
-            element={<ManageUsers />}
+            element={
+              <RequirePermission permissions={["user:view"]}>
+                <ManageUsers />
+              </RequirePermission>
+            }
           />
           <Route
             path="/user"
-            element={<CreateUser />}
+            element={
+              <RequirePermission permissions={["user:create"]}>
+                <CreateUser />
+              </RequirePermission>
+            }
           />
           <Route
             path="/user/:id"
-            element={<ViewUser />}
+            element={
+              <RequirePermission permissions={["user:view-detail"]}>
+                <ViewUser />
+              </RequirePermission>
+            }
           />
           <Route
             path="/user/:id/edit"
-            element={<EditUser />}
+            element={
+              <RequirePermission permissions={["user:update"]}>
+                <EditUser />
+              </RequirePermission>
+            }
           />
           <Route
             path="/roles"
-            element={<ManageRoles />}
+            element={
+              <RequirePermission permissions={["role:view"]}>
+                <ManageRoles />
+              </RequirePermission>
+            }
           />
           <Route
             path="/role"
-            element={<CreateRole />}
+            element={
+              <RequirePermission permissions={["role:create"]}>
+                <CreateRole />
+              </RequirePermission>
+            }
           />
           <Route
             path="/role/:id/edit"
-            element={<EditRole />}
+            element={
+              <RequirePermission permissions={["role:update"]}>
+                <EditRole />
+              </RequirePermission>
+            }
           />
           <Route
             path="/permissions"
-            element={<ManagePermissions />}
+            element={
+              <RequirePermission permissions={["permission:view"]}>
+                <ManagePermissions />
+              </RequirePermission>
+            }
           />
           <Route
             path="/permission"
-            element={<CreatePermission />}
+            element={
+              <RequirePermission permissions={["permission:create"]}>
+                <CreatePermission />
+              </RequirePermission>
+            }
           />
         </Route>
       </Routes>
