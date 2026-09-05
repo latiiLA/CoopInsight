@@ -2,9 +2,17 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Separator } from "@/components/ui/separator";
-import { Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { RootState } from "./store/store";
 
 export default function Layout() {
+  const isLoggedIn = useSelector((state: RootState) => state.user.isLoggedIn);
+
+  if (!isLoggedIn) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <SidebarProvider defaultOpen={false} className="overflow-x-hidden">
       <AppSidebar />

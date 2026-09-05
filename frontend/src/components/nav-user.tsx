@@ -21,6 +21,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+
+import { logout } from "@/features/user_slice";
+import { AppDispatch } from "../../app/store/store";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -38,6 +43,13 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const dispatch = useDispatch<AppDispatch>()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    dispatch(logout())
+    navigate("/", { replace: true })
+  }
 
   return (
     <SidebarMenu>
@@ -89,7 +101,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleLogout}>
               <LogOut />
               Log out
             </DropdownMenuItem>
