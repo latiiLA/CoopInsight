@@ -14,6 +14,7 @@ export type OnusEvent = {
   rrn: string;
   authCode: string;
   acquirer: string;
+  bankId: string;
 };
 
 export type OnusFrame = {

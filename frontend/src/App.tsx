@@ -17,6 +17,7 @@ import ManagePermissions from "./pages/system administrations/permissions/manage
 import CreatePermission from "./pages/system administrations/permissions/create-permission";
 import EditPermission from "./pages/system administrations/permissions/edit-permission";
 import OnusMonitoring from "./pages/monitoring/onus/onus-monitoring";
+import OffusMonitoring from "./pages/monitoring/offus/offus-monitoring";
 import { RequirePermission } from "./components/require-permission";
 
 function App() {
@@ -49,6 +50,14 @@ function App() {
             element={
               <RequirePermission permissions={["monitoring:view-onus"]}>
                 <OnusMonitoring />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/offus-monitoring"
+            element={
+              <RequirePermission permissions={["monitoring:view-offus"]}>
+                <OffusMonitoring />
               </RequirePermission>
             }
           />
