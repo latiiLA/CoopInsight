@@ -48,6 +48,12 @@ export function LiveSwitchFeed({
   const seen = useRef(new Set<string>());
 
   useEffect(() => {
+    if (!config.LiveMonitoringEnabled) {
+      setLive(false);
+      setError("Live monitoring is disabled");
+      return;
+    }
+
     const token = getStoredAuthToken();
     if (!token) {
       setError("Authentication token not found");
@@ -162,10 +168,16 @@ export function LiveSwitchFeed({
               className={
                 live
                   ? "inline-block h-2 w-2 rounded-full bg-emerald-500"
-                  : "inline-block h-2 w-2 rounded-full bg-amber-500"
+                  : "inline-block h-2 w-2 rounded-full bg-muted-foreground/40"
               }
             />
-            <span>{live ? "Live" : "Connecting"}</span>
+            <span>
+              {live
+                ? "Live"
+                : config.LiveMonitoringEnabled
+                  ? "Connecting"
+                  : "Disabled"}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -206,7 +218,9 @@ export function LiveSwitchFeed({
         <div className="max-h-[calc(100svh-7rem)] overflow-auto">
           {events.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-              Waiting for live {emptyLabel} transactions...
+              {config.LiveMonitoringEnabled
+                ? `Waiting for live ${emptyLabel} transactions...`
+                : `Live ${emptyLabel} monitoring is disabled`}
             </div>
           ) : filteredEvents.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-muted-foreground">
