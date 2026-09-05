@@ -16,6 +16,7 @@ import EditRole from "./pages/system administrations/roles/edit-role";
 import ManagePermissions from "./pages/system administrations/permissions/manage-permissions";
 import CreatePermission from "./pages/system administrations/permissions/create-permission";
 import EditPermission from "./pages/system administrations/permissions/edit-permission";
+import OnusMonitoring from "./pages/monitoring/onus/onus-monitoring";
 import { RequirePermission } from "./components/require-permission";
 
 function App() {
@@ -40,6 +41,14 @@ function App() {
             element={
               <RequirePermission permissions={["report:view-success-transactions"]}>
                 <SuccessRate />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/onus-monitoring"
+            element={
+              <RequirePermission permissions={["monitoring:view-onus"]}>
+                <OnusMonitoring />
               </RequirePermission>
             }
           />

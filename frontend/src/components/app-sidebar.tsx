@@ -8,6 +8,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Percent,
+  Radio,
   LucideIdCard,
   Settings,
   Shield,
@@ -133,6 +134,19 @@ const data: {
           icon: Percent,
           url: "success-rate",
           permissions: ["report:view-success-transactions"],
+        },
+      ],
+    },
+    {
+      title: "Monitoring",
+      icon: Activity,
+      url: "#",
+      items: [
+        {
+          title: "Onus monitoring",
+          icon: Radio,
+          url: "onus-monitoring",
+          permissions: ["monitoring:view-onus"],
         },
       ],
     },
