@@ -6,9 +6,9 @@ import { Outlet } from "react-router-dom";
 
 export default function Layout() {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false} className="overflow-x-hidden">
       <AppSidebar />
-      <main className="flex min-h-svh flex-1 flex-col">
+      <main className="flex min-h-svh min-w-0 flex-1 flex-col overflow-x-hidden">
         <div className="flex w-full items-center flex-row justify-between">
           <div className="pl-2 pt-1 pb-1">
             <SidebarTrigger />

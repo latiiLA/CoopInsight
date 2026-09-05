@@ -40,11 +40,11 @@ export function VersionSwitcher({
                 className="size-full object-contain"
             />
             </div>
-              <div className="flex flex-col gap-0.5 leading-none">
+              <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
                 <span className="font-medium">Switch Hub</span>
                 {/* <span className="">v{selectedVersion}</span> */}
               </div>
-              <ChevronsUpDown className="ml-auto" />
+              <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
