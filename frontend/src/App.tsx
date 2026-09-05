@@ -9,6 +9,9 @@ import ManageUsers from "./pages/system administrations/users/manage-users";
 import CreateUser from "./pages/system administrations/users/create-user";
 import ManageRoles from "./pages/system administrations/roles/manage-roles";
 import CreateRole from "./pages/system administrations/roles/create-role";
+import ManagePermissions from "./pages/system administrations/permissions/manage-permissions";
+import CreatePermission from "./pages/system administrations/permissions/create-permission";
+
 
 function App() {
   return (
@@ -39,6 +42,14 @@ function App() {
           <Route
             path="/role"
             element={<CreateRole />}
+          />
+          <Route
+            path="/permissions"
+            element={<ManagePermissions />}
+          />
+          <Route
+            path="/permission"
+            element={<CreatePermission />}
           />
         </Route>
       </Routes>

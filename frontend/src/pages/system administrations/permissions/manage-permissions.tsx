@@ -7,36 +7,38 @@ import { PlusCircle } from "lucide-react";
 import { AppDispatch, RootState } from "../../../../app/store/store";
 import { DataTable } from "@/components/data-table";
 import { columns } from "./columns";
-import { fetchRoles } from "@/features/role_slice";
+import { fetchPermissions } from "@/features/permission_slice";
 import { hasPermission } from "../../../../utility/has-permission";
 
-const ManageRoles = () => {
+const ManagePermissions = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { roles, roleError } = useSelector((state: RootState) => state.role);
+  const { allPermissions, permissionError } = useSelector(
+    (state: RootState) => state.permission,
+  );
   const { authUser } = useSelector((state: RootState) => state.user);
 
   useEffect(() => {
     if (authUser) {
-      dispatch(fetchRoles());
+      dispatch(fetchPermissions());
     }
   }, [authUser, dispatch]);
 
   useEffect(() => {
-    if (roleError) {
-      toast.error(roleError);
+    if (permissionError) {
+      toast.error(permissionError);
     }
-  }, [roleError]);
+  }, [permissionError]);
 
   return (
     <div>
       <div className="flex align-items-center justify-between">
-        <h1 className="text-lg font-semibold">Role Management</h1>
+        <h1 className="text-lg font-semibold">Permission Management</h1>
         <div className="flex gap-2">
-          {authUser && hasPermission(["role:add"]) && (
-            <Button onClick={() => navigate("/role")}>
+          {authUser && hasPermission(["permission:add"]) && (
+            <Button onClick={() => navigate("/permission")}>
               <PlusCircle />
-              Add Role
+              Add Permission
             </Button>
           )}
         </div>
@@ -44,12 +46,12 @@ const ManageRoles = () => {
 
       <DataTable
         columns={columns}
-        data={roles}
-        searchPlaceholder="Search all roles..."
-        exportFileName="Roles"
+        data={allPermissions}
+        searchPlaceholder="Search all permissions..."
+        exportFileName="Permissions"
       />
     </div>
   );
 };
 
-export default ManageRoles;
+export default ManagePermissions;

@@ -1,7 +1,8 @@
-import config from "@/configs/config";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { RootState } from "../../app/store/store";
+import { getTokenFromAuth } from "../../utility/auth-token";
+import api from "@/lib/api";
 
 export interface DepositPerTerminal {
   BRANCH_CODE: string;
@@ -41,28 +42,20 @@ export const fetchDepositPerTerminal = createAsyncThunk<
   "depositPerTerminal/fetchDepositPerTerminal",
   async ({ dateFrom, dateTo }, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().user.authUser?.data.token;
+      const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
 
       if (!token) {
-        return thunkAPI.rejectWithValue(
-          "Authentication token not found",
-        );
+        return thunkAPI.rejectWithValue("Authentication token not found");
       }
 
-      const response = await axios.get(
-        `${config.API_URL}/tests/test`,
-        {
-          params: {
-            dateFrom,
-            dateTo,
-          },
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const response = await api.get("/tests/test", {
+        params: {
+          dateFrom,
+          dateTo,
         },
-      );
+      });
 
-      return response.data.data.map((item: any) => ({
+      return response.data.data.map((item: DepositPerTerminal) => ({
         ...item,
         NUMBER_TRNX: Number(item.NUMBER_TRNX),
         TOTAL_AMT: Number(item.TOTAL_AMT),
@@ -104,13 +97,11 @@ const depositPerTerminalSlice = createSlice({
       .addCase(fetchDepositPerTerminal.rejected, (state, action) => {
         state.loading = false;
         state.error =
-          action.payload ||
-          "Failed to fetch deposit per terminal data";
+          action.payload || "Failed to fetch deposit per terminal data";
       });
   },
 });
 
-export const { clearDepositPerTerminal } =
-  depositPerTerminalSlice.actions;
+export const { clearDepositPerTerminal } = depositPerTerminalSlice.actions;
 
 export default depositPerTerminalSlice.reducer;

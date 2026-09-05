@@ -100,6 +100,16 @@ export function DataTable<TData extends RowData>({
     features,
     data,
     columns,
+    getRowId: (row, index) => {
+      const record = row as Record<string, unknown>;
+      if (typeof record._id === "string" && record._id) {
+        return record._id;
+      }
+      if (typeof record.id === "string" && record.id) {
+        return record.id;
+      }
+      return String(index);
+    },
 
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,

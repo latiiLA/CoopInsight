@@ -18,11 +18,10 @@ const ManageUsers = () => {
   );
 
   useEffect(() => {
-    if (authUser && users.length === 0) {
+    if (authUser) {
       dispatch(fetchUsers());
     }
-    console.log(users);
-  }, [authUser, users.length, dispatch]);
+  }, [authUser, dispatch]);
 
   useEffect(() => {
     if (usersError) {

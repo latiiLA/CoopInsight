@@ -1,9 +1,9 @@
-import config from "@/configs/config";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
 import { RootState } from "../../app/store/store";
 import { CreateRoleDTO, Role } from "@/types/role";
 import getErrorMessage from "../../utility/error-message";
+import { getTokenFromAuth } from "../../utility/auth-token";
+import api from "@/lib/api";
 
 interface RoleState {
   roles: Role[];
@@ -30,17 +30,13 @@ export const fetchRoles = createAsyncThunk<
   }
 >("role/fetchRoles", async (_, thunkAPI) => {
   try {
-    const token = thunkAPI.getState().user.authUser?.data.token;
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
 
     if (!token) {
       return thunkAPI.rejectWithValue("Authentication token not found");
     }
 
-    const response = await axios.get(`${config.API_URL}/roles`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.get("/roles");
 
     return response.data.data ?? [];
   } catch (error) {
@@ -57,20 +53,16 @@ export const createRole = createAsyncThunk<
   }
 >("role/createRole", async (payload, thunkAPI) => {
   try {
-    const token = thunkAPI.getState().user.authUser?.data.token;
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
 
     if (!token) {
       return thunkAPI.rejectWithValue("Authentication token not found");
     }
 
-    const response = await axios.post<{
+    const response = await api.post<{
       isSuccessful: boolean;
       message: string;
-    }>(`${config.API_URL}/roles`, payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    }>("/roles", payload);
 
     return response.data.message || "Role created successfully";
   } catch (error) {

@@ -5,9 +5,9 @@ import { ArrowUpDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataRowActions } from "@/components/data-row-actions";
 import { DataTableFeatures } from "@/components/data-table-features";
-import { Role } from "@/types/role";
+import { Permission } from "@/types/permission";
 
-const columnHelper = createColumnHelper<DataTableFeatures, Role>();
+const columnHelper = createColumnHelper<DataTableFeatures, Permission>();
 
 export const columns = columnHelper.columns([
   columnHelper.display({
@@ -45,6 +45,38 @@ export const columns = columnHelper.columns([
       );
     },
   }),
+  columnHelper.accessor("resource", {
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Resource
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+  }),
+  columnHelper.accessor("action", {
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Action
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+  }),
+  columnHelper.accessor("description", {
+    header: "Description",
+    cell: ({ row }) => row.original.description || (
+      <span className="text-muted-foreground">None</span>
+    ),
+  }),
   columnHelper.accessor("status", {
     header: ({ column }) => {
       return (
@@ -58,24 +90,25 @@ export const columns = columnHelper.columns([
       );
     },
   }),
-  {
+  columnHelper.display({
     id: "actions",
+    header: "Actions",
     enableHiding: false,
     cell: ({ row }) => (
       <DataRowActions
         row={row.original}
-        viewPath="/role/details"
-        viewPermission={["role:view-details"]}
-        editPath="/role/edit"
-        editPermission={["role:update"]}
+        viewPath="/permission/details"
+        viewPermission={["permission:view-details"]}
+        editPath="/permission/edit"
+        editPermission={["permission:update"]}
         deleteLabel="Delete"
-        deleteTitle="Delete Role"
-        deleteDescription="Are you sure you want to delete this role?"
-        deletePermission={["role:delete"]}
+        deleteTitle="Delete Permission"
+        deleteDescription="Are you sure you want to delete this permission?"
+        deletePermission={["permission:delete"]}
         onDelete={async () => {
-          // delete role here
+          // delete permission here
         }}
       />
     ),
-  },
+  }),
 ]);

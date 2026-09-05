@@ -2,10 +2,11 @@ import config from "@/configs/config";
 import { Auth } from "@/types/auth";
 import { CreateUserDTO, User } from "@/types/user";
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import axios from "axios";
 import getErrorMessage from "../../utility/error-message";
+import { AUTH_STORAGE_KEY, getTokenFromAuth } from "../../utility/auth-token";
 import { RootState } from "../../app/store/store";
 import { jwtDecode } from "jwt-decode";
+import api from "@/lib/api";
 
 export interface UserSliceState {
   authUser: Auth | null;
@@ -31,8 +32,6 @@ interface LoginCredentials {
 interface JwtPayload {
   permissions?: string[];
 }
-
-const AUTH_STORAGE_KEY = "coop-hub-auth";
 
 const getPermissionsFromToken = (token?: string): string[] => {
   if (!token) {
@@ -98,10 +97,7 @@ export const loginUser = createAsyncThunk<
 >("user/loginUser", async (credentials, thunkAPI) => {
   try {
     const loginURL = config.Login_Type || "login";
-    const response = await axios.post<Auth>(
-      `${config.API_URL}/auth/${loginURL}`,
-      credentials,
-    );
+    const response = await api.post<Auth>(`/auth/${loginURL}`, credentials);
 
     return response.data;
   } catch (error: unknown) {
@@ -115,20 +111,16 @@ export const registerAuth = createAsyncThunk<
   { state: RootState; rejectValue: string }
 >("user/registerAuth", async (payload, thunkAPI) => {
   try {
-    const token = thunkAPI.getState().user.authUser?.data.token;
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
 
     if (!token) {
       return thunkAPI.rejectWithValue("Authentication token not found");
     }
 
-    const response = await axios.post<{
+    const response = await api.post<{
       isSuccessful: boolean;
       message: string;
-    }>(`${config.API_URL}/users`, payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    }>("/users", payload);
 
     return response.data.message || "User registered successfully";
   } catch (error: unknown) {
@@ -142,21 +134,17 @@ export const fetchUsers = createAsyncThunk<
   { state: RootState; rejectValue: string }
 >("user/fetchUsers", async (_, thunkAPI) => {
   try {
-    const token = thunkAPI.getState().user.authUser?.data.token;
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
 
     if (!token) {
       return thunkAPI.rejectWithValue("Authentication token not found");
     }
 
-    const response = await axios.get<{
+    const response = await api.get<{
       isSuccessful: boolean;
       message: string;
       data: User[];
-    }>(`${config.API_URL}/users`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    }>("/users");
 
     return response.data.data ?? [];
   } catch (error: unknown) {

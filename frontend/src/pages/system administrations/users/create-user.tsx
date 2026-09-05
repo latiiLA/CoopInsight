@@ -59,6 +59,11 @@ const formSchema = z.object({
       /^[a-zA-Z0-9._-]+$/,
       "Username can only contain letters, numbers, dots, underscores and hyphens",
     ),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Enter a valid email address"),
   role: z.string().min(1, "Role is required"),
   permissions: z.array(z.string()),
 });
@@ -94,6 +99,7 @@ const CreateUser = () => {
       middleName: "",
       lastName: "",
       username: "",
+      email: "",
       role: "",
       permissions: [],
     },
@@ -146,6 +152,7 @@ const CreateUser = () => {
       firstName: values.firstName.trim(),
       middleName: values.middleName.trim(),
       lastName: values.lastName.trim(),
+      email: values.email.trim().toLowerCase(),
       role: values.role,
       permissions: values.permissions ?? [],
     };
@@ -301,6 +308,31 @@ const CreateUser = () => {
 
                       <FormDescription>
                         Use the username the user will use to sign in.
+                      </FormDescription>
+
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="Enter email address"
+                          autoComplete="email"
+                          {...field}
+                        />
+                      </FormControl>
+
+                      <FormDescription>
+                        Used for notifications and account identification.
                       </FormDescription>
 
                       <FormMessage />

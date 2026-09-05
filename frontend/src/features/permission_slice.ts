@@ -1,19 +1,24 @@
-import config from "@/configs/config";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
 import { RootState } from "../../app/store/store";
-import { Permission } from "@/types/permission";
+import { CreatePermissionDTO, Permission } from "@/types/permission";
+import getErrorMessage from "../../utility/error-message";
+import { getTokenFromAuth } from "../../utility/auth-token";
+import api from "@/lib/api";
 
 interface PermissionState {
   allPermissions: Permission[];
   permissionLoading: boolean;
   permissionError: string | null;
+  createLoading: boolean;
+  createError: string | null;
 }
 
 const initialState: PermissionState = {
   allPermissions: [],
   permissionLoading: false,
   permissionError: null,
+  createLoading: false,
+  createError: null,
 };
 
 export const fetchPermissions = createAsyncThunk<
@@ -25,30 +30,43 @@ export const fetchPermissions = createAsyncThunk<
   }
 >("permission/fetchPermissions", async (_, thunkAPI) => {
   try {
-    const token = thunkAPI.getState().user.authUser?.data.token;
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
 
     if (!token) {
       return thunkAPI.rejectWithValue("Authentication token not found");
     }
 
-    const response = await axios.get(`${config.API_URL}/permissions`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.get("/permissions");
 
-    return response.data.data ?? []
+    return response.data.data ?? [];
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.message ||
-          "Failed to fetch permissions",
-      );
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
+export const createPermission = createAsyncThunk<
+  string,
+  CreatePermissionDTO,
+  {
+    state: RootState;
+    rejectValue: string;
+  }
+>("permission/createPermission", async (payload, thunkAPI) => {
+  try {
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
     }
 
-    return thunkAPI.rejectWithValue(
-      "Failed to fetch permissions",
-    );
+    const response = await api.post<{
+      isSuccessful: boolean;
+      message: string;
+    }>("/permissions", payload);
+
+    return response.data.message || "Permission created successfully";
+  } catch (error) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
   }
 });
 
@@ -59,6 +77,9 @@ const permissionSlice = createSlice({
     clearPermissions: (state) => {
       state.allPermissions = [];
       state.permissionError = null;
+    },
+    clearCreateError: (state) => {
+      state.createError = null;
     },
   },
   extraReducers: (builder) => {
@@ -74,10 +95,22 @@ const permissionSlice = createSlice({
       .addCase(fetchPermissions.rejected, (state, action) => {
         state.permissionLoading = false;
         state.permissionError = action.payload || "Failed to fetch permissions";
+      })
+      .addCase(createPermission.pending, (state) => {
+        state.createLoading = true;
+        state.createError = null;
+      })
+      .addCase(createPermission.fulfilled, (state) => {
+        state.createLoading = false;
+        state.createError = null;
+      })
+      .addCase(createPermission.rejected, (state, action) => {
+        state.createLoading = false;
+        state.createError = action.payload || "Failed to create permission";
       });
   },
 });
 
-export const { clearPermissions } = permissionSlice.actions;
+export const { clearPermissions, clearCreateError } = permissionSlice.actions;
 
 export default permissionSlice.reducer;

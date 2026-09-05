@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Home,
   HomeIcon,
+  KeyRound,
   LayoutDashboard,
   LucideIdCard,
   ProjectorIcon,
@@ -146,6 +147,11 @@ const data: {
           title: "Manage Roles",
           url: "roles",
           icon: Shield,
+        },
+        {
+          title: "Manage Permissions",
+          url: "permissions",
+          icon: KeyRound,
         },
         {
           title: "Analytics",
