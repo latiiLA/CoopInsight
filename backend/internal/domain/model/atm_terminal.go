@@ -20,6 +20,7 @@ type AtmTerminal struct {
 	Port         int                `json:"port" bson:"port"`
 	IPAddress    string             `json:"ipAddress" bson:"ipAddress"`
 	Status       string             `json:"status" bson:"status"`
+	IsDeleted    bool               `json:"isDeleted" bson:"isDeleted"`
 	CreatedAt    time.Time          `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 	UpdatedAt    time.Time          `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
 }

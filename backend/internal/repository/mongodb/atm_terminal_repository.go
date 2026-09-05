@@ -22,9 +22,6 @@ func NewAtmTerminalRepository(db *mongo.Database) repository.AtmTerminalReposito
 
 func (r *atmTerminalRepository) FindAll(ctx context.Context) ([]model.AtmTerminal, error) {
 	pipeline := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: bson.D{
-			{Key: "isDeleted", Value: bson.D{{Key: "$ne", Value: true}}},
-		}}},
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "branches"},
 			{Key: "localField", Value: "branchName"},
@@ -66,6 +63,9 @@ func (r *atmTerminalRepository) FindAll(ctx context.Context) ([]model.AtmTermina
 			{Key: "port", Value: 1},
 			{Key: "ipAddress", Value: 1},
 			{Key: "status", Value: 1},
+			{Key: "isDeleted", Value: bson.D{
+				{Key: "$eq", Value: bson.A{"$isDeleted", true}},
+			}},
 			{Key: "createdAt", Value: 1},
 			{Key: "updatedAt", Value: 1},
 		}}},
