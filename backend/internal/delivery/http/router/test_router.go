@@ -9,6 +9,6 @@ func registerTestRoutes(protected *gin.RouterGroup, testHandler handler.TestHand
 	users := protected.Group("/tests")
 
 	users.GET("/test", testHandler.GetTestData)
-	// group.POST("/register", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"user:add"}), authController.Register)
+	// group.POST("/register", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"user:create"}), authController.Register)
 
 }

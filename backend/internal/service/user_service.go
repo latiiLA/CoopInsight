@@ -108,7 +108,7 @@ func (s *userService) Authenticate(ctx context.Context, username, password, ip s
 	}
 	logrus.Println("✅ User authentication successful")
 
-	return s.issueLoginResponse(existingUser, ip)
+	return s.issueLoginResponse(ctx, existingUser, ip)
 }
 
 func (s *userService) AuthenticateLocal(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error) {
@@ -124,7 +124,7 @@ func (s *userService) AuthenticateLocal(ctx context.Context, username, password,
 
 	logrus.Println("local user authentication successful")
 
-	return s.issueLoginResponse(existingUser, ip)
+	return s.issueLoginResponse(ctx, existingUser, ip)
 }
 
 func (s *userService) findEligibleUser(ctx context.Context, username string) (*model.User, error) {
@@ -144,13 +144,26 @@ func (s *userService) findEligibleUser(ctx context.Context, username string) (*m
 	return existingUser, nil
 }
 
-func (s *userService) issueLoginResponse(existingUser *model.User, ip string) (*dto.LoginResponse, error) {
+func (s *userService) issueLoginResponse(ctx context.Context, existingUser *model.User, ip string) (*dto.LoginResponse, error) {
+	role := existingUser.Role
+	if !existingUser.RoleID.IsZero() {
+		fetchedRole, err := s.roleRepository.FindByID(ctx, existingUser.RoleID)
+		if err != nil {
+			return nil, err
+		}
+
+		if fetchedRole != nil {
+			role = fetchedRole
+			existingUser.Role = fetchedRole
+		}
+	}
+
 	var roleName string
 	var rolePerms []string
 
-	if existingUser.Role != nil {
-		roleName = existingUser.Role.Name
-		rolePerms = existingUser.Role.Permissions
+	if role != nil {
+		roleName = role.Name
+		rolePerms = role.Permissions
 	}
 
 	effectivePerms := utils.MergePermissions(rolePerms, existingUser.Permissions)

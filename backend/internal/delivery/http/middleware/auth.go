@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"slices"
 	"strings"
 
 	"github.com/dgrijalva/jwt-go"
@@ -87,15 +86,11 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermissions []st
 		// --------------------------------------------------
 
 		if role, ok := claims["role"].(string); ok {
-			if slices.Contains(allowedRoles, role) {
+			if containsPermission(allowedRoles, role) {
 				c.Next()
 				return
 			}
 		}
-
-		// --------------------------------------------------
-		// Permission authorization
-		// --------------------------------------------------
 
 		permissions, exists := claims["permissions"]
 		if !exists {
@@ -109,11 +104,17 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermissions []st
 		userPermissions := extractPermissions(permissions)
 
 		for _, required := range requiredPermissions {
-			if slices.Contains(userPermissions, required) {
+			if containsPermission(userPermissions, required) {
 				c.Next()
 				return
 			}
 		}
+
+		logrus.WithFields(logrus.Fields{
+			"role":     claims["role"],
+			"required": requiredPermissions,
+			"have":     userPermissions,
+		}).Warn("Access denied")
 
 		c.AbortWithStatusJSON(http.StatusForbidden, response.Status{
 			Message: "Access denied",
@@ -141,6 +142,16 @@ func extractPermissions(value interface{}) []string {
 	default:
 		return nil
 	}
+}
+
+func containsPermission(permissions []string, required string) bool {
+	for _, permission := range permissions {
+		if strings.EqualFold(strings.TrimSpace(permission), strings.TrimSpace(required)) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func toClaimsMap(value interface{}) (map[string]interface{}, bool) {
