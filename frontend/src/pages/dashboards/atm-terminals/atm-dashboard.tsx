@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { fetchAtmTerminals } from "@/features/atm_terminal_slice";
 import { cn } from "@/lib/utils";
 import { AppDispatch, RootState } from "../../../../app/store/store";
+import { FleetChangeCard } from "../fleet-change-card";
 import {
   atmTerminalsPath,
   countBy,
@@ -147,6 +148,14 @@ const AtmDashboard = () => {
           <ArrowRight className="size-4" />
         </Button>
       </div>
+
+      <FleetChangeCard
+        terminals={terminals}
+        loading={loading}
+        label="New + Active ATMs"
+        icon={Activity}
+        onClick={() => navigate(atmTerminalsPath())}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard

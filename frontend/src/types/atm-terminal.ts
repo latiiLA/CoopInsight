@@ -13,4 +13,6 @@ export type AtmTerminal = {
   ipAddress?: string;
   status?: string;
   isDeleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };

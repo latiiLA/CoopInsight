@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { fetchPosTerminals } from "@/features/pos_terminal_slice";
 import { cn } from "@/lib/utils";
 import { AppDispatch, RootState } from "../../../../app/store/store";
+import { FleetChangeCard } from "../fleet-change-card";
 import {
   SITE_BRANCH,
   SITE_MERCHANT,
@@ -158,6 +159,14 @@ const PosDashboard = () => {
           <ArrowRight className="size-4" />
         </Button>
       </div>
+
+      <FleetChangeCard
+        terminals={terminals}
+        loading={loading}
+        label="New + Active POS"
+        icon={Activity}
+        onClick={() => navigate(posTerminalsPath())}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard
