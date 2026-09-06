@@ -23,6 +23,7 @@ import AtmDashboard from "./pages/dashboards/atm-terminals/atm-dashboard";
 import PosTerminals from "./pages/dashboards/pos-terminals/pos-terminals";
 import PosDashboard from "./pages/dashboards/pos-terminals/pos-dashboard";
 import Account from "./pages/account/account";
+import NotFound from "./pages/not-found";
 import { RequirePermission } from "./components/require-permission";
 
 function App() {
@@ -179,6 +180,7 @@ function App() {
               </RequirePermission>
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </>
