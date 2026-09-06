@@ -21,11 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  CountSlice,
-  formatCount,
-  type StackedDistrictRow,
-} from "./atm-fleet";
+import { CountSlice, formatCount } from "./atm-fleet";
 
 const SLICE_COLORS = [
   "var(--chart-1)",
@@ -40,6 +36,11 @@ const SLICE_COLORS = [
 ];
 
 const OTHERS = "Others";
+
+type StackedBarRow = {
+  name: string;
+  [key: string]: string | number;
+};
 
 type PieSlice = CountSlice & {
   sharePercent: number;
@@ -368,7 +369,7 @@ export function FleetStackedBar({
 }: {
   title: string;
   description: string;
-  rows: StackedDistrictRow[];
+  rows: StackedBarRow[];
   series: Array<{ key: string; color: string }>;
   loading: boolean;
   onSelect?: (name: string) => void;
@@ -429,7 +430,7 @@ export function FleetStackedBar({
                       }
                       onClick={(data) => {
                         const point = data as
-                          | (StackedDistrictRow & { payload?: StackedDistrictRow })
+                          | (StackedBarRow & { payload?: StackedBarRow })
                           | undefined;
                         const name = point?.name ?? point?.payload?.name;
                         if (name && name !== OTHERS) {

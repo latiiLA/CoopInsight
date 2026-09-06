@@ -170,8 +170,9 @@ const data: {
         },
         {
           title: "POS Terminal",
-          url: "#",
+          url: "pos-dashboard",
           icon: LucideIdCard,
+          permissions: ["terminal:view-pos"],
         },
       ],
     },

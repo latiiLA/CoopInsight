@@ -20,6 +20,8 @@ import OnusMonitoring from "./pages/monitoring/onus/onus-monitoring";
 import OffusMonitoring from "./pages/monitoring/offus/offus-monitoring";
 import AtmTerminals from "./pages/dashboards/atm-terminals/atm-terminals";
 import AtmDashboard from "./pages/dashboards/atm-terminals/atm-dashboard";
+import PosTerminals from "./pages/dashboards/pos-terminals/pos-terminals";
+import PosDashboard from "./pages/dashboards/pos-terminals/pos-dashboard";
 import { RequirePermission } from "./components/require-permission";
 
 function App() {
@@ -76,6 +78,22 @@ function App() {
             element={
               <RequirePermission permissions={["terminal:view-atm"]}>
                 <AtmTerminals />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pos-dashboard"
+            element={
+              <RequirePermission permissions={["terminal:view-pos"]}>
+                <PosDashboard />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pos-terminals"
+            element={
+              <RequirePermission permissions={["terminal:view-pos"]}>
+                <PosTerminals />
               </RequirePermission>
             }
           />
