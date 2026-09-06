@@ -168,12 +168,17 @@ func main() {
 	roleHandler := handler.NewRoleHandler(roleService)
 
 	var atmTerminalHandler handler.AtmTerminalHandler
+	var posTerminalHandler handler.PosTerminalHandler
 	if tmsDB != nil {
 		atmTerminalHandler = handler.NewAtmTerminalHandler(
 			service.NewAtmTerminalService(mongodb.NewAtmTerminalRepository(tmsDB)),
 		)
+		posTerminalHandler = handler.NewPosTerminalHandler(
+			service.NewPosTerminalService(mongodb.NewPosTerminalRepository(tmsDB)),
+		)
 	} else {
 		atmTerminalHandler = handler.NewAtmTerminalHandler(service.NewAtmTerminalService(nil))
+		posTerminalHandler = handler.NewPosTerminalHandler(service.NewPosTerminalService(nil))
 	}
 
 	var testHandler handler.TestHandler
@@ -235,6 +240,7 @@ func main() {
 		Test:               testHandler,
 		SuccessTransaction: successTransactionHandler,
 		AtmTerminal:        atmTerminalHandler,
+		PosTerminal:        posTerminalHandler,
 		OnusMonitoring:     onusHandler,
 		OffusMonitoring:    offusHandler,
 		SwitchCommand:      switchCommandHandler,

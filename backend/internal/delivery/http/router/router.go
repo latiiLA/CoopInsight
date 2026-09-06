@@ -18,6 +18,7 @@ type Handlers struct {
 	Test               handler.TestHandler
 	SuccessTransaction handler.SuccessTransactionHandler
 	AtmTerminal        handler.AtmTerminalHandler
+	PosTerminal        handler.PosTerminalHandler
 	OnusMonitoring     handler.OnusMonitoringHandler
 	OffusMonitoring    handler.OnusMonitoringHandler
 	SwitchCommand      handler.SwitchCommandHandler
@@ -123,6 +124,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	registerPermissionRoutes(protected, handlers.Permission)
 	registerRoleRoutes(protected, handlers.Role)
 	registerAtmTerminalRoutes(protected, handlers.AtmTerminal)
+	registerPosTerminalRoutes(protected, handlers.PosTerminal)
 
 	// --------------------------------------------------
 	// Protected Oracle routes - longer timeout

@@ -48,6 +48,7 @@ var appErrors = []struct {
 	{common.ErrInvalidDateRange, http.StatusBadRequest},
 	{common.ErrFailedToFetchReport, http.StatusInternalServerError},
 	{common.ErrFailedToFetchAtmTerminals, http.StatusInternalServerError},
+	{common.ErrFailedToFetchPosTerminals, http.StatusInternalServerError},
 	{common.ErrOnusMonitoringUnavailable, http.StatusServiceUnavailable},
 	{common.ErrOffusMonitoringUnavailable, http.StatusServiceUnavailable},
 	{common.ErrSwitchCommandUnavailable, http.StatusServiceUnavailable},

@@ -41,6 +41,7 @@ var (
 	ErrInvalidDateRange           = errors.New("dateFrom must be on or before dateTo")
 	ErrFailedToFetchReport        = errors.New("failed to fetch report")
 	ErrFailedToFetchAtmTerminals  = errors.New("failed to fetch ATM terminals")
+	ErrFailedToFetchPosTerminals  = errors.New("failed to fetch POS terminals")
 	ErrOnusMonitoringUnavailable  = errors.New("on-us monitoring is unavailable")
 	ErrOffusMonitoringUnavailable = errors.New("off-us monitoring is unavailable")
 	ErrSwitchCommandUnavailable   = errors.New("switch command is unavailable")
