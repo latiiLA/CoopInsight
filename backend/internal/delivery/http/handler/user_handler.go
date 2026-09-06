@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -24,6 +25,9 @@ type UserHandler interface {
 	GetByID(c *gin.Context)
 	Create(c *gin.Context)
 	Update(c *gin.Context)
+	UpdateAvatar(c *gin.Context)
+	UploadAvatarPhoto(c *gin.Context)
+	UpdateProfile(c *gin.Context)
 	Delete(c *gin.Context)
 }
 
@@ -378,6 +382,139 @@ func (h *userHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Status{
 		IsSuccessful: true,
 		Message:      "User updated successfully",
+	})
+}
+
+func (h *userHandler) UpdateAvatar(c *gin.Context) {
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessUnauthorized,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	var req dto.UpdateAvatarRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessInvalidRequest,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	if err := h.userService.UpdateAvatar(c, authUserID, req.Avatar); err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	normalized, _ := model.NormalizeAvatarChoice(req.Avatar)
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Avatar updated successfully",
+		Data: gin.H{
+			"avatar": normalized,
+		},
+	})
+}
+
+const maxAvatarBytes int64 = 2 * 1024 * 1024
+
+func (h *userHandler) UploadAvatarPhoto(c *gin.Context) {
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessUnauthorized,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	file, err := c.FormFile("photo")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessInvalidRequestFile,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	if file.Size > maxAvatarBytes {
+		writeAppError(c, common.ErrInvalidAvatarFile)
+		return
+	}
+
+	src, err := file.Open()
+	if err != nil {
+		writeAppError(c, common.ErrInvalidAvatarFile)
+		return
+	}
+	defer src.Close()
+
+	data, err := io.ReadAll(io.LimitReader(src, maxAvatarBytes+1))
+	if err != nil {
+		writeAppError(c, common.ErrInvalidAvatarFile)
+		return
+	}
+	if int64(len(data)) > maxAvatarBytes {
+		writeAppError(c, common.ErrInvalidAvatarFile)
+		return
+	}
+
+	avatar, err := h.userService.UploadAvatarPhoto(c, authUserID, data)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Avatar updated successfully",
+		Data: gin.H{
+			"avatar": avatar,
+		},
+	})
+}
+
+func (h *userHandler) UpdateProfile(c *gin.Context) {
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessUnauthorized,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	var req dto.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessInvalidRequest,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	profile, err := h.userService.UpdateProfile(c, authUserID, &req)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Profile updated successfully",
+		Data: gin.H{
+			"profile": profile,
+		},
 	})
 }
 

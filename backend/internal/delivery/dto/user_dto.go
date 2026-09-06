@@ -7,6 +7,18 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type UpdateAvatarRequest struct {
+	Avatar string `json:"avatar"`
+}
+
+type UpdateProfileRequest struct {
+	JobTitle   string `json:"jobTitle" binding:"max=80"`
+	Department string `json:"department" binding:"max=80"`
+	Branch     string `json:"branch" binding:"max=80"`
+	Phone      string `json:"phone" binding:"max=30"`
+	Bio        string `json:"bio" binding:"max=500"`
+}
+
 type UpdateUserRequest struct {
 	FirstName   string   `json:"firstName" binding:"required,min=3,max=50"`
 	MiddleName  string   `json:"middleName" binding:"required,min=3,max=50"`

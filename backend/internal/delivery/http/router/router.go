@@ -72,7 +72,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	// Static files
 	// --------------------------------------------------
 
-	router.Static("/uploads", "./uploads")
+	router.Static("/uploads", configs.FileUploadPath)
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -121,6 +121,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	)
 
 	registerUserRoutes(protected, handlers.User)
+	registerAccountRoutes(protected, handlers.User)
 	registerPermissionRoutes(protected, handlers.Permission)
 	registerRoleRoutes(protected, handlers.Role)
 	registerAtmTerminalRoutes(protected, handlers.AtmTerminal)

@@ -12,6 +12,9 @@ var (
 	ErrFailedToFetchUsers    = errors.New("failed to fetch users")
 	ErrFailedToCreateUser    = errors.New("failed to create user")
 	ErrFailedToUpdateUser    = errors.New("failed to update user")
+	ErrInvalidAvatar         = errors.New("invalid avatar")
+	ErrInvalidAvatarFile     = errors.New("photo must be a JPEG, PNG, or WebP under 2 MB")
+	ErrInvalidProfile        = errors.New("invalid profile")
 	ErrFailedToDecodeUser    = errors.New("failed to decode user")
 
 	ErrRoleNotFound          = errors.New("role not found")

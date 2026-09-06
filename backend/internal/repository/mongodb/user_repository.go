@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"time"
 
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
@@ -83,6 +84,8 @@ func (ur *userRepository) FindByUsername(ctx context.Context, username string) (
 			{Key: "role", Value: 1},
 			{Key: "username", Value: 1},
 			{Key: "status", Value: 1},
+			{Key: "avatar", Value: 1},
+			{Key: "profile", Value: 1},
 			{Key: "password", Value: 1},
 			{Key: "permissions", Value: 1},
 			{Key: "roleId", Value: 1},
@@ -167,6 +170,8 @@ func (ur *userRepository) FindByID(ctx context.Context, userID primitive.ObjectI
 			{Key: "roleId", Value: 1},
 			{Key: "username", Value: 1},
 			{Key: "status", Value: 1},
+			{Key: "avatar", Value: 1},
+			{Key: "profile", Value: 1},
 			{Key: "permissions", Value: 1},
 			{Key: "createdAt", Value: 1},
 			{Key: "updatedAt", Value: 1},
@@ -275,6 +280,8 @@ func (ur *userRepository) FindAll(ctx context.Context) ([]model.User, error) {
 				{Key: "email", Value: 1},
 				{Key: "username", Value: 1},
 				{Key: "status", Value: 1},
+				{Key: "avatar", Value: 1},
+				{Key: "profile", Value: 1},
 				{Key: "createdAt", Value: 1},
 				{Key: "updatedAt", Value: 1},
 				{Key: "createdAy", Value: 1},
@@ -346,6 +353,66 @@ func (ur *userRepository) Update(ctx context.Context, user *model.User) error {
 				"status":      user.Status,
 				"updatedAt":   user.UpdatedAt,
 				"updatedBy":   user.UpdatedBy,
+			},
+		},
+	)
+	if err != nil {
+		return wrapDBError(common.ErrFailedToUpdateUser, err)
+	}
+
+	if result.MatchedCount == 0 {
+		return common.ErrUserNotFound
+	}
+
+	return nil
+}
+
+func (ur *userRepository) UpdateAvatar(ctx context.Context, userID primitive.ObjectID, avatar string, updatedAt time.Time) error {
+	result, err := ur.collection.UpdateOne(
+		ctx,
+		bson.M{
+			"_id": userID,
+			"status": bson.M{
+				"$ne": model.StatusDeleted,
+			},
+		},
+		bson.M{
+			"$set": bson.M{
+				"avatar":    avatar,
+				"updatedAt": updatedAt,
+			},
+		},
+	)
+	if err != nil {
+		return wrapDBError(common.ErrFailedToUpdateUser, err)
+	}
+
+	if result.MatchedCount == 0 {
+		return common.ErrUserNotFound
+	}
+
+	return nil
+}
+
+func (ur *userRepository) UpdateProfile(ctx context.Context, userID primitive.ObjectID, profile model.UserProfile, updatedAt time.Time) error {
+	result, err := ur.collection.UpdateOne(
+		ctx,
+		bson.M{
+			"_id": userID,
+			"status": bson.M{
+				"$ne": model.StatusDeleted,
+			},
+		},
+		bson.M{
+			"$set": bson.M{
+				"profile": bson.M{
+					"jobTitle":   profile.JobTitle,
+					"department": profile.Department,
+					"branch":     profile.Branch,
+					"phone":      profile.Phone,
+					"bio":        profile.Bio,
+				},
+				"updatedAt": updatedAt,
 			},
 		},
 	)

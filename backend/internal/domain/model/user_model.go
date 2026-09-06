@@ -28,6 +28,8 @@ type User struct {
 	Permissions []string            `json:"permissions,omitempty" bson:"permissions,omitempty"`
 	Username    string              `json:"username" bson:"username"`
 	Password    string              `json:"-" bson:"password,omitempty"`
+	Avatar      string              `json:"avatar,omitempty" bson:"avatar,omitempty"`
+	Profile     UserProfile         `json:"profile,omitempty" bson:"profile,omitempty"`
 	Status      UserStatus          `json:"status" bson:"status"`
 	LastLogin   *time.Time          `json:"lastLogin,omitempty" bson:"lastLogin,omitempty"`
 	CreatedAt   time.Time           `json:"createdAt" bson:"createdAt"`
@@ -38,4 +40,12 @@ type User struct {
 	UpdatedBy   *primitive.ObjectID `json:"updatedBy,omitempty" bson:"updatedBy,omitempty"`
 	DeletedBy   *primitive.ObjectID `json:"deletedBy,omitempty" bson:"deletedBy,omitempty"`
 	DeletedAt   *time.Time          `json:"deletedAt,omitempty" bson:"deletedAt,omitempty"`
+}
+
+type UserProfile struct {
+	JobTitle   string `json:"jobTitle,omitempty" bson:"jobTitle,omitempty"`
+	Department string `json:"department,omitempty" bson:"department,omitempty"`
+	Branch     string `json:"branch,omitempty" bson:"branch,omitempty"`
+	Phone      string `json:"phone,omitempty" bson:"phone,omitempty"`
+	Bio        string `json:"bio,omitempty" bson:"bio,omitempty"`
 }

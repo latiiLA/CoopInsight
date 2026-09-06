@@ -4,10 +4,13 @@ import (
 	"context"
 	"crypto/subtle"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
+	"github.com/latiiLA/CoopInsight/backend/configs"
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/dto"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
@@ -27,6 +30,9 @@ type UserService interface {
 	GetByID(ctx context.Context, userID primitive.ObjectID) (*model.User, error)
 	GetAll(ctx context.Context) ([]model.User, error)
 	Update(ctx context.Context, updatedBy primitive.ObjectID, userID primitive.ObjectID, req *dto.UpdateUserRequest) error
+	UpdateAvatar(ctx context.Context, userID primitive.ObjectID, avatar string) error
+	UploadAvatarPhoto(ctx context.Context, userID primitive.ObjectID, data []byte) (string, error)
+	UpdateProfile(ctx context.Context, userID primitive.ObjectID, req *dto.UpdateProfileRequest) (*model.UserProfile, error)
 }
 
 type userService struct {
@@ -178,13 +184,21 @@ func (s *userService) issueLoginResponse(ctx context.Context, existingUser *mode
 		return nil, err
 	}
 
+	avatar := existingUser.Avatar
+	if avatar != "" && !model.IsAllowedAvatar(avatar) && !model.IsPhotoAvatar(avatar) {
+		avatar = ""
+	}
+
 	return &dto.LoginResponse{
 		User: model.User{
 			ID:         existingUser.ID,
 			FirstName:  existingUser.FirstName,
 			MiddleName: existingUser.MiddleName,
+			LastName:   existingUser.LastName,
 			Username:   existingUser.Username,
 			Email:      existingUser.Email,
+			Avatar:     avatar,
+			Profile:    existingUser.Profile,
 			Role:       existingUser.Role,
 		},
 		Token:        accessToken,
@@ -311,6 +325,85 @@ func (s *userService) Update(ctx context.Context, updatedBy primitive.ObjectID, 
 	existing.UpdatedBy = &updatedBy
 
 	return s.userRepository.Update(ctx, existing)
+}
+
+func (s *userService) UpdateAvatar(ctx context.Context, userID primitive.ObjectID, avatar string) error {
+	normalized, ok := model.NormalizeAvatarChoice(avatar)
+	if !ok {
+		return common.ErrInvalidAvatar
+	}
+
+	if _, err := s.GetByID(ctx, userID); err != nil {
+		return err
+	}
+
+	removeUserAvatarFiles(userID)
+
+	return s.userRepository.UpdateAvatar(ctx, userID, normalized, time.Now())
+}
+
+func (s *userService) UploadAvatarPhoto(ctx context.Context, userID primitive.ObjectID, data []byte) (string, error) {
+	if _, err := s.GetByID(ctx, userID); err != nil {
+		return "", err
+	}
+
+	ext, ok := model.ImageExtension(data)
+	if !ok {
+		return "", common.ErrInvalidAvatarFile
+	}
+
+	dir := filepath.Join(configs.FileUploadPath, "avatars")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", fmt.Errorf("%w: %v", common.ErrFailedToUpdateUser, err)
+	}
+
+	removeUserAvatarFiles(userID)
+
+	filename := fmt.Sprintf("%s-%d.%s", userID.Hex(), time.Now().Unix(), ext)
+	absPath := filepath.Join(dir, filename)
+	if err := os.WriteFile(absPath, data, 0o644); err != nil {
+		return "", fmt.Errorf("%w: %v", common.ErrFailedToUpdateUser, err)
+	}
+
+	publicPath := "/uploads/avatars/" + filename
+	if err := s.userRepository.UpdateAvatar(ctx, userID, publicPath, time.Now()); err != nil {
+		_ = os.Remove(absPath)
+		return "", err
+	}
+
+	return publicPath, nil
+}
+
+func (s *userService) UpdateProfile(ctx context.Context, userID primitive.ObjectID, req *dto.UpdateProfileRequest) (*model.UserProfile, error) {
+	if req == nil {
+		return nil, common.ErrInvalidProfile
+	}
+
+	if _, err := s.GetByID(ctx, userID); err != nil {
+		return nil, err
+	}
+
+	profile, ok := model.NormalizeProfile(req.JobTitle, req.Department, req.Branch, req.Phone, req.Bio)
+	if !ok {
+		return nil, common.ErrInvalidProfile
+	}
+
+	if err := s.userRepository.UpdateProfile(ctx, userID, profile, time.Now()); err != nil {
+		return nil, err
+	}
+
+	return &profile, nil
+}
+
+func removeUserAvatarFiles(userID primitive.ObjectID) {
+	matches, err := filepath.Glob(filepath.Join(configs.FileUploadPath, "avatars", userID.Hex()+"*"))
+	if err != nil {
+		return
+	}
+
+	for _, match := range matches {
+		_ = os.Remove(match)
+	}
 }
 
 func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID, req *dto.RegisterRequest) error {
