@@ -25,3 +25,7 @@ type LoginResponse struct {
 	Token        string     `json:"token"`
 	RefreshToken string     `json:"refreshToken"`
 }
+
+type RefreshRequest struct {
+	RefreshToken string `json:"refreshToken" binding:"required"`
+}

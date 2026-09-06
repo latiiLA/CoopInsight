@@ -21,6 +21,7 @@ import (
 type UserHandler interface {
 	Login(c *gin.Context)
 	LoginLocal(c *gin.Context)
+	Refresh(c *gin.Context)
 	GetAll(c *gin.Context)
 	GetByID(c *gin.Context)
 	Create(c *gin.Context)
@@ -77,6 +78,21 @@ func (a *userHandler) LoginLocal(c *gin.Context) {
 	a.writeLoginResult(c, user, err)
 }
 
+func (a *userHandler) Refresh(c *gin.Context) {
+	var req dto.RefreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessInvalidRequest,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	user, err := a.userService.RefreshSession(c, req.RefreshToken, c.ClientIP())
+	a.writeLoginResult(c, user, err)
+}
+
 func bindLoginRequest(c *gin.Context) (dto.LoginRequest, bool) {
 	var req dto.LoginRequest
 
@@ -121,6 +137,10 @@ func (a *userHandler) writeLoginResult(c *gin.Context, user *dto.LoginResponse, 
 		case errors.Is(err, common.ErrUserAccessRevoked):
 			status = http.StatusUnauthorized
 			message = "Account status has been disabled"
+
+		case errors.Is(err, common.ErrInvalidRefreshToken):
+			status = http.StatusUnauthorized
+			message = "Session expired. Please sign in again"
 
 		case errors.Is(err, common.ErrADUserNotFound):
 			status = http.StatusForbidden

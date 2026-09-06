@@ -25,6 +25,7 @@ import (
 type UserService interface {
 	Authenticate(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error)
 	AuthenticateLocal(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error)
+	RefreshSession(ctx context.Context, refreshToken, ip string) (*dto.LoginResponse, error)
 	Register(ctx context.Context, createdBy primitive.ObjectID, req *dto.RegisterRequest) error
 	GetUserDetails(ctx context.Context, username string) (*dto.UserResponse, error)
 	GetByID(ctx context.Context, userID primitive.ObjectID) (*model.User, error)
@@ -114,7 +115,7 @@ func (s *userService) Authenticate(ctx context.Context, username, password, ip s
 	}
 	logrus.Println("✅ User authentication successful")
 
-	return s.issueLoginResponse(ctx, existingUser, ip)
+	return s.issueSessionResponse(ctx, existingUser, ip, "")
 }
 
 func (s *userService) AuthenticateLocal(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error) {
@@ -130,7 +131,34 @@ func (s *userService) AuthenticateLocal(ctx context.Context, username, password,
 
 	logrus.Println("local user authentication successful")
 
-	return s.issueLoginResponse(ctx, existingUser, ip)
+	return s.issueSessionResponse(ctx, existingUser, ip, "")
+}
+
+func (s *userService) RefreshSession(ctx context.Context, refreshToken, ip string) (*dto.LoginResponse, error) {
+	claims, err := auth.ValidateRefreshToken(refreshToken, ip)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", common.ErrInvalidRefreshToken, err)
+	}
+
+	userIDHex, _ := claims["userId"].(string)
+	userID, err := primitive.ObjectIDFromHex(userIDHex)
+	if err != nil {
+		return nil, common.ErrInvalidRefreshToken
+	}
+
+	existingUser, err := s.userRepository.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if existingUser == nil {
+		return nil, common.ErrUserNotFound
+	}
+
+	if existingUser.Status != model.StatusNew && existingUser.Status != model.StatusActive {
+		return nil, common.ErrUserAccessRevoked
+	}
+
+	return s.issueSessionResponse(ctx, existingUser, ip, refreshToken)
 }
 
 func (s *userService) findEligibleUser(ctx context.Context, username string) (*model.User, error) {
@@ -150,7 +178,7 @@ func (s *userService) findEligibleUser(ctx context.Context, username string) (*m
 	return existingUser, nil
 }
 
-func (s *userService) issueLoginResponse(ctx context.Context, existingUser *model.User, ip string) (*dto.LoginResponse, error) {
+func (s *userService) issueSessionResponse(ctx context.Context, existingUser *model.User, ip, existingRefreshToken string) (*dto.LoginResponse, error) {
 	role := existingUser.Role
 	if !existingUser.RoleID.IsZero() {
 		fetchedRole, err := s.roleRepository.FindByID(ctx, existingUser.RoleID)
@@ -179,9 +207,12 @@ func (s *userService) issueLoginResponse(ctx context.Context, existingUser *mode
 		return nil, err
 	}
 
-	refreshToken, err := auth.GenerateRefreshToken(existingUser.ID, ip)
-	if err != nil {
-		return nil, err
+	refreshToken := existingRefreshToken
+	if refreshToken == "" {
+		refreshToken, err = auth.GenerateRefreshToken(existingUser.ID, ip)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	avatar := existingUser.Avatar

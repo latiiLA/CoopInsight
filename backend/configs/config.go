@@ -130,7 +130,7 @@ func LoadConfig() {
 	}
 
 	RefreshJwtSecret = os.Getenv("REFRESH_JWT_SECRET")
-	if JwtSecret == "" {
+	if RefreshJwtSecret == "" {
 		log.Fatal("REFRESH_JWT_SECRET is required but not set")
 	}
 

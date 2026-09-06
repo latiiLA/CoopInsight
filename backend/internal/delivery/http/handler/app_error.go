@@ -16,6 +16,7 @@ var appErrors = []struct {
 }{
 	{common.ErrInvalidCredentials, http.StatusUnauthorized},
 	{common.ErrUserAccessRevoked, http.StatusUnauthorized},
+	{common.ErrInvalidRefreshToken, http.StatusUnauthorized},
 	{common.ErrUnauthorized, http.StatusUnauthorized},
 	{common.ErrADUserNotFound, http.StatusForbidden},
 	{common.ErrUserNotFound, http.StatusNotFound},

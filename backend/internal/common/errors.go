@@ -5,6 +5,7 @@ import "errors"
 var (
 	ErrInvalidCredentials    = errors.New("Invalid username or password")
 	ErrUserAccessRevoked     = errors.New("User access has been revoked or user is deleted")
+	ErrInvalidRefreshToken   = errors.New("invalid or expired refresh token")
 	ErrADUserNotFound        = errors.New("User not found in AD")
 	ErrUserNotFound          = errors.New("User not found")
 	ErrUsernameAlreadyExists = errors.New("username already exists")

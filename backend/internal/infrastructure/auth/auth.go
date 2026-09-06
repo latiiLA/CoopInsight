@@ -68,8 +68,7 @@ func GenerateRefreshToken(userID primitive.ObjectID, ip string) (string, error) 
 		return "", fmt.Errorf("REFRESH_JWT_SECRET environment variable is not set")
 	}
 
-	// Set expiration time (e.g., 7 days)
-	expirationTime := time.Now().Add(7 * 24 * time.Hour)
+	expirationTime := time.Now().Add(configs.RefreshTokenExpiry)
 
 	// Use MapClaims to match your access token style
 	claims := jwt.MapClaims{
