@@ -5,9 +5,11 @@ import { Separator } from "@/components/ui/separator";
 import { Navigate, Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "./store/store";
+import { useAccessTokenRefresh } from "@/hooks/use-access-token-refresh";
 
 export default function Layout() {
   const isLoggedIn = useSelector((state: RootState) => state.user.isLoggedIn);
+  useAccessTokenRefresh();
 
   if (!isLoggedIn) {
     return <Navigate to="/" replace />;
