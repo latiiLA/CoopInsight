@@ -4,6 +4,7 @@ import {
   CreateUserDTO,
   UpdateUserDTO,
   User,
+  UserProfile,
 } from "@/types/user";
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import getErrorMessage from "../../utility/error-message";
@@ -33,6 +34,9 @@ export interface UserSliceState {
 
   updateLoading: boolean;
   updateError: string | null;
+
+  avatarLoading: boolean;
+  profileLoading: boolean;
 }
 
 interface LoginCredentials {
@@ -106,6 +110,9 @@ const initialState: UserSliceState = {
 
   updateLoading: false,
   updateError: null,
+
+  avatarLoading: false,
+  profileLoading: false,
 };
 
 export const loginUser = createAsyncThunk<
@@ -223,6 +230,81 @@ export const updateUser = createAsyncThunk<
   }
 });
 
+export const updateAvatar = createAsyncThunk<
+  string,
+  string,
+  { state: RootState; rejectValue: string }
+>("user/updateAvatar", async (avatar, thunkAPI) => {
+  try {
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
+    }
+
+    const response = await api.put<{
+      isSuccessful: boolean;
+      message: string;
+      data?: { avatar?: string };
+    }>("/account/avatar", { avatar }, withAuthHeader(token));
+
+    return response.data.data?.avatar ?? avatar;
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
+export const uploadAvatarPhoto = createAsyncThunk<
+  string,
+  File,
+  { state: RootState; rejectValue: string }
+>("user/uploadAvatarPhoto", async (file, thunkAPI) => {
+  try {
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
+    }
+
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    const response = await api.post<{
+      isSuccessful: boolean;
+      message: string;
+      data?: { avatar?: string };
+    }>("/account/avatar/photo", formData, withAuthHeader(token));
+
+    return response.data.data?.avatar ?? "";
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
+export const updateProfile = createAsyncThunk<
+  UserProfile,
+  UserProfile,
+  { state: RootState; rejectValue: string }
+>("user/updateProfile", async (profile, thunkAPI) => {
+  try {
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
+    }
+
+    const response = await api.put<{
+      isSuccessful: boolean;
+      message: string;
+      data?: { profile?: UserProfile };
+    }>("/account/profile", profile, withAuthHeader(token));
+
+    return response.data.data?.profile ?? profile;
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
 const userSlice = createSlice({
   name: "user",
   initialState,
@@ -243,6 +325,8 @@ const userSlice = createSlice({
       state.registerError = null;
       state.permissions = [];
       state.selectedUser = null;
+      state.avatarLoading = false;
+      state.profileLoading = false;
       persistAuth(null);
     },
 
@@ -344,6 +428,48 @@ const userSlice = createSlice({
       .addCase(updateUser.rejected, (state, action) => {
         state.updateLoading = false;
         state.updateError = action.payload || "Failed to update user";
+      })
+
+      .addCase(updateAvatar.pending, (state) => {
+        state.avatarLoading = true;
+      })
+      .addCase(updateAvatar.fulfilled, (state, action) => {
+        state.avatarLoading = false;
+        if (state.authUser?.data?.user) {
+          state.authUser.data.user.avatar = action.payload;
+          persistAuth(state.authUser);
+        }
+      })
+      .addCase(updateAvatar.rejected, (state) => {
+        state.avatarLoading = false;
+      })
+
+      .addCase(uploadAvatarPhoto.pending, (state) => {
+        state.avatarLoading = true;
+      })
+      .addCase(uploadAvatarPhoto.fulfilled, (state, action) => {
+        state.avatarLoading = false;
+        if (state.authUser?.data?.user) {
+          state.authUser.data.user.avatar = action.payload;
+          persistAuth(state.authUser);
+        }
+      })
+      .addCase(uploadAvatarPhoto.rejected, (state) => {
+        state.avatarLoading = false;
+      })
+
+      .addCase(updateProfile.pending, (state) => {
+        state.profileLoading = true;
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.profileLoading = false;
+        if (state.authUser?.data?.user) {
+          state.authUser.data.user.profile = action.payload;
+          persistAuth(state.authUser);
+        }
+      })
+      .addCase(updateProfile.rejected, (state) => {
+        state.profileLoading = false;
       });
   },
 });

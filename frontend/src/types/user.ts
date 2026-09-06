@@ -1,5 +1,13 @@
 import { Role, getRoleId } from "./role";
 
+export type UserProfile = {
+  jobTitle?: string;
+  department?: string;
+  branch?: string;
+  phone?: string;
+  bio?: string;
+};
+
 export type User = {
   id: string;
   username: string;
@@ -10,6 +18,8 @@ export type User = {
   middleName: string;
   lastName: string;
   email: string;
+  avatar?: string;
+  profile?: UserProfile;
   status: string;
   createdBy: string;
   updatedBy: string | null;

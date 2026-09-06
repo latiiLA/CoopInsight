@@ -52,6 +52,7 @@ import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../../app/store/store";
 import { hasPermission } from "../../utility/has-permission";
+import { avatarSrc } from "@/lib/avatars";
 
 // ------------------------------------
 // Types
@@ -331,9 +332,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <NavUser
           user={{
-            name: `${authUser?.data?.user?.firstName ?? ""} ${authUser?.data?.user?.middleName ?? ""}`.trim(),
+            name:
+              `${authUser?.data?.user?.firstName ?? ""} ${authUser?.data?.user?.middleName ?? ""}`.trim() ||
+              (authUser?.data?.user?.username ?? ""),
             username: authUser?.data?.user?.username ?? "",
-            avatar: "",
+            avatar: avatarSrc(authUser?.data?.user?.avatar),
           }}
         />
       </SidebarFooter>
