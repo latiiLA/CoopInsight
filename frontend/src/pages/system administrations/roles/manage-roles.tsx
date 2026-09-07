@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -6,9 +6,10 @@ import { useNavigate } from "react-router";
 import { PlusCircle } from "lucide-react";
 import { AppDispatch, RootState } from "../../../../app/store/store";
 import { DataTable } from "@/components/data-table";
-import { columns } from "./columns";
-import { fetchRoles } from "@/features/role_slice";
+import { getColumns } from "./columns";
+import { deleteRole, fetchRoles } from "@/features/role_slice";
 import { hasPermission } from "../../../../utility/has-permission";
+import { Role, getRoleId } from "@/types/role";
 
 const ManageRoles = () => {
   const navigate = useNavigate();
@@ -27,6 +28,32 @@ const ManageRoles = () => {
       toast.error(roleError);
     }
   }, [roleError]);
+
+  const handleDelete = useCallback(
+    async (role: Role) => {
+      const roleId = getRoleId(role);
+
+      if (!roleId) {
+        toast.error("Role id is missing");
+        return;
+      }
+
+      const result = await dispatch(deleteRole(roleId));
+
+      if (deleteRole.rejected.match(result)) {
+        toast.error(result.payload || "Failed to delete role");
+        throw new Error(result.payload || "Failed to delete role");
+      }
+
+      toast.success("Role deleted successfully", {
+        description: `${role.name} has been removed.`,
+      });
+      dispatch(fetchRoles());
+    },
+    [dispatch],
+  );
+
+  const columns = useMemo(() => getColumns(handleDelete), [handleDelete]);
 
   return (
     <div>

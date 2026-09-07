@@ -29,6 +29,7 @@ import {
 } from "@/features/role_slice";
 
 import { AppDispatch, RootState } from "../../../../app/store/store";
+import { getPermissionId } from "@/types/permission";
 import { UpdateRoleDTO, getRoleId } from "@/types/role";
 import { roleFormSchema, type RoleFormValues } from "./role-form-schema";
 
@@ -100,7 +101,7 @@ const EditRole = () => {
     return allPermissions
       .filter((permission) => Boolean(permission.name))
       .map((permission) => ({
-        id: permission.id || permission.name,
+        id: getPermissionId(permission) || permission.name,
         name: permission.name,
         description: permission.description,
       }))

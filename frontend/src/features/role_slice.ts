@@ -16,6 +16,8 @@ interface RoleState {
   roleDetailError: string | null;
   updateLoading: boolean;
   updateError: string | null;
+  deleteLoading: boolean;
+  deleteError: string | null;
 }
 
 const initialState: RoleState = {
@@ -29,6 +31,8 @@ const initialState: RoleState = {
   roleDetailError: null,
   updateLoading: false,
   updateError: null,
+  deleteLoading: false,
+  deleteError: null,
 };
 
 export const fetchRoles = createAsyncThunk<
@@ -139,6 +143,32 @@ export const updateRole = createAsyncThunk<
   }
 });
 
+export const deleteRole = createAsyncThunk<
+  string,
+  string,
+  {
+    state: RootState;
+    rejectValue: string;
+  }
+>("role/deleteRole", async (id, thunkAPI) => {
+  try {
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
+    }
+
+    const response = await api.delete<{
+      isSuccessful: boolean;
+      message: string;
+    }>(`/roles/${id}`, withAuthHeader(token));
+
+    return response.data.message || "Role deleted successfully";
+  } catch (error) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
 const roleSlice = createSlice({
   name: "role",
   initialState,
@@ -210,6 +240,18 @@ const roleSlice = createSlice({
       .addCase(updateRole.rejected, (state, action) => {
         state.updateLoading = false;
         state.updateError = action.payload || "Failed to update role";
+      })
+      .addCase(deleteRole.pending, (state) => {
+        state.deleteLoading = true;
+        state.deleteError = null;
+      })
+      .addCase(deleteRole.fulfilled, (state) => {
+        state.deleteLoading = false;
+        state.deleteError = null;
+      })
+      .addCase(deleteRole.rejected, (state, action) => {
+        state.deleteLoading = false;
+        state.deleteError = action.payload || "Failed to delete role";
       });
   },
 });

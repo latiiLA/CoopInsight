@@ -38,6 +38,8 @@ export interface UserSliceState {
 
   updateLoading: boolean;
   updateError: string | null;
+  deleteLoading: boolean;
+  deleteError: string | null;
 
   avatarLoading: boolean;
   profileLoading: boolean;
@@ -117,6 +119,8 @@ const initialState: UserSliceState = {
 
   updateLoading: false,
   updateError: null,
+  deleteLoading: false,
+  deleteError: null,
 
   avatarLoading: false,
   profileLoading: false,
@@ -252,6 +256,29 @@ export const updateUser = createAsyncThunk<
     }>(`/users/${id}`, payload, withAuthHeader(token));
 
     return response.data.message || "User updated successfully";
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
+export const deleteUser = createAsyncThunk<
+  string,
+  string,
+  { state: RootState; rejectValue: string }
+>("user/deleteUser", async (id, thunkAPI) => {
+  try {
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
+    }
+
+    const response = await api.delete<{
+      isSuccessful: boolean;
+      message: string;
+    }>(`/users/${id}`, withAuthHeader(token));
+
+    return response.data.message || "User deleted successfully";
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getErrorMessage(error));
   }
@@ -471,6 +498,18 @@ const userSlice = createSlice({
       .addCase(updateUser.rejected, (state, action) => {
         state.updateLoading = false;
         state.updateError = action.payload || "Failed to update user";
+      })
+      .addCase(deleteUser.pending, (state) => {
+        state.deleteLoading = true;
+        state.deleteError = null;
+      })
+      .addCase(deleteUser.fulfilled, (state) => {
+        state.deleteLoading = false;
+        state.deleteError = null;
+      })
+      .addCase(deleteUser.rejected, (state, action) => {
+        state.deleteLoading = false;
+        state.deleteError = action.payload || "Failed to delete user";
       })
 
       .addCase(updateAvatar.pending, (state) => {

@@ -28,6 +28,7 @@ import {
 import { fetchPermissions } from "@/features/permission_slice";
 
 import { AppDispatch, RootState } from "../../../../app/store/store";
+import { getPermissionId } from "@/types/permission";
 import { CreateRoleDTO } from "@/types/role";
 import { roleFormSchema, type RoleFormValues } from "./role-form-schema";
 
@@ -184,7 +185,7 @@ const CreateRole = () => {
 
                             return (
                               <label
-                                key={permission.id}
+                                key={getPermissionId(permission) || permission.name}
                                 className="flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted/50"
                               >
                                 <Checkbox
