@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { SwitchHubMark } from "@/components/switch-hub-mark"
 
 import coopgif from "../assets/coop.gif"
 
@@ -41,8 +42,7 @@ export function VersionSwitcher({
             />
             </div>
               <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-                <span className="font-medium">Switch Hub</span>
-                {/* <span className="">v{selectedVersion}</span> */}
+                <SwitchHubMark />
               </div>
               <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>

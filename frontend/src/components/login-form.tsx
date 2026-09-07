@@ -80,7 +80,7 @@ export function LoginForm({
                 </h1>
 
                 <p className="text-balance text-muted-foreground">
-                  Login to your Switch Insight account
+                  Login to your Switch Hub account
                 </p>
               </div>
 
