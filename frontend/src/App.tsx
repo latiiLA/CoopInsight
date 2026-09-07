@@ -21,6 +21,8 @@ import CreatePermission from "./pages/system administrations/permissions/create-
 import EditPermission from "./pages/system administrations/permissions/edit-permission";
 import OnusMonitoring from "./pages/monitoring/onus/onus-monitoring";
 import OffusMonitoring from "./pages/monitoring/offus/offus-monitoring";
+import MastercardDebitMonitoring from "./pages/monitoring/mastercard-debit/mastercard-debit-monitoring";
+import MastercardCreditMonitoring from "./pages/monitoring/mastercard-credit/mastercard-credit-monitoring";
 import AtmTerminals from "./pages/dashboards/atm-terminals/atm-terminals";
 import AtmDashboard from "./pages/dashboards/atm-terminals/atm-dashboard";
 import PosTerminals from "./pages/dashboards/pos-terminals/pos-terminals";
@@ -79,6 +81,22 @@ function App() {
             element={
               <RequirePermission permissions={["monitoring:view-offus"]}>
                 <OffusMonitoring />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/mastercard-debit-monitoring"
+            element={
+              <RequirePermission permissions={["monitoring:view-mastercard-debit"]}>
+                <MastercardDebitMonitoring />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/mastercard-credit-monitoring"
+            element={
+              <RequirePermission permissions={["monitoring:view-mastercard-credit"]}>
+                <MastercardCreditMonitoring />
               </RequirePermission>
             }
           />
