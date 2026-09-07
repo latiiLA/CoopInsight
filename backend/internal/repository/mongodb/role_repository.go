@@ -128,6 +128,35 @@ func (r *roleRepository) Update(ctx context.Context, role *model.Role) error {
 	return nil
 }
 
+func (r *roleRepository) Delete(ctx context.Context, role *model.Role) error {
+	result, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{
+			"_id": role.ID,
+			"status": bson.M{
+				"$ne": model.RoleStatusDeleted,
+			},
+		},
+		bson.M{
+			"$set": bson.M{
+				"status":    model.RoleStatusDeleted,
+				"deletedAt": role.DeletedAt,
+				"deletedBy": role.DeletedBy,
+				"updatedAt": role.UpdatedAt,
+			},
+		},
+	)
+	if err != nil {
+		return wrapDBError(common.ErrFailedToDeleteRole, err)
+	}
+
+	if result.MatchedCount == 0 {
+		return common.ErrRoleNotFound
+	}
+
+	return nil
+}
+
 func (r *roleRepository) CountByPermission(ctx context.Context, permissionName string) (int64, error) {
 	count, err := r.collection.CountDocuments(ctx, bson.M{
 		"permissions": permissionName,

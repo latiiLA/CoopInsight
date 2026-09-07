@@ -71,6 +71,10 @@ func main() {
 
 	db := mongoClient.Database(dbName)
 
+	if err := mongodb.EnsurePermissionIndexes(ctx, db); err != nil {
+		logrus.WithError(err).Warn("Could not create unique permission name index; duplicate names may already exist")
+	}
+
 	sourceClient, tmsDB, sourceErr := database.OpenSourceMongo(ctx, mongoClient)
 	if !configs.SourceMongoEnabled {
 		logrus.Info("Source Mongo is disabled; skipping connection")
@@ -165,7 +169,7 @@ func main() {
 	)
 	permissionHandler := handler.NewPermissionHandler(permissionService)
 
-	roleService := service.NewRoleService(roleRepository)
+	roleService := service.NewRoleService(roleRepository, userRepository)
 	roleHandler := handler.NewRoleHandler(roleService)
 
 	var atmTerminalHandler handler.AtmTerminalHandler

@@ -35,6 +35,7 @@ type UserService interface {
 	GetByID(ctx context.Context, userID primitive.ObjectID) (*model.User, error)
 	GetAll(ctx context.Context) ([]model.User, error)
 	Update(ctx context.Context, updatedBy primitive.ObjectID, userID primitive.ObjectID, req *dto.UpdateUserRequest) error
+	Delete(ctx context.Context, deletedBy primitive.ObjectID, userID primitive.ObjectID) error
 	UpdateAvatar(ctx context.Context, userID primitive.ObjectID, avatar string) error
 	UploadAvatarPhoto(ctx context.Context, userID primitive.ObjectID, data []byte) (string, error)
 	UpdateProfile(ctx context.Context, userID primitive.ObjectID, req *dto.UpdateProfileRequest) (*model.UserProfile, error)
@@ -228,6 +229,13 @@ func (s *userService) issueSessionResponse(ctx context.Context, existingUser *mo
 		if err != nil {
 			return nil, err
 		}
+
+		now := time.Now()
+		if err := s.userRepository.UpdateLastLogin(ctx, existingUser.ID, now); err != nil {
+			logrus.WithError(err).Warn("failed to record last login")
+		} else {
+			existingUser.LastLogin = &now
+		}
 	}
 
 	avatar := existingUser.Avatar
@@ -383,6 +391,33 @@ func (s *userService) Update(ctx context.Context, updatedBy primitive.ObjectID, 
 	existing.UpdatedBy = &updatedBy
 
 	return s.userRepository.Update(ctx, existing)
+}
+
+func (s *userService) Delete(ctx context.Context, deletedBy primitive.ObjectID, userID primitive.ObjectID) error {
+	if deletedBy == userID {
+		return common.ErrCannotDeleteSelf
+	}
+
+	existing, err := s.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	hasActivity, err := s.userRepository.HasActivity(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if hasActivity {
+		return common.ErrUserHasActivity
+	}
+
+	now := time.Now()
+	existing.Status = model.StatusDeleted
+	existing.DeletedAt = &now
+	existing.DeletedBy = &deletedBy
+	existing.UpdatedAt = now
+
+	return s.userRepository.Delete(ctx, existing)
 }
 
 func (s *userService) UpdateAvatar(ctx context.Context, userID primitive.ObjectID, avatar string) error {

@@ -90,6 +90,7 @@ func (ur *userRepository) FindByUsername(ctx context.Context, username string) (
 			{Key: "password", Value: 1},
 			{Key: "permissions", Value: 1},
 			{Key: "roleId", Value: 1},
+			{Key: "lastLogin", Value: 1},
 			{Key: "createdAt", Value: 1},
 			{Key: "updatedAt", Value: 1},
 			{Key: "createdBy", Value: 1},
@@ -174,6 +175,7 @@ func (ur *userRepository) FindByID(ctx context.Context, userID primitive.ObjectI
 			{Key: "avatar", Value: 1},
 			{Key: "profile", Value: 1},
 			{Key: "permissions", Value: 1},
+			{Key: "lastLogin", Value: 1},
 			{Key: "createdAt", Value: 1},
 			{Key: "updatedAt", Value: 1},
 			{Key: "createdBy", Value: 1},
@@ -292,6 +294,7 @@ func (ur *userRepository) FindAll(ctx context.Context) ([]model.User, error) {
 				{Key: "status", Value: 1},
 				{Key: "avatar", Value: 1},
 				{Key: "profile", Value: 1},
+				{Key: "lastLogin", Value: 1},
 				{Key: "createdAt", Value: 1},
 				{Key: "updatedAt", Value: 1},
 				{Key: "createdAy", Value: 1},
@@ -471,4 +474,144 @@ func (ur *userRepository) CountByPermission(ctx context.Context, permissionName 
 	}
 
 	return count, nil
+}
+
+func (ur *userRepository) CountByRole(ctx context.Context, roleID primitive.ObjectID) (int64, error) {
+	count, err := ur.collection.CountDocuments(ctx, bson.M{
+		"roleId": roleID,
+		"status": bson.M{
+			"$ne": model.StatusDeleted,
+		},
+	})
+	if err != nil {
+		return 0, wrapDBError(common.ErrFailedToFetchUsers, err)
+	}
+
+	return count, nil
+}
+
+func (ur *userRepository) UpdateLastLogin(ctx context.Context, userID primitive.ObjectID, lastLogin time.Time) error {
+	result, err := ur.collection.UpdateOne(
+		ctx,
+		bson.M{
+			"_id": userID,
+			"status": bson.M{
+				"$ne": model.StatusDeleted,
+			},
+		},
+		bson.M{
+			"$set": bson.M{
+				"lastLogin": lastLogin,
+			},
+		},
+	)
+	if err != nil {
+		return wrapDBError(common.ErrFailedToUpdateUser, err)
+	}
+
+	if result.MatchedCount == 0 {
+		return common.ErrUserNotFound
+	}
+
+	return nil
+}
+
+func (ur *userRepository) HasActivity(ctx context.Context, userID primitive.ObjectID) (bool, error) {
+	var stored struct {
+		LastLogin *time.Time          `bson:"lastLogin"`
+		UpdatedBy *primitive.ObjectID `bson:"updatedBy"`
+	}
+
+	err := ur.collection.FindOne(ctx, bson.M{
+		"_id": userID,
+		"status": bson.M{
+			"$ne": model.StatusDeleted,
+		},
+	}).Decode(&stored)
+	if isNoDocuments(err) {
+		return false, common.ErrUserNotFound
+	}
+	if err != nil {
+		return false, wrapDBError(common.ErrFailedToFetchUser, err)
+	}
+
+	if stored.LastLogin != nil && !stored.LastLogin.IsZero() {
+		return true, nil
+	}
+
+	if stored.UpdatedBy != nil && *stored.UpdatedBy == userID {
+		return true, nil
+	}
+
+	actorFilter := bson.M{
+		"$or": []bson.M{
+			{"createdBy": userID},
+			{"updatedBy": userID},
+			{"deletedBy": userID},
+		},
+	}
+
+	db := ur.collection.Database()
+	for _, name := range []string{"roles", "permissions"} {
+		count, countErr := db.Collection(name).CountDocuments(ctx, actorFilter)
+		if countErr != nil {
+			return false, wrapDBError(common.ErrFailedToFetchUsers, countErr)
+		}
+		if count > 0 {
+			return true, nil
+		}
+	}
+
+	otherUsers, err := ur.collection.CountDocuments(ctx, bson.M{
+		"_id": bson.M{"$ne": userID},
+		"$or": []bson.M{
+			{"createdBy": userID},
+			{"updatedBy": userID},
+			{"deletedBy": userID},
+		},
+	})
+	if err != nil {
+		return false, wrapDBError(common.ErrFailedToFetchUsers, err)
+	}
+	if otherUsers > 0 {
+		return true, nil
+	}
+
+	requests, err := db.Collection("account_requests").CountDocuments(ctx, bson.M{
+		"fulfilledBy": userID,
+	})
+	if err != nil {
+		return false, wrapDBError(common.ErrFailedToFetchAccountRequests, err)
+	}
+
+	return requests > 0, nil
+}
+
+func (ur *userRepository) Delete(ctx context.Context, user *model.User) error {
+	result, err := ur.collection.UpdateOne(
+		ctx,
+		bson.M{
+			"_id": user.ID,
+			"status": bson.M{
+				"$ne": model.StatusDeleted,
+			},
+		},
+		bson.M{
+			"$set": bson.M{
+				"status":    model.StatusDeleted,
+				"deletedAt": user.DeletedAt,
+				"deletedBy": user.DeletedBy,
+				"updatedAt": user.UpdatedAt,
+			},
+		},
+	)
+	if err != nil {
+		return wrapDBError(common.ErrFailedToDeleteUser, err)
+	}
+
+	if result.MatchedCount == 0 {
+		return common.ErrUserNotFound
+	}
+
+	return nil
 }

@@ -17,15 +17,21 @@ type RoleService interface {
 	GetByID(ctx context.Context, roleID primitive.ObjectID) (*model.Role, error)
 	Create(ctx context.Context, createdBy primitive.ObjectID, req *dto.CreateRoleRequest) error
 	Update(ctx context.Context, updatedBy primitive.ObjectID, roleID primitive.ObjectID, req *dto.UpdateRoleRequest) error
+	Delete(ctx context.Context, deletedBy primitive.ObjectID, roleID primitive.ObjectID) error
 }
 
 type roleService struct {
 	roleRepository repository.RoleRepository
+	userRepository repository.UserRepository
 }
 
-func NewRoleService(roleRepository repository.RoleRepository) RoleService {
+func NewRoleService(
+	roleRepository repository.RoleRepository,
+	userRepository repository.UserRepository,
+) RoleService {
 	return &roleService{
 		roleRepository: roleRepository,
+		userRepository: userRepository,
 	}
 }
 
@@ -115,4 +121,35 @@ func (s *roleService) Update(ctx context.Context, updatedBy primitive.ObjectID, 
 	existing.UpdatedBy = &updatedBy
 
 	return s.roleRepository.Update(ctx, existing)
+}
+
+func (s *roleService) Delete(ctx context.Context, deletedBy primitive.ObjectID, roleID primitive.ObjectID) error {
+	existing, err := s.GetByID(ctx, roleID)
+	if err != nil {
+		return err
+	}
+
+	if strings.EqualFold(existing.Name, "SUPERADMIN") {
+		return common.ErrRoleNameNotAllowed
+	}
+
+	if s.userRepository == nil {
+		return common.ErrFailedToDeleteRole
+	}
+
+	userCount, err := s.userRepository.CountByRole(ctx, roleID)
+	if err != nil {
+		return err
+	}
+	if userCount > 0 {
+		return common.ErrRoleInUse
+	}
+
+	now := time.Now()
+	existing.Status = model.RoleStatusDeleted
+	existing.DeletedAt = &now
+	existing.DeletedBy = &deletedBy
+	existing.UpdatedAt = now
+
+	return s.roleRepository.Delete(ctx, existing)
 }

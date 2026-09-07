@@ -620,10 +620,29 @@ func (h *userHandler) UpdateProfile(c *gin.Context) {
 }
 
 func (h *userHandler) Delete(c *gin.Context) {
-	id := c.Param("id")
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessUnauthorized,
+			Error:        err.Error(),
+		})
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Delete user",
-		"id":      id,
+	userID, ok := parseObjectIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	err = h.userService.Delete(c, authUserID, userID)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "User deleted successfully",
 	})
 }

@@ -18,4 +18,8 @@ type UserRepository interface {
 	UpdateAvatar(ctx context.Context, userID primitive.ObjectID, avatar string, updatedAt time.Time) error
 	UpdateProfile(ctx context.Context, userID primitive.ObjectID, profile model.UserProfile, updatedAt time.Time) error
 	CountByPermission(ctx context.Context, permissionName string) (int64, error)
+	CountByRole(ctx context.Context, roleID primitive.ObjectID) (int64, error)
+	UpdateLastLogin(ctx context.Context, userID primitive.ObjectID, lastLogin time.Time) error
+	HasActivity(ctx context.Context, userID primitive.ObjectID) (bool, error)
+	Delete(ctx context.Context, user *model.User) error
 }

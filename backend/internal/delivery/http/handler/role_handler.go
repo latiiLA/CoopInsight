@@ -19,6 +19,7 @@ type RoleHandler interface {
 	GetByID(c *gin.Context)
 	Create(c *gin.Context)
 	Update(c *gin.Context)
+	Delete(c *gin.Context)
 }
 
 type roleHandler struct {
@@ -164,5 +165,33 @@ func (h *roleHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Status{
 		IsSuccessful: true,
 		Message:      "Role updated successfully",
+	})
+}
+
+func (h *roleHandler) Delete(c *gin.Context) {
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessUnauthorized,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	roleID, ok := parseObjectIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	err = h.roleService.Delete(c, authUserID, roleID)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Role deleted successfully",
 	})
 }

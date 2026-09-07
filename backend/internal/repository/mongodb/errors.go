@@ -11,6 +11,10 @@ func isNoDocuments(err error) bool {
 	return errors.Is(err, mongo.ErrNoDocuments)
 }
 
+func isDuplicateKey(err error) bool {
+	return mongo.IsDuplicateKeyError(err)
+}
+
 func wrapDBError(sentinel error, err error) error {
 	if err == nil {
 		return sentinel

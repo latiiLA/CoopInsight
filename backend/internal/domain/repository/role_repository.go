@@ -13,5 +13,6 @@ type RoleRepository interface {
 	FindAll(ctx context.Context) ([]model.Role, error)
 	Create(ctx context.Context, role *model.Role) error
 	Update(ctx context.Context, role *model.Role) error
+	Delete(ctx context.Context, role *model.Role) error
 	CountByPermission(ctx context.Context, permissionName string) (int64, error)
 }
