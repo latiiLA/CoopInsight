@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const switchCommandTimeout = 30 * time.Second
+const switchCommandTimeout = 45 * time.Second
 
 var (
 	institutionIDRe = regexp.MustCompile(`^[A-Za-z0-9]{3,12}$`)
@@ -49,6 +49,7 @@ func (s *switchCommandService) Run(ctx context.Context, actor, command, institut
 			DryRun:   true,
 			ExitCode: 0,
 			Output:   "dry-run: load_atm " + institution + " " + atm + "\nSSH is not connected; the command was not sent to the switch.",
+			Command:  sshswitch.LoadATMCommand(institution, atm),
 		}, nil
 	}
 
@@ -67,6 +68,7 @@ func (s *switchCommandService) Run(ctx context.Context, actor, command, institut
 		"atm":         atm,
 		"duration_ms": duration.Milliseconds(),
 		"exit_code":   result.ExitCode,
+		"output":      truncateSwitchOutput(result.Output),
 	})
 
 	if err != nil {
@@ -76,6 +78,7 @@ func (s *switchCommandService) Run(ctx context.Context, actor, command, institut
 				OK:       false,
 				ExitCode: result.ExitCode,
 				Output:   result.Output,
+				Command:  remote,
 			}, common.ErrSwitchCommandTimeout
 		}
 		log.WithError(err).Warn("switch command failed")
@@ -87,7 +90,17 @@ func (s *switchCommandService) Run(ctx context.Context, actor, command, institut
 		OK:       result.ExitCode == 0,
 		ExitCode: result.ExitCode,
 		Output:   result.Output,
+		Command:  remote,
 	}, nil
+}
+
+func truncateSwitchOutput(raw string) string {
+	const max = 500
+	body := strings.TrimSpace(raw)
+	if len(body) <= max {
+		return body
+	}
+	return body[:max] + "..."
 }
 
 func ParseSwitchCommand(command, institution, atm string) (string, string, error) {

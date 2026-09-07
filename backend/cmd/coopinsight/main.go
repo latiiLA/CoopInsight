@@ -232,10 +232,18 @@ func main() {
 	offusHandler := handler.NewOnusMonitoringHandler(
 		service.NewOffusMonitoringService(offusCollector),
 	)
+
+	var switchCommandClient *sshswitch.Client
+	if configs.SSHSwitchEnabled {
+		switchCommandClient = newSwitchSSHClient("")
+		defer switchCommandClient.Close()
+		logrus.Info("Switch commands will run over SSH")
+	} else {
+		logrus.Info("Switch commands are in dry-run mode (SSH not connected)")
+	}
 	switchCommandHandler := handler.NewSwitchCommandHandler(
-		service.NewSwitchCommandService(nil),
+		service.NewSwitchCommandService(switchCommandClient),
 	)
-	logrus.Info("Switch commands are in dry-run mode (SSH not connected)")
 
 	// --------------------------------------------------
 	// Router

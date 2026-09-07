@@ -74,7 +74,7 @@ func (h *switchCommandHandler) Run(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, response.Status{
 				IsSuccessful: false,
 				Message:      common.ErrInvalidSwitchCommand.Error(),
-				Error:        `expected {"command":"load_atm","institution":"CBOBNA","atm":"005"} or {"command":"load_atm CBOBNA 005"}`,
+				Error:        switchCommandHint(req),
 			})
 			return
 		}
@@ -111,9 +111,9 @@ func decodeSwitchCommandRequest(raw []byte) (switchCommandRequest, error) {
 		switch strings.ToLower(strings.TrimSpace(key)) {
 		case "command", "cmd":
 			req.Command = text
-		case "institution", "bank", "inst":
+		case "institution", "bank", "inst", "institition", "institute":
 			req.Institution = text
-		case "atm", "terminal", "atmid":
+		case "atm", "terminal", "atmid", "atm_id", "terminalid", "terminal_id":
 			req.ATM = text
 		}
 	}
@@ -134,6 +134,16 @@ func jsonValueString(value any) string {
 	default:
 		return strings.TrimSpace(fmt.Sprint(v))
 	}
+}
+
+func switchCommandHint(req switchCommandRequest) string {
+	if strings.TrimSpace(req.Institution) == "" {
+		return `institution is required, e.g. {"command":"load_atm","institution":"CBOBNA","atm":"005"}`
+	}
+	if strings.TrimSpace(req.ATM) == "" {
+		return `atm is required, e.g. {"command":"load_atm","institution":"CBOBNA","atm":"005"}`
+	}
+	return `expected {"command":"load_atm","institution":"CBOBNA","atm":"005"} or {"command":"load_atm CBOBNA 005"}`
 }
 
 func truncateBody(raw []byte) string {

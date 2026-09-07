@@ -63,11 +63,9 @@ func TestSwitchCommandDryRunWithoutSSH(t *testing.T) {
 		t.Fatalf("output = %q", result.Output)
 	}
 }
-func TestLoadATMCommandQuotesArgs(t *testing.T) {
+func TestLoadATMCommandLine(t *testing.T) {
 	cmd := sshswitch.LoadATMCommand("CBOBNA", "005")
-	for _, part := range []string{"load_atm", "CBOBNA", "005", "bash -lc"} {
-		if !strings.Contains(cmd, part) {
-			t.Fatalf("command missing %q: %s", part, cmd)
-		}
+	if cmd != "load_atm CBOBNA 005" {
+		t.Fatalf("got %q", cmd)
 	}
 }

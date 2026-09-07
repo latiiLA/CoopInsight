@@ -11,13 +11,19 @@ func registerMonitoringRoutes(
 	live *gin.RouterGroup,
 	onusHandler handler.OnusMonitoringHandler,
 	offusHandler handler.OnusMonitoringHandler,
-	_ handler.SwitchCommandHandler,
+	switchCommandHandler handler.SwitchCommandHandler,
 ) {
+	monitoring := live.Group("/monitoring")
+
+	monitoring.POST(
+		"/switch/commands",
+		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"monitoring:run-switch"}),
+		switchCommandHandler.Run,
+	)
+
 	if !configs.LiveMonitoringEnabled {
 		return
 	}
-
-	monitoring := live.Group("/monitoring")
 
 	monitoring.GET(
 		"/onus/ws",

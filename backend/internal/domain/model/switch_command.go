@@ -5,4 +5,5 @@ type SwitchCommandResult struct {
 	DryRun   bool   `json:"dryRun,omitempty"`
 	ExitCode int    `json:"exitCode"`
 	Output   string `json:"output"`
+	Command  string `json:"command,omitempty"`
 }
