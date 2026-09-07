@@ -127,7 +127,9 @@ export function DeclineReasonsPie({
                     outerRadius={96}
                     paddingAngle={2}
                     label={({ percent }) =>
-                      percent >= 0.04 ? `${(percent * 100).toFixed(1)}%` : ""
+                      (percent ?? 0) >= 0.04
+                        ? `${((percent ?? 0) * 100).toFixed(1)}%`
+                        : ""
                     }
                     labelLine={false}
                   >

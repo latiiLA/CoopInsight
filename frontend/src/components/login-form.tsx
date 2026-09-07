@@ -54,7 +54,12 @@ export function LoginForm({
   const [showPassword, setShowPassword] = useState(false);
 
   const onSubmit = async (data: LoginFormInputs) => {
-    const result = await dispatch(loginUser(data));
+    const result = await dispatch(
+      loginUser({
+        username: data.username ?? "",
+        password: data.password ?? "",
+      }),
+    );
 
     if (loginUser.fulfilled.match(result)) {
       navigate("/home");

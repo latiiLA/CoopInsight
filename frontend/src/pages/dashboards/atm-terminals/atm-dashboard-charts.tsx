@@ -47,6 +47,16 @@ type PieSlice = CountSlice & {
   fill: string;
 };
 
+function nameFromBarClick(data: { payload?: { name?: unknown } } | undefined) {
+  const name = data?.payload?.name;
+  return typeof name === "string" ? name : undefined;
+}
+
+function formatAxisLabel(value: string | number) {
+  const label = String(value);
+  return label.length > 18 ? `${label.slice(0, 16)}…` : label;
+}
+
 function toPieSlices(rows: CountSlice[], total: number): PieSlice[] {
   return rows
     .filter((row) => row.count > 0)
@@ -135,7 +145,9 @@ export function FleetPie({
                       }
                     }}
                     label={({ percent }) =>
-                      percent >= 0.08 ? `${(percent * 100).toFixed(0)}%` : ""
+                      (percent ?? 0) >= 0.08
+                        ? `${((percent ?? 0) * 100).toFixed(0)}%`
+                        : ""
                     }
                     labelLine={false}
                   >
@@ -216,9 +228,7 @@ export function FleetBar({
                   width={128}
                   tick={{ fontSize: 11 }}
                   interval={0}
-                  tickFormatter={(value: string) =>
-                    value.length > 18 ? `${value.slice(0, 16)}…` : value
-                  }
+                  tickFormatter={formatAxisLabel}
                 />
                 <Tooltip content={<CountTooltip />} />
                 <Bar
@@ -228,9 +238,9 @@ export function FleetBar({
                   maxBarSize={22}
                   cursor={onSelect ? "pointer" : undefined}
                   onClick={(data) => {
-                    const name = (data as CountSlice | undefined)?.name;
+                    const name = nameFromBarClick(data);
                     if (name && name !== OTHERS) {
-                      onSelect(name);
+                      onSelect?.(name);
                     }
                   }}
                 >
@@ -412,9 +422,7 @@ export function FleetStackedBar({
                     width={128}
                     tick={{ fontSize: 11 }}
                     interval={0}
-                    tickFormatter={(value: string) =>
-                      value.length > 18 ? `${value.slice(0, 16)}…` : value
-                    }
+                    tickFormatter={formatAxisLabel}
                   />
                   <Tooltip content={<StackedTooltip />} />
                   {series.map((item, index) => (
@@ -429,10 +437,7 @@ export function FleetStackedBar({
                         index === series.length - 1 ? [0, 6, 6, 0] : [0, 0, 0, 0]
                       }
                       onClick={(data) => {
-                        const point = data as
-                          | (StackedBarRow & { payload?: StackedBarRow })
-                          | undefined;
-                        const name = point?.name ?? point?.payload?.name;
+                        const name = nameFromBarClick(data);
                         if (name && name !== OTHERS) {
                           onSelect?.(name);
                         }
