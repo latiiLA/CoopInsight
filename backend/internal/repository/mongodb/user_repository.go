@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type userRepository struct {
@@ -212,6 +213,15 @@ func (ur *userRepository) FindAll(ctx context.Context) ([]model.User, error) {
 				{Key: "status", Value: bson.D{
 					{Key: "$ne", Value: model.StatusDeleted},
 				}},
+				{Key: "$or", Value: bson.A{
+					bson.D{{Key: "roleId", Value: bson.D{
+						{Key: "$exists", Value: true},
+						{Key: "$nin", Value: bson.A{nil, primitive.NilObjectID}},
+					}}},
+					bson.D{{Key: "status", Value: bson.D{
+						{Key: "$ne", Value: model.StatusNew},
+					}}},
+				}},
 			}},
 		},
 
@@ -316,6 +326,28 @@ func (ur *userRepository) FindAll(ctx context.Context) ([]model.User, error) {
 
 	// prettyJSON, _ := json.MarshalIndent(users, "", "  ")
 	// fmt.Println("users:", string(prettyJSON))
+
+	return users, nil
+}
+
+func (ur *userRepository) FindUnassignedNew(ctx context.Context) ([]model.User, error) {
+	cursor, err := ur.collection.Find(ctx, bson.M{
+		"status": model.StatusNew,
+		"$or": []bson.M{
+			{"roleId": bson.M{"$exists": false}},
+			{"roleId": nil},
+			{"roleId": primitive.NilObjectID},
+		},
+	}, options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}))
+	if err != nil {
+		return nil, wrapDBError(common.ErrFailedToFetchUsers, err)
+	}
+	defer func() { _ = cursor.Close(ctx) }()
+
+	users := make([]model.User, 0)
+	if err := cursor.All(ctx, &users); err != nil {
+		return nil, wrapDBError(common.ErrFailedToFetchUsers, err)
+	}
 
 	return users, nil
 }

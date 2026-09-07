@@ -23,7 +23,7 @@ type User struct {
 	MiddleName  string              `json:"middleName" bson:"middleName,omitempty"`
 	LastName    string              `json:"lastName" bson:"lastName,omitempty"`
 	Email       string              `json:"email" bson:"email"`
-	RoleID      primitive.ObjectID  `json:"roleId" bson:"roleId"`
+	RoleID      primitive.ObjectID  `json:"roleId,omitempty" bson:"roleId,omitempty"`
 	Role        *Role               `json:"role,omitempty" bson:"role,omitempty"`
 	Permissions []string            `json:"permissions,omitempty" bson:"permissions,omitempty"`
 	Username    string              `json:"username" bson:"username"`
@@ -40,6 +40,18 @@ type User struct {
 	UpdatedBy   *primitive.ObjectID `json:"updatedBy,omitempty" bson:"updatedBy,omitempty"`
 	DeletedBy   *primitive.ObjectID `json:"deletedBy,omitempty" bson:"deletedBy,omitempty"`
 	DeletedAt   *time.Time          `json:"deletedAt,omitempty" bson:"deletedAt,omitempty"`
+}
+
+func (u *User) HasAssignedRole() bool {
+	if u == nil {
+		return false
+	}
+
+	if !u.RoleID.IsZero() {
+		return true
+	}
+
+	return u.Role != nil && !u.Role.ID.IsZero()
 }
 
 type UserProfile struct {

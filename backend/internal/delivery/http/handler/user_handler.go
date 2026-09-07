@@ -25,6 +25,9 @@ type UserHandler interface {
 	GetAll(c *gin.Context)
 	GetByID(c *gin.Context)
 	Create(c *gin.Context)
+	RequestAccount(c *gin.Context)
+	ListAccountRequests(c *gin.Context)
+	GetAccountRequest(c *gin.Context)
 	Update(c *gin.Context)
 	UpdateAvatar(c *gin.Context)
 	UploadAvatarPhoto(c *gin.Context)
@@ -141,6 +144,10 @@ func (a *userHandler) writeLoginResult(c *gin.Context, user *dto.LoginResponse, 
 		case errors.Is(err, common.ErrInvalidRefreshToken):
 			status = http.StatusUnauthorized
 			message = "Session expired. Please sign in again"
+
+		case errors.Is(err, common.ErrAccountPendingApproval):
+			status = http.StatusForbidden
+			message = "Your account request is pending approval"
 
 		case errors.Is(err, common.ErrADUserNotFound):
 			status = http.StatusForbidden
@@ -350,6 +357,80 @@ func (h *userHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, response.Status{
 		IsSuccessful: true,
 		Message:      "User registered successfully",
+	})
+}
+
+func (h *userHandler) RequestAccount(c *gin.Context) {
+	var req dto.RequestAccountRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			message := fmt.Sprintf(
+				"%s failed on %s validation",
+				e.Field(),
+				e.Tag(),
+			)
+
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: message,
+				Error:   err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: common.MessInvalidRequest,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	err := h.userService.RequestAccount(c, &req)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, response.Status{
+		IsSuccessful: true,
+		Message:      "Account request submitted. An administrator will review it before you can sign in.",
+	})
+}
+
+func (h *userHandler) ListAccountRequests(c *gin.Context) {
+	requests, err := h.userService.ListAccountRequests(c)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	if requests == nil {
+		requests = []model.AccountRequest{}
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Account requests fetched successfully",
+		Data:         requests,
+	})
+}
+
+func (h *userHandler) GetAccountRequest(c *gin.Context) {
+	requestID, ok := parseObjectIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	request, err := h.userService.GetAccountRequest(c, requestID)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Account request fetched successfully",
+		Data:         request,
 	})
 }
 

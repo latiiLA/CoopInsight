@@ -146,6 +146,7 @@ func main() {
 	userService := service.NewUserService(
 		userRepository,
 		roleRepository,
+		mongodb.NewAccountRequestRepository(db),
 		configs.LDAPHost,
 		configs.LDAPPort,
 		configs.LDAPBaseDN,

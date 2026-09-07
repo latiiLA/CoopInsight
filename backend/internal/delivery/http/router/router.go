@@ -121,6 +121,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	)
 
 	registerUserRoutes(protected, handlers.User)
+	registerAccountRequestRoutes(protected, handlers.User)
 	registerAccountRoutes(protected, handlers.User)
 	registerPermissionRoutes(protected, handlers.Permission)
 	registerRoleRoutes(protected, handlers.Role)

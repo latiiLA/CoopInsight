@@ -11,5 +11,6 @@ func registerAuthRoutes(api *gin.RouterGroup, userHandler handler.UserHandler) {
 	auth.POST("/login-ldap", userHandler.Login)
 	auth.POST("/login", userHandler.LoginLocal)
 	auth.POST("/refresh", userHandler.Refresh)
+	auth.POST("/request-account", userHandler.RequestAccount)
 	// group.POST("/register", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"user:create"}), authController.Register)
 }

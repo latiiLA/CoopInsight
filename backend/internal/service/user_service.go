@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -27,6 +28,9 @@ type UserService interface {
 	AuthenticateLocal(ctx context.Context, username, password, ip string) (*dto.LoginResponse, error)
 	RefreshSession(ctx context.Context, refreshToken, ip string) (*dto.LoginResponse, error)
 	Register(ctx context.Context, createdBy primitive.ObjectID, req *dto.RegisterRequest) error
+	RequestAccount(ctx context.Context, req *dto.RequestAccountRequest) error
+	ListAccountRequests(ctx context.Context) ([]model.AccountRequest, error)
+	GetAccountRequest(ctx context.Context, id primitive.ObjectID) (*model.AccountRequest, error)
 	GetUserDetails(ctx context.Context, username string) (*dto.UserResponse, error)
 	GetByID(ctx context.Context, userID primitive.ObjectID) (*model.User, error)
 	GetAll(ctx context.Context) ([]model.User, error)
@@ -37,30 +41,33 @@ type UserService interface {
 }
 
 type userService struct {
-	userRepository repository.UserRepository
-	roleRepository repository.RoleRepository
-	host           string
-	port           string
-	basedDN        string
-	bindUser       string
-	bindPassword   string
-	userFilter     string
+	userRepository           repository.UserRepository
+	roleRepository           repository.RoleRepository
+	accountRequestRepository repository.AccountRequestRepository
+	host                     string
+	port                     string
+	basedDN                  string
+	bindUser                 string
+	bindPassword             string
+	userFilter               string
 }
 
 func NewUserService(
 	userRepository repository.UserRepository,
 	roleRepository repository.RoleRepository,
+	accountRequestRepository repository.AccountRequestRepository,
 	host, port, baseDN, bindUser, bindPassword, userFilter string,
 ) UserService {
 	return &userService{
-		userRepository: userRepository,
-		roleRepository: roleRepository,
-		host:           host,
-		port:           port,
-		basedDN:        baseDN,
-		bindUser:       bindUser,
-		bindPassword:   bindPassword,
-		userFilter:     userFilter,
+		userRepository:           userRepository,
+		roleRepository:           roleRepository,
+		accountRequestRepository: accountRequestRepository,
+		host:                     host,
+		port:                     port,
+		basedDN:                  baseDN,
+		bindUser:                 bindUser,
+		bindPassword:             bindPassword,
+		userFilter:               userFilter,
 	}
 }
 
@@ -158,6 +165,10 @@ func (s *userService) RefreshSession(ctx context.Context, refreshToken, ip strin
 		return nil, common.ErrUserAccessRevoked
 	}
 
+	if !existingUser.HasAssignedRole() {
+		return nil, common.ErrAccountPendingApproval
+	}
+
 	return s.issueSessionResponse(ctx, existingUser, ip, refreshToken)
 }
 
@@ -173,6 +184,10 @@ func (s *userService) findEligibleUser(ctx context.Context, username string) (*m
 	if existingUser.Status != model.StatusNew && existingUser.Status != model.StatusActive {
 		logrus.Println("user access has been revoked")
 		return nil, common.ErrUserAccessRevoked
+	}
+
+	if !existingUser.HasAssignedRole() {
+		return nil, common.ErrAccountPendingApproval
 	}
 
 	return existingUser, nil
@@ -255,53 +270,65 @@ func passwordMatches(stored, provided string) bool {
 
 // Inside your LDAP service
 func (s *userService) GetUserDetails(ctx context.Context, username string) (*dto.UserResponse, error) {
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return nil, common.ErrADUserNotFound
+	}
+
 	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s:%s", s.host, s.port))
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).Warn("LDAP: connection failed")
+		return nil, fmt.Errorf("%w: %v", common.ErrADUnavailable, err)
 	}
 	defer func() { _ = l.Close() }()
 
-	// Bind with Service Account
-	err = l.Bind(s.bindUser, s.bindPassword)
-	if err != nil {
-		return nil, err
+	if err := l.Bind(s.bindUser, s.bindPassword); err != nil {
+		logrus.WithError(err).Warn("LDAP: bind failed")
+		return nil, fmt.Errorf("%w: %v", common.ErrADUnavailable, err)
 	}
 
-	// Search for the user
+	filter := fmt.Sprintf(
+		"(&(objectClass=user)(%s=%s))",
+		s.userFilter,
+		ldap.EscapeFilter(username),
+	)
+
 	searchRequest := ldap.NewSearchRequest(
 		s.basedDN,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(%s=%s)", s.userFilter, username), // Use sAMAccountName for real AD
-		[]string{"dn", "givenName", "name", "sn", "mail", "userAccountControl"},
-		// []string{"*"}, // used for debug to fetch all the data
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 1, 0, false,
+		filter,
+		[]string{"dn", "givenName", "name", "sn", "mail", s.userFilter, "sAMAccountName"},
 		nil,
 	)
 
 	sr, err := l.Search(searchRequest)
-	if err != nil || len(sr.Entries) == 0 {
+	if err != nil {
+		logrus.WithError(err).WithField("username", username).Warn("LDAP: search failed")
+		return nil, fmt.Errorf("%w: %v", common.ErrADUnavailable, err)
+	}
+	if sr == nil || len(sr.Entries) == 0 {
+		logrus.WithField("username", username).Warn("LDAP: username does not exist")
 		return nil, common.ErrADUserNotFound
 	}
 
 	entry := sr.Entries[0]
+	accountName := entry.GetAttributeValue(s.userFilter)
+	if accountName == "" {
+		accountName = entry.GetAttributeValue("sAMAccountName")
+	}
+	if !strings.EqualFold(accountName, username) {
+		logrus.WithFields(logrus.Fields{
+			"username":    username,
+			"accountName": accountName,
+		}).Warn("LDAP: username does not match AD account")
+		return nil, common.ErrADUserNotFound
+	}
 
-	// log.Println("===== LDAP ATTRIBUTES DUMP =====")
-
-	// for _, attr := range entry.Attributes {
-	// 	log.Printf("Attribute: %s\n", attr.Name)
-	// 	for i, val := range attr.Values {
-	// 		log.Printf("   Value[%d]: %s\n", i, val)
-	// 	}
-	// }
-
-	// log.Println("================================")
-
-	user := &dto.UserResponse{
-		// DisplayName: entry.GetAttributeValue("name"),
+	return &dto.UserResponse{
 		FirstName:  entry.GetAttributeValue("givenName"),
 		MiddleName: entry.GetAttributeValue("sn"),
 		Email:      entry.GetAttributeValue("mail"),
-	}
-	return user, nil
+	}, nil
 }
 
 func (s *userService) GetByID(ctx context.Context, userID primitive.ObjectID) (*model.User, error) {
@@ -440,12 +467,9 @@ func removeUserAvatarFiles(userID primitive.ObjectID) {
 func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID, req *dto.RegisterRequest) error {
 	username := strings.ToLower(strings.TrimSpace(req.Username))
 
-	existing, err := s.userRepository.FindByUsername(ctx, username)
+	adUser, err := s.GetUserDetails(ctx, username)
 	if err != nil {
 		return err
-	}
-	if existing != nil {
-		return common.ErrUsernameAlreadyExists
 	}
 
 	roleID, err := primitive.ObjectIDFromHex(req.Role)
@@ -462,16 +486,62 @@ func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID
 	}
 
 	email := strings.ToLower(strings.TrimSpace(req.Email))
-	if email == "" {
-		if adUser, adErr := s.GetUserDetails(ctx, username); adErr == nil && adUser != nil {
-			email = adUser.Email
-		}
+	if email == "" && adUser != nil {
+		email = adUser.Email
 	}
 
 	now := time.Now()
 	permissions := req.Permissions
 	if permissions == nil {
 		permissions = []string{}
+	}
+
+	var accountRequest *model.AccountRequest
+	var stubUser *model.User
+	if strings.TrimSpace(req.RequestID) != "" {
+		requestID, parseErr := primitive.ObjectIDFromHex(strings.TrimSpace(req.RequestID))
+		if parseErr != nil {
+			return common.ErrAccountRequestNotFound
+		}
+
+		accountRequest, err = s.accountRequestRepository.FindByID(ctx, requestID)
+		if err != nil {
+			return err
+		}
+		if accountRequest != nil && accountRequest.Status != model.AccountRequestPending {
+			return common.ErrAccountRequestAlreadyHandled
+		}
+		if accountRequest == nil {
+			stubUser, err = s.userRepository.FindByID(ctx, requestID)
+			if err != nil {
+				return err
+			}
+			if stubUser == nil || stubUser.HasAssignedRole() || stubUser.Status == model.StatusDeleted {
+				return common.ErrAccountRequestNotFound
+			}
+		}
+	}
+
+	existing, err := s.userRepository.FindByUsername(ctx, username)
+	if err != nil {
+		return err
+	}
+	if existing != nil && (stubUser == nil || existing.ID != stubUser.ID) {
+		return common.ErrUsernameAlreadyExists
+	}
+
+	if stubUser != nil {
+		stubUser.FirstName = strings.TrimSpace(req.FirstName)
+		stubUser.MiddleName = strings.TrimSpace(req.MiddleName)
+		stubUser.LastName = strings.TrimSpace(req.LastName)
+		stubUser.Email = email
+		stubUser.RoleID = roleID
+		stubUser.Permissions = permissions
+		stubUser.Username = username
+		stubUser.UpdatedAt = now
+		stubUser.UpdatedBy = &createdBy
+
+		return s.userRepository.Update(ctx, stubUser)
 	}
 
 	user := &model.User{
@@ -489,5 +559,126 @@ func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID
 		CreatedBy:   createdBy,
 	}
 
-	return s.userRepository.Create(ctx, user)
+	if err := s.userRepository.Create(ctx, user); err != nil {
+		return err
+	}
+
+	if accountRequest != nil {
+		if err := s.accountRequestRepository.Fulfill(ctx, accountRequest.ID, createdBy, user.ID, now); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *userService) RequestAccount(ctx context.Context, req *dto.RequestAccountRequest) error {
+	username := strings.ToLower(strings.TrimSpace(req.Username))
+
+	existing, err := s.userRepository.FindByUsername(ctx, username)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		return common.ErrUsernameAlreadyExists
+	}
+
+	pending, err := s.accountRequestRepository.FindPendingByUsername(ctx, username)
+	if err != nil {
+		return err
+	}
+	if pending != nil {
+		return common.ErrUsernameAlreadyExists
+	}
+
+	if _, err := s.GetUserDetails(ctx, username); err != nil {
+		return err
+	}
+
+	now := time.Now()
+	request := &model.AccountRequest{
+		ID:         primitive.NewObjectID(),
+		Username:   username,
+		FirstName:  strings.TrimSpace(req.FirstName),
+		MiddleName: strings.TrimSpace(req.MiddleName),
+		LastName:   strings.TrimSpace(req.LastName),
+		Email:      strings.ToLower(strings.TrimSpace(req.Email)),
+		Status:     model.AccountRequestPending,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+
+	return s.accountRequestRepository.Create(ctx, request)
+}
+
+func accountRequestFromUser(user *model.User) model.AccountRequest {
+	return model.AccountRequest{
+		ID:         user.ID,
+		Username:   user.Username,
+		FirstName:  user.FirstName,
+		MiddleName: user.MiddleName,
+		LastName:   user.LastName,
+		Email:      user.Email,
+		Status:     model.AccountRequestPending,
+		CreatedAt:  user.CreatedAt,
+		UpdatedAt:  user.UpdatedAt,
+	}
+}
+
+func (s *userService) ListAccountRequests(ctx context.Context) ([]model.AccountRequest, error) {
+	requests, err := s.accountRequestRepository.FindPending(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if requests == nil {
+		requests = []model.AccountRequest{}
+	}
+
+	pendingUsernames := make(map[string]struct{}, len(requests))
+	for _, request := range requests {
+		pendingUsernames[request.Username] = struct{}{}
+	}
+
+	stubs, err := s.userRepository.FindUnassignedNew(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range stubs {
+		if stubs[i].HasAssignedRole() {
+			continue
+		}
+		if _, exists := pendingUsernames[stubs[i].Username]; exists {
+			continue
+		}
+
+		requests = append(requests, accountRequestFromUser(&stubs[i]))
+	}
+
+	sort.Slice(requests, func(i, j int) bool {
+		return requests[i].CreatedAt.After(requests[j].CreatedAt)
+	})
+
+	return requests, nil
+}
+
+func (s *userService) GetAccountRequest(ctx context.Context, id primitive.ObjectID) (*model.AccountRequest, error) {
+	request, err := s.accountRequestRepository.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if request != nil {
+		return request, nil
+	}
+
+	user, err := s.userRepository.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil || user.HasAssignedRole() || user.Status == model.StatusDeleted {
+		return nil, common.ErrAccountRequestNotFound
+	}
+
+	converted := accountRequestFromUser(user)
+	return &converted, nil
 }
