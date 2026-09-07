@@ -133,7 +133,7 @@ const data: {
           permissions: ["report:view-deposit-per-terminal"],
         },
         {
-          title: "Success Rate",
+          title: "Acquiring Success Rate",
           icon: Percent,
           url: "success-rate",
           permissions: ["report:view-success-transactions"],

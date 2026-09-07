@@ -15,6 +15,7 @@ import {
 import { fetchSuccessTransactions } from "@/features/report_slice";
 import { SuccessRateRow } from "@/types/report";
 import { AppDispatch, RootState } from "../../../../app/store/store";
+import { AcquiringOutcomePie } from "./acquiring-outcome-pie";
 import { columns } from "./columns";
 import { DeclineReasonsPie } from "./decline-reasons-pie";
 
@@ -81,7 +82,9 @@ export default function SuccessRate() {
     <div className="container mx-auto">
       <div className="flex items-center justify-between py-1">
         <div>
-          <h3 className="text-lg font-semibold tracking-tight">Success Rate</h3>
+          <h3 className="text-lg font-semibold tracking-tight">
+            Acquiring Success Rate
+          </h3>
         </div>
       </div>
 
@@ -121,7 +124,7 @@ export default function SuccessRate() {
         </Card>
         <Card className="gap-2 py-4">
           <CardHeader className="px-4">
-            <CardDescription>Success rate</CardDescription>
+            <CardDescription>Acquiring success rate</CardDescription>
             <CardTitle className="text-2xl">
               {successRate ? `${successRate.successRatePercent.toFixed(2)}%` : "—"}
             </CardTitle>
@@ -134,16 +137,25 @@ export default function SuccessRate() {
         </Card>
       </div>
 
-      <div className="py-2">
-        <DeclineReasonsPie rows={tableData} declinedCount={declinedCount} />
+      <div className="grid min-w-0 gap-4 py-2 lg:grid-cols-2">
+        <AcquiringOutcomePie
+          approvedCount={successRate?.approvedCount ?? 0}
+          declinedCount={declinedCount}
+          compact
+        />
+        <DeclineReasonsPie
+          rows={tableData}
+          declinedCount={declinedCount}
+          compact
+        />
       </div>
 
       <DataTable
         loading={successRateLoading}
         columns={columns}
         data={tableData}
-        searchPlaceholder="Search decline reasons..."
-        exportFileName="success-rate"
+        searchPlaceholder="Search acquiring declined reasons..."
+        exportFileName="acquiring-success-rate"
         defaultDate={todayRange}
         onDateChange={handleDateChange}
       />

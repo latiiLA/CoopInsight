@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchDepositPerTerminal } from "@/features/terminal_slice";
 import { fetchSuccessTransactions } from "@/features/report_slice";
+import { AcquiringOutcomePie } from "@/pages/reports/success-rate/acquiring-outcome-pie";
 import { DeclineReasonsPie } from "@/pages/reports/success-rate/decline-reasons-pie";
 import { SuccessRateRow } from "@/types/report";
 import { AppDispatch, RootState } from "../../app/store/store";
@@ -163,8 +164,8 @@ export default function Home() {
 
   const quickLinks = [
     {
-      title: "Success Rate",
-      description: "ATM approvals, declines, and response codes",
+      title: "Acquiring Success Rate",
+      description: "Acquiring approvals, declines, and response codes",
       to: "/success-rate",
       icon: Percent,
       show: canViewSuccessRate,
@@ -245,9 +246,9 @@ export default function Home() {
           loading={canViewSuccessRate && successRateLoading}
         />
         <MetricCard
-          label="Success rate"
+          label="Acquiring success rate"
           value={successRate ? `${successPercent.toFixed(2)}%` : "—"}
-          hint="Approved share of today's ATM traffic"
+          hint="Approved share of today's acquiring traffic"
           icon={Percent}
           loading={canViewSuccessRate && successRateLoading}
         />
@@ -256,10 +257,11 @@ export default function Home() {
       {successRate ? (
         <Card className="gap-3 py-4">
           <CardHeader className="px-4">
-            <CardTitle className="text-base">Approval mix</CardTitle>
+            <CardTitle className="text-base">Acquiring approval mix</CardTitle>
             <CardDescription>
               {formatCount(successRate.approvedCount)} approved of{" "}
-              {formatCount(successRate.totalTransactions)} ATM transactions
+              {formatCount(successRate.totalTransactions)} acquiring
+              transactions
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4">
@@ -282,25 +284,42 @@ export default function Home() {
       <div className="grid min-w-0 gap-4 xl:grid-cols-2">
         {canViewSuccessRate ? (
           successRateLoading && !successRate ? (
-            <Card className="h-[28rem] py-4">
-              <CardHeader className="px-4">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-4 w-64" />
-              </CardHeader>
-              <CardContent className="px-4">
-                <Skeleton className="h-64 w-full" />
-              </CardContent>
-            </Card>
+            <div className="min-w-0 space-y-4">
+              <Card className="h-[28rem] py-4">
+                <CardHeader className="px-4">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent className="px-4">
+                  <Skeleton className="h-64 w-full" />
+                </CardContent>
+              </Card>
+              <Card className="h-[28rem] py-4">
+                <CardHeader className="px-4">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent className="px-4">
+                  <Skeleton className="h-64 w-full" />
+                </CardContent>
+              </Card>
+            </div>
           ) : (
-            <DeclineReasonsPie
-              rows={tableData}
-              declinedCount={declinedCount}
-            />
+            <div className="min-w-0 space-y-4">
+              <AcquiringOutcomePie
+                approvedCount={successRate?.approvedCount ?? 0}
+                declinedCount={declinedCount}
+              />
+              <DeclineReasonsPie
+                rows={tableData}
+                declinedCount={declinedCount}
+              />
+            </div>
           )
         ) : (
           <Card className="py-4">
             <CardHeader className="px-4">
-              <CardTitle>ATM success rate</CardTitle>
+              <CardTitle>Acquiring success rate</CardTitle>
               <CardDescription>
                 You need report access to view today&apos;s switch performance.
               </CardDescription>

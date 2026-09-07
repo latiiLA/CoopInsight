@@ -7,64 +7,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SuccessRateRow } from "@/types/report";
 
-const SLICE_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--color-primary)",
-  "var(--chart-3)",
-  "var(--chart-5)",
-  "oklch(0.62 0.18 150)",
-  "oklch(0.58 0.19 300)",
-  "oklch(0.68 0.16 20)",
-  "var(--chart-4)",
-];
-
-const TOP_SLICE_COUNT = 8;
-
-type PieSlice = {
+type OutcomeSlice = {
   name: string;
   count: number;
   sharePercent: number;
   fill: string;
 };
 
-function buildPieSlices(rows: SuccessRateRow[], declinedCount: number): PieSlice[] {
-  const sorted = rows
-    .filter((row) => row.count > 0)
-    .sort((a, b) => b.count - a.count);
-
-  const top = sorted.slice(0, TOP_SLICE_COUNT);
-  const restCount = sorted
-    .slice(TOP_SLICE_COUNT)
-    .reduce((sum, row) => sum + row.count, 0);
-
-  const slices = top.map((row, index) => ({
-    name: `${row.label} (${row.code})`,
-    count: row.count,
-    sharePercent: row.sharePercent,
-    fill: SLICE_COLORS[index % SLICE_COLORS.length],
-  }));
-
-  if (restCount > 0) {
-    slices.push({
-      name: "Others",
-      count: restCount,
-      sharePercent: declinedCount > 0 ? (restCount / declinedCount) * 100 : 0,
-      fill: SLICE_COLORS[slices.length % SLICE_COLORS.length],
-    });
-  }
-
-  return slices;
-}
+const SUCCESS_FILL = "oklch(0.62 0.18 150)";
+const DECLINED_FILL = "var(--destructive)";
 
 function ShareTooltip({
   active,
   payload,
 }: {
   active?: boolean;
-  payload?: Array<{ payload: PieSlice }>;
+  payload?: Array<{ payload: OutcomeSlice }>;
 }) {
   if (!active || !payload?.length) {
     return null;
@@ -82,29 +41,43 @@ function ShareTooltip({
   );
 }
 
-export function DeclineReasonsPie({
-  rows,
+export function AcquiringOutcomePie({
+  approvedCount,
   declinedCount,
   compact = false,
 }: {
-  rows: SuccessRateRow[];
+  approvedCount: number;
   declinedCount: number;
   compact?: boolean;
 }) {
-  const slices = buildPieSlices(rows, declinedCount);
+  const total = approvedCount + declinedCount;
+  const slices: OutcomeSlice[] = [
+    {
+      name: "Success",
+      count: approvedCount,
+      sharePercent: total > 0 ? (approvedCount / total) * 100 : 0,
+      fill: SUCCESS_FILL,
+    },
+    {
+      name: "Declined",
+      count: declinedCount,
+      sharePercent: total > 0 ? (declinedCount / total) * 100 : 0,
+      fill: DECLINED_FILL,
+    },
+  ].filter((slice) => slice.count > 0);
 
   return (
     <Card className={compact ? "h-full min-w-0 gap-4 py-4" : "gap-4 py-4"}>
       <CardHeader className="px-4">
-        <CardTitle>Acquiring declined reasons</CardTitle>
+        <CardTitle>Acquiring success rate</CardTitle>
         <CardDescription>
-          Share of acquiring declined transactions by response code
+          Success and declined share of acquiring transactions
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4">
         {slices.length === 0 ? (
           <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-            No acquiring declined transactions in this range
+            No acquiring transactions in this range
           </div>
         ) : (
           <div
@@ -125,10 +98,8 @@ export function DeclineReasonsPie({
                     cy="50%"
                     innerRadius={58}
                     outerRadius={96}
-                    paddingAngle={2}
-                    label={({ percent }) =>
-                      percent >= 0.04 ? `${(percent * 100).toFixed(1)}%` : ""
-                    }
+                    paddingAngle={slices.length > 1 ? 2 : 0}
+                    label={({ percent }) => `${((percent ?? 0) * 100).toFixed(1)}%`}
                     labelLine={false}
                   >
                     {slices.map((slice) => (
