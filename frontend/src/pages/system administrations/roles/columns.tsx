@@ -69,7 +69,7 @@ export function getColumns(onDelete: (role: Role) => Promise<void>) {
         return (
           <DataRowActions
             row={row.original}
-            viewPath="/role/details"
+            viewPath={`/role/${roleId}`}
             viewPermission={["role:view-details"]}
             editPath={`/role/${roleId}/edit`}
             editPermission={["role:update"]}

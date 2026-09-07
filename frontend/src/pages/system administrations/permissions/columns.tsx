@@ -104,6 +104,8 @@ export function getColumns(
         return (
           <DataRowActions
             row={row.original}
+            viewPath={`/permission/${permissionId}`}
+            viewPermission={["permission:view-details"]}
             editPath={`/permission/${permissionId}/edit`}
             editPermission={["permission:update"]}
             deleteLabel="Delete"

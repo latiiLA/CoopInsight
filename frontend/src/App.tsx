@@ -16,9 +16,11 @@ import EditUser from "./pages/system administrations/users/edit-user";
 import ManageRoles from "./pages/system administrations/roles/manage-roles";
 import CreateRole from "./pages/system administrations/roles/create-role";
 import EditRole from "./pages/system administrations/roles/edit-role";
+import ViewRole from "./pages/system administrations/roles/view-role";
 import ManagePermissions from "./pages/system administrations/permissions/manage-permissions";
 import CreatePermission from "./pages/system administrations/permissions/create-permission";
 import EditPermission from "./pages/system administrations/permissions/edit-permission";
+import ViewPermission from "./pages/system administrations/permissions/view-permission";
 import OnusMonitoring from "./pages/monitoring/onus/onus-monitoring";
 import OffusMonitoring from "./pages/monitoring/offus/offus-monitoring";
 import MastercardDebitMonitoring from "./pages/monitoring/mastercard-debit/mastercard-debit-monitoring";
@@ -168,7 +170,7 @@ function App() {
           <Route
             path="/user/:id"
             element={
-              <RequirePermission permissions={["user:view-detail"]}>
+              <RequirePermission permissions={["user:view-details"]}>
                 <ViewUser />
               </RequirePermission>
             }
@@ -206,6 +208,14 @@ function App() {
             }
           />
           <Route
+            path="/role/:id"
+            element={
+              <RequirePermission permissions={["role:view-details"]}>
+                <ViewRole />
+              </RequirePermission>
+            }
+          />
+          <Route
             path="/permissions"
             element={
               <RequirePermission permissions={["permission:view"]}>
@@ -226,6 +236,14 @@ function App() {
             element={
               <RequirePermission permissions={["permission:update"]}>
                 <EditPermission />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/permission/:id"
+            element={
+              <RequirePermission permissions={["permission:view-details"]}>
+                <ViewPermission />
               </RequirePermission>
             }
           />
