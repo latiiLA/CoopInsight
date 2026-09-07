@@ -3,11 +3,11 @@ package common
 import "errors"
 
 var (
-	ErrInvalidCredentials    = errors.New("Invalid username or password")
-	ErrUserAccessRevoked     = errors.New("User access has been revoked or user is deleted")
+	ErrInvalidCredentials    = errors.New("invalid username or password")
+	ErrUserAccessRevoked     = errors.New("user access has been revoked or user is deleted")
 	ErrInvalidRefreshToken   = errors.New("invalid or expired refresh token")
-	ErrADUserNotFound        = errors.New("User not found in AD")
-	ErrUserNotFound          = errors.New("User not found")
+	ErrADUserNotFound        = errors.New("user not found in AD")
+	ErrUserNotFound          = errors.New("user not found")
 	ErrUsernameAlreadyExists = errors.New("username already exists")
 	ErrFailedToFetchUser     = errors.New("failed to fetch user")
 	ErrFailedToFetchUsers    = errors.New("failed to fetch users")

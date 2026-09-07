@@ -75,7 +75,7 @@ func (s *userService) Authenticate(ctx context.Context, username, password, ip s
 		logrus.Println("LDAP: Connection failed")
 		return nil, fmt.Errorf("failed to connect to LDAP: %w", err)
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 
 	// Search for user DN
 	searchRequest := ldap.NewSearchRequest(
@@ -259,7 +259,7 @@ func (s *userService) GetUserDetails(ctx context.Context, username string) (*dto
 	if err != nil {
 		return nil, err
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 
 	// Bind with Service Account
 	err = l.Bind(s.bindUser, s.bindPassword)

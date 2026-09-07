@@ -44,7 +44,7 @@ func (h *onusMonitoringHandler) Stream(c *gin.Context) {
 		logrus.WithError(err).Warn("on-us websocket upgrade failed")
 		return
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	done := make(chan struct{})
 	go func() {

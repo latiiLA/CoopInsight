@@ -104,7 +104,7 @@ func (ur *userRepository) FindByUsername(ctx context.Context, username string) (
 	if err != nil {
 		return nil, wrapDBError(common.ErrFailedToFetchUser, err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var user model.User
 	if !cursor.Next(ctx) {
@@ -186,7 +186,7 @@ func (ur *userRepository) FindByID(ctx context.Context, userID primitive.ObjectI
 	if err != nil {
 		return nil, wrapDBError(common.ErrFailedToFetchUser, err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	if !cursor.Next(ctx) {
 		if err := cursor.Err(); err != nil {
@@ -307,7 +307,7 @@ func (ur *userRepository) FindAll(ctx context.Context) ([]model.User, error) {
 	if err != nil {
 		return nil, wrapDBError(common.ErrFailedToFetchUsers, err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var users []model.User
 	if err := cursor.All(ctx, &users); err != nil {

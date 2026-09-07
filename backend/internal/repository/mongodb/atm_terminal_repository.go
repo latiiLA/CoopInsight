@@ -76,7 +76,7 @@ func (r *atmTerminalRepository) FindAll(ctx context.Context) ([]model.AtmTermina
 	if err != nil {
 		return nil, wrapDBError(common.ErrFailedToFetchAtmTerminals, err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	terminals := make([]model.AtmTerminal, 0)
 	if err := cursor.All(ctx, &terminals); err != nil {

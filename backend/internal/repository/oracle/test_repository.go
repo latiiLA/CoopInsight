@@ -75,7 +75,7 @@ func (r *testRepository) GetTestData(ctx context.Context, dateFrom, dateTo strin
 		return nil, err
 	}
 
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	columns, err := rows.Columns()
 	if err != nil {

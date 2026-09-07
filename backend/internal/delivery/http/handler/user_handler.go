@@ -475,7 +475,7 @@ func (h *userHandler) UploadAvatarPhoto(c *gin.Context) {
 		writeAppError(c, common.ErrInvalidAvatarFile)
 		return
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	data, err := io.ReadAll(io.LimitReader(src, maxAvatarBytes+1))
 	if err != nil {

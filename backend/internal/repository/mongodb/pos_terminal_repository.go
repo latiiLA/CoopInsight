@@ -83,7 +83,7 @@ func (r *posTerminalRepository) FindAll(ctx context.Context) ([]model.PosTermina
 	if err != nil {
 		return nil, wrapDBError(common.ErrFailedToFetchPosTerminals, err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	terminals := make([]model.PosTerminal, 0)
 	if err := cursor.All(ctx, &terminals); err != nil {

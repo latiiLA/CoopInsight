@@ -72,7 +72,7 @@ func (r *roleRepository) FindAll(ctx context.Context) ([]model.Role, error) {
 	if err != nil {
 		return nil, wrapDBError(common.ErrFailedToFetchRoles, err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var roles []model.Role
 	if err := cursor.All(ctx, &roles); err != nil {

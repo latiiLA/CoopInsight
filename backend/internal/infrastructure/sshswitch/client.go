@@ -55,7 +55,7 @@ func (c *Client) Tail() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
 
 	cmd := fmt.Sprintf("tail -n %d %s", c.cfg.TailLines, shellQuote(c.cfg.DebugPath))
 	output, err := session.Output(cmd)
@@ -72,7 +72,7 @@ func (c *Client) Follow(ctx context.Context, onStart func(), onLine func(string)
 	if err != nil {
 		return err
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
 
 	stdout, err := session.StdoutPipe()
 	if err != nil {
@@ -137,7 +137,7 @@ func (c *Client) Run(ctx context.Context, command string) (CommandResult, error)
 	if err != nil {
 		return CommandResult{}, err
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
 
 	var buf bytes.Buffer
 	session.Stdout = &buf

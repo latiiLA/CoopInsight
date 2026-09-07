@@ -136,7 +136,7 @@ func (r *permissionRepository) FindAll(ctx context.Context) ([]model.Permission,
 	if err != nil {
 		return nil, wrapDBError(common.ErrFailedToFetchPermissions, err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var permissions []model.Permission
 	if err := cursor.All(ctx, &permissions); err != nil {
