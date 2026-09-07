@@ -21,3 +21,18 @@ export type SuccessRateRow = DeclineReason & {
   id: string;
   sharePercent: number;
 };
+
+export type EbirrCardlessWithdrawal = {
+  id: string;
+  rrn: string;
+  terminalName: string;
+  terminalLocation: string;
+  terminalId: string;
+  accountNumber: string;
+  response: string;
+  date: string;
+  amount: number;
+  customerMobile: string;
+  extTxnId: string;
+  bankTransferId: string;
+};

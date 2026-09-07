@@ -7,6 +7,7 @@ import RequestAccountPage from "./pages/request-account";
 import Transaction from "./pages/transaction/Transaction";
 import DepositPerTerminal from "./pages/reports/deposit-per-terminal";
 import SuccessRate from "./pages/reports/success-rate/success-rate";
+import EbirrCardlessWithdrawal from "./pages/reports/ebirr-cardless-withdrawal/ebirr-cardless-withdrawal";
 import ManageUsers from "./pages/system administrations/users/manage-users";
 import CreateUser from "./pages/system administrations/users/create-user";
 import ManageAccountRequests from "./pages/system administrations/users/manage-account-requests";
@@ -54,6 +55,14 @@ function App() {
             element={
               <RequirePermission permissions={["report:view-success-transactions"]}>
                 <SuccessRate />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/ebirr-cardless-withdrawal"
+            element={
+              <RequirePermission permissions={["report:view-ebirr-cardless-withdrawal"]}>
+                <EbirrCardlessWithdrawal />
               </RequirePermission>
             }
           />

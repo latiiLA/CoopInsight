@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { RootState } from "../../app/store/store";
 import {
   DeclineReason,
+  EbirrCardlessWithdrawal,
   SuccessTransactionReport,
 } from "@/types/report";
 import getErrorMessage from "../../utility/error-message";
@@ -12,9 +13,12 @@ interface ReportState {
   successRate: SuccessTransactionReport | null;
   successRateLoading: boolean;
   successRateError: string | null;
+  ebirrCardless: EbirrCardlessWithdrawal[];
+  ebirrCardlessLoading: boolean;
+  ebirrCardlessError: string | null;
 }
 
-interface FetchSuccessTransactionsParams {
+interface FetchReportDateParams {
   dateFrom: string;
   dateTo: string;
 }
@@ -23,11 +27,21 @@ const initialState: ReportState = {
   successRate: null,
   successRateLoading: false,
   successRateError: null,
+  ebirrCardless: [],
+  ebirrCardlessLoading: false,
+  ebirrCardlessError: null,
 };
 
 function toNumber(value: unknown): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toText(value: unknown): string {
+  if (value == null) {
+    return "";
+  }
+  return String(value);
 }
 
 function normalizeDeclineReason(reason: DeclineReason): DeclineReason {
@@ -55,9 +69,31 @@ function normalizeReport(
   };
 }
 
+function normalizeEbirrRow(
+  row: Omit<EbirrCardlessWithdrawal, "id">,
+  index: number,
+): EbirrCardlessWithdrawal {
+  const bankTransferId = toText(row.bankTransferId);
+  const rrn = toText(row.rrn);
+  return {
+    id: `${bankTransferId || "row"}-${rrn || index}-${index}`,
+    rrn,
+    terminalName: toText(row.terminalName),
+    terminalLocation: toText(row.terminalLocation),
+    terminalId: toText(row.terminalId),
+    accountNumber: toText(row.accountNumber),
+    response: toText(row.response),
+    date: toText(row.date),
+    amount: toNumber(row.amount),
+    customerMobile: toText(row.customerMobile),
+    extTxnId: toText(row.extTxnId),
+    bankTransferId,
+  };
+}
+
 export const fetchSuccessTransactions = createAsyncThunk<
   SuccessTransactionReport,
-  FetchSuccessTransactionsParams,
+  FetchReportDateParams,
   {
     state: RootState;
     rejectValue: string;
@@ -99,6 +135,50 @@ export const fetchSuccessTransactions = createAsyncThunk<
   },
 );
 
+export const fetchEbirrCardlessWithdrawal = createAsyncThunk<
+  EbirrCardlessWithdrawal[],
+  FetchReportDateParams,
+  {
+    state: RootState;
+    rejectValue: string;
+  }
+>(
+  "report/fetchEbirrCardlessWithdrawal",
+  async ({ dateFrom, dateTo }, thunkAPI) => {
+    try {
+      const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+      if (!token) {
+        return thunkAPI.rejectWithValue("Authentication token not found");
+      }
+
+      const response = await api.get<{
+        isSuccessful: boolean;
+        message: string;
+        data: Omit<EbirrCardlessWithdrawal, "id">[];
+      }>("/reports/ebirr-cardless-withdrawal", {
+        ...withAuthHeader(token),
+        params: {
+          dateFrom,
+          dateTo,
+        },
+      });
+
+      const rows = response.data.data;
+
+      if (!rows) {
+        return thunkAPI.rejectWithValue(
+          "Failed to fetch Ebirr cardless withdrawal report",
+        );
+      }
+
+      return rows.map(normalizeEbirrRow);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
 const reportSlice = createSlice({
   name: "report",
   initialState,
@@ -106,6 +186,10 @@ const reportSlice = createSlice({
     clearSuccessRate: (state) => {
       state.successRate = null;
       state.successRateError = null;
+    },
+    clearEbirrCardless: (state) => {
+      state.ebirrCardless = [];
+      state.ebirrCardlessError = null;
     },
   },
   extraReducers: (builder) => {
@@ -122,10 +206,23 @@ const reportSlice = createSlice({
         state.successRateLoading = false;
         state.successRateError =
           action.payload || "Failed to fetch success transaction report";
+      })
+      .addCase(fetchEbirrCardlessWithdrawal.pending, (state) => {
+        state.ebirrCardlessLoading = true;
+        state.ebirrCardlessError = null;
+      })
+      .addCase(fetchEbirrCardlessWithdrawal.fulfilled, (state, action) => {
+        state.ebirrCardlessLoading = false;
+        state.ebirrCardless = action.payload;
+      })
+      .addCase(fetchEbirrCardlessWithdrawal.rejected, (state, action) => {
+        state.ebirrCardlessLoading = false;
+        state.ebirrCardlessError =
+          action.payload || "Failed to fetch Ebirr cardless withdrawal report";
       });
   },
 });
 
-export const { clearSuccessRate } = reportSlice.actions;
+export const { clearSuccessRate, clearEbirrCardless } = reportSlice.actions;
 
 export default reportSlice.reducer;

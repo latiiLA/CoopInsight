@@ -8,6 +8,7 @@ import {
   Shield,
   Activity,
   Users,
+  Wallet,
 } from "lucide-react";
 import { type ComponentType, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -176,6 +177,13 @@ export default function Home() {
       to: "/deposit-per-terminal",
       icon: Banknote,
       show: true,
+    },
+    {
+      title: "Ebirr Cardless Withdrawal",
+      description: "Confirmed Ebirr cardless cash withdrawals",
+      to: "/ebirr-cardless-withdrawal",
+      icon: Wallet,
+      show: hasPermission(["report:view-ebirr-cardless-withdrawal"]),
     },
     {
       title: "Manage Users",
