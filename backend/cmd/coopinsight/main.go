@@ -184,6 +184,7 @@ func main() {
 
 	var testHandler handler.TestHandler
 	var successTransactionHandler handler.SuccessTransactionHandler
+	var ebirrCardlessHandler handler.EbirrCardlessWithdrawalHandler
 	if oracleDB != nil {
 		testHandler = handler.NewTestHandler(
 			service.NewTestService(oracle.NewTestRepository(oracleDB)),
@@ -191,10 +192,16 @@ func main() {
 		successTransactionHandler = handler.NewSuccessTransactionHandler(
 			service.NewSuccessTransactionService(oracle.NewSuccessTransactionRepository(oracleDB)),
 		)
+		ebirrCardlessHandler = handler.NewEbirrCardlessWithdrawalHandler(
+			service.NewEbirrCardlessWithdrawalService(oracle.NewEbirrCardlessWithdrawalRepository(oracleDB)),
+		)
 	} else {
 		testHandler = handler.NewTestHandler(service.NewTestService(nil))
 		successTransactionHandler = handler.NewSuccessTransactionHandler(
 			service.NewSuccessTransactionService(nil),
+		)
+		ebirrCardlessHandler = handler.NewEbirrCardlessWithdrawalHandler(
+			service.NewEbirrCardlessWithdrawalService(nil),
 		)
 	}
 
@@ -235,16 +242,17 @@ func main() {
 	// --------------------------------------------------
 
 	r := router.SetupRouter(router.Handlers{
-		User:               userHandler,
-		Permission:         permissionHandler,
-		Role:               roleHandler,
-		Test:               testHandler,
-		SuccessTransaction: successTransactionHandler,
-		AtmTerminal:        atmTerminalHandler,
-		PosTerminal:        posTerminalHandler,
-		OnusMonitoring:     onusHandler,
-		OffusMonitoring:    offusHandler,
-		SwitchCommand:      switchCommandHandler,
+		User:                    userHandler,
+		Permission:              permissionHandler,
+		Role:                    roleHandler,
+		Test:                    testHandler,
+		SuccessTransaction:      successTransactionHandler,
+		EbirrCardlessWithdrawal: ebirrCardlessHandler,
+		AtmTerminal:             atmTerminalHandler,
+		PosTerminal:             posTerminalHandler,
+		OnusMonitoring:          onusHandler,
+		OffusMonitoring:         offusHandler,
+		SwitchCommand:           switchCommandHandler,
 	})
 
 	// --------------------------------------------------

@@ -12,16 +12,17 @@ import (
 )
 
 type Handlers struct {
-	User               handler.UserHandler
-	Permission         handler.PermissionHandler
-	Role               handler.RoleHandler
-	Test               handler.TestHandler
-	SuccessTransaction handler.SuccessTransactionHandler
-	AtmTerminal        handler.AtmTerminalHandler
-	PosTerminal        handler.PosTerminalHandler
-	OnusMonitoring     handler.OnusMonitoringHandler
-	OffusMonitoring    handler.OnusMonitoringHandler
-	SwitchCommand      handler.SwitchCommandHandler
+	User                    handler.UserHandler
+	Permission              handler.PermissionHandler
+	Role                    handler.RoleHandler
+	Test                    handler.TestHandler
+	SuccessTransaction      handler.SuccessTransactionHandler
+	EbirrCardlessWithdrawal handler.EbirrCardlessWithdrawalHandler
+	AtmTerminal             handler.AtmTerminalHandler
+	PosTerminal             handler.PosTerminalHandler
+	OnusMonitoring          handler.OnusMonitoringHandler
+	OffusMonitoring         handler.OnusMonitoringHandler
+	SwitchCommand           handler.SwitchCommandHandler
 }
 
 func SetupRouter(handlers Handlers) *gin.Engine {
@@ -139,7 +140,11 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	)
 
 	registerTestRoutes(oracleProtected, handlers.Test)
-	registerReportRoutes(oracleProtected, handlers.SuccessTransaction)
+	registerReportRoutes(
+		oracleProtected,
+		handlers.SuccessTransaction,
+		handlers.EbirrCardlessWithdrawal,
+	)
 
 	live := api.Group("")
 	live.Use(middleware.JwtAuthMiddleware())

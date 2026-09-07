@@ -6,12 +6,21 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/middleware"
 )
 
-func registerReportRoutes(protected *gin.RouterGroup, successTransactionHandler handler.SuccessTransactionHandler) {
+func registerReportRoutes(
+	protected *gin.RouterGroup,
+	successTransactionHandler handler.SuccessTransactionHandler,
+	ebirrCardlessHandler handler.EbirrCardlessWithdrawalHandler,
+) {
 	reports := protected.Group("/reports")
 
 	reports.GET(
 		"/success-transactions",
 		middleware.AuthorizeRolesOrPermissions([]string{}, []string{"report:view-success-transactions"}),
 		successTransactionHandler.GetReport,
+	)
+	reports.GET(
+		"/ebirr-cardless-withdrawal",
+		middleware.AuthorizeRolesOrPermissions([]string{}, []string{"report:view-ebirr-cardless-withdrawal"}),
+		ebirrCardlessHandler.GetReport,
 	)
 }
