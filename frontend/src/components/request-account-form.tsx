@@ -27,10 +27,7 @@ const requestAccountSchema = z.object({
     .string()
     .trim()
     .min(2, "Username must be at least 2 characters")
-    .regex(
-      /^[a-zA-Z0-9._-]+$/,
-      "Username can only contain letters, numbers, dots, underscores and hyphens",
-    ),
+    .regex(/^[a-zA-Z0-9._-]+$/, "Use letters, numbers, dots, _ or -"),
   email: z
     .string()
     .trim()
@@ -39,6 +36,14 @@ const requestAccountSchema = z.object({
 });
 
 type RequestAccountFormInputs = z.infer<typeof requestAccountSchema>;
+
+function FieldError({ message }: { message?: string }) {
+  return (
+    <p className="h-4 truncate text-xs leading-4 text-destructive">
+      {message ?? "\u00a0"}
+    </p>
+  );
+}
 
 export function RequestAccountForm({
   className,
@@ -84,83 +89,75 @@ export function RequestAccountForm({
   };
 
   return (
-    <div className={cn("flex flex-col gap-4", className)} {...props}>
-      <Card>
-        <CardContent className="p-5">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-1">
-              <h1 className="text-lg font-semibold">Request an account</h1>
+    <div className={cn("flex flex-col", className)} {...props}>
+      <Card className="overflow-hidden">
+        <CardContent className="p-5 md:p-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+            <div className="space-y-0.5">
+              <h1 className="text-xl font-semibold tracking-tight">
+                Request an account
+              </h1>
               <p className="text-sm text-muted-foreground">
-                An administrator will review your request.
+                An administrator will review your request before you can sign in.
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="grid gap-1.5">
+              <div className="grid gap-1">
                 <Label htmlFor="firstName">First name</Label>
                 <Input
                   id="firstName"
                   autoComplete="given-name"
+                  aria-invalid={Boolean(errors.firstName)}
                   {...register("firstName")}
                 />
-                {errors.firstName?.message ? (
-                  <p className="text-xs text-red-600">
-                    {errors.firstName.message}
-                  </p>
-                ) : null}
+                <FieldError message={errors.firstName?.message} />
               </div>
 
-              <div className="grid gap-1.5">
+              <div className="grid gap-1">
                 <Label htmlFor="middleName">Father name</Label>
                 <Input
                   id="middleName"
                   autoComplete="additional-name"
+                  aria-invalid={Boolean(errors.middleName)}
                   {...register("middleName")}
                 />
-                {errors.middleName?.message ? (
-                  <p className="text-xs text-red-600">
-                    {errors.middleName.message}
-                  </p>
-                ) : null}
+                <FieldError message={errors.middleName?.message} />
               </div>
 
-              <div className="grid gap-1.5">
+              <div className="grid gap-1">
                 <Label htmlFor="lastName">Grandfather name</Label>
                 <Input
                   id="lastName"
                   autoComplete="family-name"
+                  aria-invalid={Boolean(errors.lastName)}
                   {...register("lastName")}
                 />
-                {errors.lastName?.message ? (
-                  <p className="text-xs text-red-600">
-                    {errors.lastName.message}
-                  </p>
-                ) : null}
+                <FieldError message={errors.lastName?.message} />
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-1.5">
+              <div className="grid gap-1">
                 <Label htmlFor="username">Username</Label>
-                <Input id="username" {...register("username")} />
-                {errors.username?.message ? (
-                  <p className="text-xs text-red-600">
-                    {errors.username.message}
-                  </p>
-                ) : null}
+                <Input
+                  id="username"
+                  aria-invalid={Boolean(errors.username)}
+                  {...register("username")}
+                />
+                <FieldError message={errors.username?.message} />
               </div>
 
-              <div className="grid gap-1.5">
+              <div className="grid gap-1">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   autoComplete="email"
+                  aria-invalid={Boolean(errors.email)}
                   {...register("email")}
                 />
-                {errors.email?.message ? (
-                  <p className="text-xs text-red-600">{errors.email.message}</p>
-                ) : null}
+                <FieldError message={errors.email?.message} />
               </div>
             </div>
 
