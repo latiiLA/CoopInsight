@@ -39,7 +39,7 @@ var processingTypes = map[string]string{
 }
 
 func ParseDump(raw string) []model.OnusEvent {
-	events := parseDumpInOrder(raw)
+	events := parseDumpInOrder(raw, false)
 	for i, j := 0, len(events)-1; i < j; i, j = i+1, j-1 {
 		events[i], events[j] = events[j], events[i]
 	}
@@ -47,7 +47,7 @@ func ParseDump(raw string) []model.OnusEvent {
 	return events
 }
 
-func parseDumpInOrder(raw string) []model.OnusEvent {
+func parseDumpInOrder(raw string, allowAnyMCC bool) []model.OnusEvent {
 	indexes := headerRe.FindAllStringSubmatchIndex(raw, -1)
 	if len(indexes) == 0 {
 		return nil
@@ -67,7 +67,7 @@ func parseDumpInOrder(raw string) []model.OnusEvent {
 		}
 
 		body := raw[loc[1]:end]
-		event, ok := parseBlock(matches[1], matches[4], matches[5], matches[3], body)
+		event, ok := parseBlock(matches[1], matches[4], matches[5], matches[3], body, allowAnyMCC)
 		if ok {
 			events = append(events, event)
 		}
@@ -77,7 +77,8 @@ func parseDumpInOrder(raw string) []model.OnusEvent {
 }
 
 type StreamParser struct {
-	buf strings.Builder
+	buf         strings.Builder
+	allowAnyMCC bool
 }
 
 func (p *StreamParser) AddLine(line string) []model.OnusEvent {
@@ -91,14 +92,14 @@ func (p *StreamParser) AddLine(line string) []model.OnusEvent {
 	}
 
 	lastStart := indexes[len(indexes)-1][0]
-	events := parseDumpInOrder(raw[:lastStart])
+	events := parseDumpInOrder(raw[:lastStart], p.allowAnyMCC)
 	p.buf.Reset()
 	p.buf.WriteString(raw[lastStart:])
 
 	return events
 }
 
-func parseBlock(timestamp, direction, messageID, seq, body string) (model.OnusEvent, bool) {
+func parseBlock(timestamp, direction, messageID, seq, body string, allowAnyMCC bool) (model.OnusEvent, bool) {
 	fields := map[string]string{}
 	amountRaw := ""
 
@@ -148,7 +149,7 @@ func parseBlock(timestamp, direction, messageID, seq, body string) (model.OnusEv
 	}
 
 	mcc := fields["18"]
-	if mcc != "" && mcc != "6011" {
+	if !allowAnyMCC && mcc != "" && mcc != "6011" {
 		return model.OnusEvent{}, false
 	}
 

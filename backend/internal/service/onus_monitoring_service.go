@@ -29,6 +29,20 @@ func NewOffusMonitoringService(collector *sshswitch.Collector) OnusMonitoringSer
 	}
 }
 
+func NewMastercardDebitMonitoringService(collector *sshswitch.Collector) OnusMonitoringService {
+	return &onusMonitoringService{
+		collector:   collector,
+		unavailable: common.ErrMastercardDebitMonitoringUnavailable,
+	}
+}
+
+func NewMastercardCreditMonitoringService(collector *sshswitch.Collector) OnusMonitoringService {
+	return &onusMonitoringService{
+		collector:   collector,
+		unavailable: common.ErrMastercardCreditMonitoringUnavailable,
+	}
+}
+
 func (s *onusMonitoringService) Subscribe() (<-chan model.OnusFrame, func(), error) {
 	if s.collector == nil {
 		return nil, nil, s.unavailable

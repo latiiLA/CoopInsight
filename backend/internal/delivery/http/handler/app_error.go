@@ -62,6 +62,8 @@ var appErrors = []struct {
 	{common.ErrFailedToFetchPosTerminals, http.StatusInternalServerError},
 	{common.ErrOnusMonitoringUnavailable, http.StatusServiceUnavailable},
 	{common.ErrOffusMonitoringUnavailable, http.StatusServiceUnavailable},
+	{common.ErrMastercardDebitMonitoringUnavailable, http.StatusServiceUnavailable},
+	{common.ErrMastercardCreditMonitoringUnavailable, http.StatusServiceUnavailable},
 	{common.ErrSwitchCommandUnavailable, http.StatusServiceUnavailable},
 	{common.ErrInvalidSwitchCommand, http.StatusBadRequest},
 	{common.ErrSwitchCommandTimeout, http.StatusGatewayTimeout},

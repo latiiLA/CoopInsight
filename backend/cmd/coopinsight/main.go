@@ -207,6 +207,8 @@ func main() {
 
 	var onusCollector *sshswitch.Collector
 	var offusCollector *sshswitch.Collector
+	var mastercardDebitCollector *sshswitch.Collector
+	var mastercardCreditCollector *sshswitch.Collector
 	if configs.SSHSwitchEnabled {
 		onusCollector = sshswitch.NewCollector(
 			newSwitchSSHClient(configs.SSHSwitchDebugPath),
@@ -222,7 +224,21 @@ func main() {
 		offusCollector.Start(ctx)
 		defer offusCollector.Close()
 
-		logrus.Info("On-us and off-us SSH monitoring collectors started")
+		mastercardDebitCollector = sshswitch.NewAnyMCCCollector(
+			newSwitchSSHClient(configs.SSHSwitchMCDebitDebugPath),
+			"mastercard-debit",
+		)
+		mastercardDebitCollector.Start(ctx)
+		defer mastercardDebitCollector.Close()
+
+		mastercardCreditCollector = sshswitch.NewAnyMCCCollector(
+			newSwitchSSHClient(configs.SSHSwitchMCCreditDebugPath),
+			"mastercard-credit",
+		)
+		mastercardCreditCollector.Start(ctx)
+		defer mastercardCreditCollector.Close()
+
+		logrus.Info("On-us, off-us, and Mastercard SSH monitoring collectors started")
 	} else {
 		logrus.Info("SSH switch monitoring is disabled")
 	}
@@ -231,6 +247,12 @@ func main() {
 	)
 	offusHandler := handler.NewOnusMonitoringHandler(
 		service.NewOffusMonitoringService(offusCollector),
+	)
+	mastercardDebitHandler := handler.NewOnusMonitoringHandler(
+		service.NewMastercardDebitMonitoringService(mastercardDebitCollector),
+	)
+	mastercardCreditHandler := handler.NewOnusMonitoringHandler(
+		service.NewMastercardCreditMonitoringService(mastercardCreditCollector),
 	)
 
 	var switchCommandClient *sshswitch.Client
@@ -250,17 +272,19 @@ func main() {
 	// --------------------------------------------------
 
 	r := router.SetupRouter(router.Handlers{
-		User:                    userHandler,
-		Permission:              permissionHandler,
-		Role:                    roleHandler,
-		Test:                    testHandler,
-		SuccessTransaction:      successTransactionHandler,
-		EbirrCardlessWithdrawal: ebirrCardlessHandler,
-		AtmTerminal:             atmTerminalHandler,
-		PosTerminal:             posTerminalHandler,
-		OnusMonitoring:          onusHandler,
-		OffusMonitoring:         offusHandler,
-		SwitchCommand:           switchCommandHandler,
+		User:                       userHandler,
+		Permission:                 permissionHandler,
+		Role:                       roleHandler,
+		Test:                       testHandler,
+		SuccessTransaction:         successTransactionHandler,
+		EbirrCardlessWithdrawal:    ebirrCardlessHandler,
+		AtmTerminal:                atmTerminalHandler,
+		PosTerminal:                posTerminalHandler,
+		OnusMonitoring:             onusHandler,
+		OffusMonitoring:            offusHandler,
+		MastercardDebitMonitoring:  mastercardDebitHandler,
+		MastercardCreditMonitoring: mastercardCreditHandler,
+		SwitchCommand:              switchCommandHandler,
 	})
 
 	// --------------------------------------------------

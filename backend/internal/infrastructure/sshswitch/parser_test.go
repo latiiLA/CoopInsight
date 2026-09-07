@@ -461,3 +461,18 @@ func terminals(events []model.OnusEvent) []string {
 	}
 	return out
 }
+
+func TestParseDumpKeepsPOSWhenAnyMCC(t *testing.T) {
+	dump := strings.ReplaceAll(sampleDump, "6011", "5411")
+	if got := parseDumpInOrder(dump, false); len(got) != 0 {
+		t.Fatalf("ATM parser should drop MCC 5411, got %d", len(got))
+	}
+
+	events := parseDumpInOrder(dump, true)
+	if len(events) != 1 {
+		t.Fatalf("expected 1 POS event when any MCC is allowed, got %d", len(events))
+	}
+	if events[0].MCC != "5411" {
+		t.Errorf("mcc = %q", events[0].MCC)
+	}
+}

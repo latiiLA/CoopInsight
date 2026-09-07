@@ -11,6 +11,8 @@ func registerMonitoringRoutes(
 	live *gin.RouterGroup,
 	onusHandler handler.OnusMonitoringHandler,
 	offusHandler handler.OnusMonitoringHandler,
+	mastercardDebitHandler handler.OnusMonitoringHandler,
+	mastercardCreditHandler handler.OnusMonitoringHandler,
 	switchCommandHandler handler.SwitchCommandHandler,
 ) {
 	monitoring := live.Group("/monitoring")
@@ -34,5 +36,15 @@ func registerMonitoringRoutes(
 		"/offus/ws",
 		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"monitoring:view-offus"}),
 		offusHandler.Stream,
+	)
+	monitoring.GET(
+		"/mastercard-debit/ws",
+		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"monitoring:view-mastercard-debit"}),
+		mastercardDebitHandler.Stream,
+	)
+	monitoring.GET(
+		"/mastercard-credit/ws",
+		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"monitoring:view-mastercard-credit"}),
+		mastercardCreditHandler.Stream,
 	)
 }

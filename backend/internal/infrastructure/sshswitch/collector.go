@@ -19,8 +19,9 @@ type subscriber struct {
 }
 
 type Collector struct {
-	client *Client
-	name   string
+	client      *Client
+	name        string
+	allowAnyMCC bool
 
 	mu           sync.RWMutex
 	recent       []model.OnusEvent
@@ -31,6 +32,14 @@ type Collector struct {
 }
 
 func NewCollector(client *Client, name string) *Collector {
+	return newCollector(client, name, false)
+}
+
+func NewAnyMCCCollector(client *Client, name string) *Collector {
+	return newCollector(client, name, true)
+}
+
+func newCollector(client *Client, name string, allowAnyMCC bool) *Collector {
 	if name == "" {
 		name = "switch"
 	}
@@ -38,6 +47,7 @@ func NewCollector(client *Client, name string) *Collector {
 	return &Collector{
 		client:      client,
 		name:        name,
+		allowAnyMCC: allowAnyMCC,
 		subscribers: make(map[*subscriber]struct{}),
 	}
 }
@@ -124,7 +134,7 @@ func (c *Collector) loop(ctx context.Context) {
 func (c *Collector) handleLine(line string) error {
 	c.mu.Lock()
 	if c.streamParser == nil {
-		c.streamParser = &StreamParser{}
+		c.streamParser = &StreamParser{allowAnyMCC: c.allowAnyMCC}
 	}
 	events := c.streamParser.AddLine(line)
 	c.mu.Unlock()
@@ -160,7 +170,7 @@ func (c *Collector) setStatus(live bool, errMessage string) {
 		if errMessage != "" {
 			c.lastErr = errMessage
 		}
-		c.streamParser = &StreamParser{}
+		c.streamParser = &StreamParser{allowAnyMCC: c.allowAnyMCC}
 	}
 	c.live = live
 	frame := model.OnusFrame{Type: "status", Live: live, Error: c.lastErr}

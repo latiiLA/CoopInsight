@@ -12,17 +12,19 @@ import (
 )
 
 type Handlers struct {
-	User                    handler.UserHandler
-	Permission              handler.PermissionHandler
-	Role                    handler.RoleHandler
-	Test                    handler.TestHandler
-	SuccessTransaction      handler.SuccessTransactionHandler
-	EbirrCardlessWithdrawal handler.EbirrCardlessWithdrawalHandler
-	AtmTerminal             handler.AtmTerminalHandler
-	PosTerminal             handler.PosTerminalHandler
-	OnusMonitoring          handler.OnusMonitoringHandler
-	OffusMonitoring         handler.OnusMonitoringHandler
-	SwitchCommand           handler.SwitchCommandHandler
+	User                       handler.UserHandler
+	Permission                 handler.PermissionHandler
+	Role                       handler.RoleHandler
+	Test                       handler.TestHandler
+	SuccessTransaction         handler.SuccessTransactionHandler
+	EbirrCardlessWithdrawal    handler.EbirrCardlessWithdrawalHandler
+	AtmTerminal                handler.AtmTerminalHandler
+	PosTerminal                handler.PosTerminalHandler
+	OnusMonitoring             handler.OnusMonitoringHandler
+	OffusMonitoring            handler.OnusMonitoringHandler
+	MastercardDebitMonitoring  handler.OnusMonitoringHandler
+	MastercardCreditMonitoring handler.OnusMonitoringHandler
+	SwitchCommand              handler.SwitchCommandHandler
 }
 
 func SetupRouter(handlers Handlers) *gin.Engine {
@@ -148,7 +150,14 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 
 	live := api.Group("")
 	live.Use(middleware.JwtAuthMiddleware())
-	registerMonitoringRoutes(live, handlers.OnusMonitoring, handlers.OffusMonitoring, handlers.SwitchCommand)
+	registerMonitoringRoutes(
+		live,
+		handlers.OnusMonitoring,
+		handlers.OffusMonitoring,
+		handlers.MastercardDebitMonitoring,
+		handlers.MastercardCreditMonitoring,
+		handlers.SwitchCommand,
+	)
 
 	return router
 }
