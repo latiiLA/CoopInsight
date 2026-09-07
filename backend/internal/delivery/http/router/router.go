@@ -24,6 +24,7 @@ type Handlers struct {
 	OffusMonitoring            handler.OnusMonitoringHandler
 	MastercardDebitMonitoring  handler.OnusMonitoringHandler
 	MastercardCreditMonitoring handler.OnusMonitoringHandler
+	VisaMonitoring             handler.OnusMonitoringHandler
 	SwitchCommand              handler.SwitchCommandHandler
 }
 
@@ -156,6 +157,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 		handlers.OffusMonitoring,
 		handlers.MastercardDebitMonitoring,
 		handlers.MastercardCreditMonitoring,
+		handlers.VisaMonitoring,
 		handlers.SwitchCommand,
 	)
 

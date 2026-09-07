@@ -64,6 +64,7 @@ var appErrors = []struct {
 	{common.ErrOffusMonitoringUnavailable, http.StatusServiceUnavailable},
 	{common.ErrMastercardDebitMonitoringUnavailable, http.StatusServiceUnavailable},
 	{common.ErrMastercardCreditMonitoringUnavailable, http.StatusServiceUnavailable},
+	{common.ErrVisaMonitoringUnavailable, http.StatusServiceUnavailable},
 	{common.ErrSwitchCommandUnavailable, http.StatusServiceUnavailable},
 	{common.ErrInvalidSwitchCommand, http.StatusBadRequest},
 	{common.ErrSwitchCommandTimeout, http.StatusGatewayTimeout},

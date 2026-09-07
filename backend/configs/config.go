@@ -98,6 +98,7 @@ var (
 	SSHSwitchOffusDebugPath    string
 	SSHSwitchMCDebitDebugPath  string
 	SSHSwitchMCCreditDebugPath string
+	SSHSwitchVisaDebugPath     string
 	SSHSwitchTailLines         int
 	SSHSwitchPollSeconds       int
 	SSHSwitchInsecure          bool
@@ -475,6 +476,11 @@ func LoadConfig() {
 		SSHSwitchMCCreditDebugPath = strings.TrimSpace(os.Getenv("SSH_SWITCH_MC_CREDIT_DEBUG_PATH"))
 		if SSHSwitchMCCreditDebugPath == "" {
 			SSHSwitchMCCreditDebugPath = "pdir/log/debug/mcnormaldump.debug"
+		}
+
+		SSHSwitchVisaDebugPath = strings.TrimSpace(os.Getenv("SSH_SWITCH_VISA_DEBUG_PATH"))
+		if SSHSwitchVisaDebugPath == "" {
+			SSHSwitchVisaDebugPath = "pdir/log/debug/visadump.debug"
 		}
 
 		SSHSwitchTailLines = parseIntEnv("SSH_SWITCH_TAIL_LINES", 400)

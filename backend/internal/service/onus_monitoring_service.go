@@ -43,6 +43,13 @@ func NewMastercardCreditMonitoringService(collector *sshswitch.Collector) OnusMo
 	}
 }
 
+func NewVisaMonitoringService(collector *sshswitch.Collector) OnusMonitoringService {
+	return &onusMonitoringService{
+		collector:   collector,
+		unavailable: common.ErrVisaMonitoringUnavailable,
+	}
+}
+
 func (s *onusMonitoringService) Subscribe() (<-chan model.OnusFrame, func(), error) {
 	if s.collector == nil {
 		return nil, nil, s.unavailable

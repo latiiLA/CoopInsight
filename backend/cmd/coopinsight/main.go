@@ -209,6 +209,7 @@ func main() {
 	var offusCollector *sshswitch.Collector
 	var mastercardDebitCollector *sshswitch.Collector
 	var mastercardCreditCollector *sshswitch.Collector
+	var visaCollector *sshswitch.Collector
 	if configs.SSHSwitchEnabled {
 		onusCollector = sshswitch.NewCollector(
 			newSwitchSSHClient(configs.SSHSwitchDebugPath),
@@ -238,7 +239,14 @@ func main() {
 		mastercardCreditCollector.Start(ctx)
 		defer mastercardCreditCollector.Close()
 
-		logrus.Info("On-us, off-us, and Mastercard SSH monitoring collectors started")
+		visaCollector = sshswitch.NewAnyMCCCollector(
+			newSwitchSSHClient(configs.SSHSwitchVisaDebugPath),
+			"visa",
+		)
+		visaCollector.Start(ctx)
+		defer visaCollector.Close()
+
+		logrus.Info("On-us, off-us, Mastercard, and Visa SSH monitoring collectors started")
 	} else {
 		logrus.Info("SSH switch monitoring is disabled")
 	}
@@ -253,6 +261,9 @@ func main() {
 	)
 	mastercardCreditHandler := handler.NewOnusMonitoringHandler(
 		service.NewMastercardCreditMonitoringService(mastercardCreditCollector),
+	)
+	visaHandler := handler.NewOnusMonitoringHandler(
+		service.NewVisaMonitoringService(visaCollector),
 	)
 
 	var switchCommandClient *sshswitch.Client
@@ -284,6 +295,7 @@ func main() {
 		OffusMonitoring:            offusHandler,
 		MastercardDebitMonitoring:  mastercardDebitHandler,
 		MastercardCreditMonitoring: mastercardCreditHandler,
+		VisaMonitoring:             visaHandler,
 		SwitchCommand:              switchCommandHandler,
 	})
 
