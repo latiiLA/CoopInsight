@@ -25,6 +25,7 @@ import AtmDashboard from "./pages/dashboards/atm-terminals/atm-dashboard";
 import PosTerminals from "./pages/dashboards/pos-terminals/pos-terminals";
 import PosDashboard from "./pages/dashboards/pos-terminals/pos-dashboard";
 import Account from "./pages/account/account";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/not-found";
 import { RequirePermission } from "./components/require-permission";
 
@@ -38,6 +39,7 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/home" element={<Home />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/transaction" element={<Transaction />} />
           <Route
             path="/deposit-per-terminal"
