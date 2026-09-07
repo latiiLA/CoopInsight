@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -32,6 +32,10 @@ import {
   fetchUsers,
   registerAuth,
 } from "@/features/user_slice";
+import {
+  clearSelectedAccountRequest,
+  fetchAccountRequestById,
+} from "@/features/account_request_slice";
 import { fetchRoles } from "@/features/role_slice";
 import { fetchPermissions } from "@/features/permission_slice";
 
@@ -54,10 +58,15 @@ const formatName = (value?: string) => {
 const CreateUser = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestId = searchParams.get("request")?.trim() || "";
 
   const { isLoggedIn, registerLoading } = useSelector(
     (state: RootState) => state.user,
   );
+
+  const { selectedRequest, requestDetailLoading, requestDetailError } =
+    useSelector((state: RootState) => state.accountRequest);
 
   const { allPermissions, permissionError, permissionLoading } = useSelector(
     (state: RootState) => state.permission,
@@ -106,6 +115,40 @@ const CreateUser = () => {
   }, [dispatch, isLoggedIn]);
 
   useEffect(() => {
+    if (!isLoggedIn || !requestId) {
+      return;
+    }
+
+    dispatch(fetchAccountRequestById(requestId));
+
+    return () => {
+      dispatch(clearSelectedAccountRequest());
+    };
+  }, [dispatch, isLoggedIn, requestId]);
+
+  useEffect(() => {
+    if (!selectedRequest || !requestId) {
+      return;
+    }
+
+    form.reset({
+      firstName: selectedRequest.firstName,
+      middleName: selectedRequest.middleName,
+      lastName: selectedRequest.lastName,
+      username: selectedRequest.username,
+      email: selectedRequest.email,
+      role: "",
+      permissions: [],
+    });
+  }, [form, requestId, selectedRequest]);
+
+  useEffect(() => {
+    if (requestDetailError) {
+      toast.error(requestDetailError);
+    }
+  }, [requestDetailError]);
+
+  useEffect(() => {
     form.setValue("permissions", []);
   }, [selectedRole, form]);
 
@@ -130,6 +173,7 @@ const CreateUser = () => {
       email: values.email.trim().toLowerCase(),
       role: values.role,
       permissions: values.permissions ?? [],
+      ...(requestId ? { requestId } : {}),
     };
 
     const resultAction = await dispatch(registerAuth(payload));
@@ -143,7 +187,7 @@ const CreateUser = () => {
         description: `${payload.firstName} ${payload.middleName} has been added to CoopInsight.`,
       });
 
-      navigate("/users");
+      navigate(requestId ? "/account-requests" : "/users");
       return;
     }
 
@@ -159,6 +203,15 @@ const CreateUser = () => {
   }
 
   const isSubmitting = form.formState.isSubmitting || registerLoading;
+  const fromRequest = Boolean(requestId);
+
+  if (fromRequest && requestDetailLoading && !selectedRequest) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full pb-8">
@@ -168,12 +221,14 @@ const CreateUser = () => {
             <div className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
               <h1 className="text-2xl font-semibold tracking-tight">
-                Add User
+                {fromRequest ? "Create User from Request" : "Add User"}
               </h1>
             </div>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              Create a CoopInsight user and assign their role and permissions.
+              {fromRequest
+                ? "Assign a role and permissions to complete this account request."
+                : "Create a CoopInsight user and assign their role and permissions."}
             </p>
           </div>
 
@@ -277,12 +332,15 @@ const CreateUser = () => {
                         <Input
                           placeholder="Enter username"
                           autoComplete="username"
+                          disabled={fromRequest}
                           {...field}
                         />
                       </FormControl>
 
                       <FormDescription>
-                        Use the username the user will use to sign in.
+                        {fromRequest
+                          ? "Taken from the account request."
+                          : "Use the username the user will use to sign in."}
                       </FormDescription>
 
                       <FormMessage />

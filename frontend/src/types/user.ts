@@ -11,7 +11,7 @@ export type UserProfile = {
 export type User = {
   id: string;
   username: string;
-  role: Role;
+  role?: Role;
   roleId?: string;
   permissions?: string[];
   firstName: string;
@@ -35,6 +35,15 @@ export interface CreateUserDTO {
   email: string;
   role: string;
   permissions?: string[];
+  requestId?: string;
+}
+
+export interface RequestAccountDTO {
+  username: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  email: string;
 }
 
 export interface UpdateUserDTO {

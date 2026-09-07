@@ -2,6 +2,7 @@ import config from "@/configs/config";
 import { Auth } from "@/types/auth";
 import {
   CreateUserDTO,
+  RequestAccountDTO,
   UpdateUserDTO,
   User,
   UserProfile,
@@ -21,6 +22,9 @@ export interface UserSliceState {
 
   registerLoading: boolean;
   registerError: string | null;
+
+  requestAccountLoading: boolean;
+  requestAccountError: string | null;
 
   permissions: string[];
 
@@ -98,6 +102,9 @@ const initialState: UserSliceState = {
   registerLoading: false,
   registerError: null,
 
+  requestAccountLoading: false,
+  requestAccountError: null,
+
   permissions: getPermissionsFromToken(initialUser?.data?.token),
 
   users: [],
@@ -148,6 +155,26 @@ export const registerAuth = createAsyncThunk<
     }>("/users", payload, withAuthHeader(token));
 
     return response.data.message || "User registered successfully";
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
+export const requestAccount = createAsyncThunk<
+  string,
+  RequestAccountDTO,
+  { rejectValue: string }
+>("user/requestAccount", async (payload, thunkAPI) => {
+  try {
+    const response = await api.post<{
+      isSuccessful: boolean;
+      message: string;
+    }>("/auth/request-account", payload);
+
+    return (
+      response.data.message ||
+      "Account request submitted. An administrator will review it before you can sign in."
+    );
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getErrorMessage(error));
   }
@@ -323,6 +350,8 @@ const userSlice = createSlice({
       state.authError = null;
       state.registerLoading = false;
       state.registerError = null;
+      state.requestAccountLoading = false;
+      state.requestAccountError = null;
       state.permissions = [];
       state.selectedUser = null;
       state.avatarLoading = false;
@@ -386,6 +415,20 @@ const userSlice = createSlice({
       .addCase(registerAuth.rejected, (state, action) => {
         state.registerLoading = false;
         state.registerError = action.payload || "Failed to register user";
+      })
+
+      .addCase(requestAccount.pending, (state) => {
+        state.requestAccountLoading = true;
+        state.requestAccountError = null;
+      })
+      .addCase(requestAccount.fulfilled, (state) => {
+        state.requestAccountLoading = false;
+        state.requestAccountError = null;
+      })
+      .addCase(requestAccount.rejected, (state, action) => {
+        state.requestAccountLoading = false;
+        state.requestAccountError =
+          action.payload || "Failed to submit account request";
       })
 
       .addCase(fetchUsers.pending, (state) => {

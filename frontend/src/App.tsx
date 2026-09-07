@@ -3,11 +3,13 @@ import "./App.css";
 import Layout from "../app/layout";
 import Home from "./pages/Home";
 import LoginPage from "./pages/Login";
+import RequestAccountPage from "./pages/request-account";
 import Transaction from "./pages/transaction/Transaction";
 import DepositPerTerminal from "./pages/reports/deposit-per-terminal";
 import SuccessRate from "./pages/reports/success-rate/success-rate";
 import ManageUsers from "./pages/system administrations/users/manage-users";
 import CreateUser from "./pages/system administrations/users/create-user";
+import ManageAccountRequests from "./pages/system administrations/users/manage-account-requests";
 import ViewUser from "./pages/system administrations/users/view-user";
 import EditUser from "./pages/system administrations/users/edit-user";
 import ManageRoles from "./pages/system administrations/roles/manage-roles";
@@ -31,6 +33,7 @@ function App() {
     <>
       <Routes>
         <Route path="/" element={<LoginPage />} />
+        <Route path="/request-account" element={<RequestAccountPage />} />
 
         <Route element={<Layout />}>
           <Route path="/home" element={<Home />} />
@@ -105,6 +108,14 @@ function App() {
             element={
               <RequirePermission permissions={["user:view"]}>
                 <ManageUsers />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/account-requests"
+            element={
+              <RequirePermission permissions={["user:view", "user:create"]}>
+                <ManageAccountRequests />
               </RequirePermission>
             }
           />

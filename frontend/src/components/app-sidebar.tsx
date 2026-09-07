@@ -5,6 +5,7 @@ import {
   ChartNoAxesGantt,
   ChevronRight,
   Home,
+  Inbox,
   KeyRound,
   LayoutDashboard,
   Percent,
@@ -187,6 +188,12 @@ const data: {
           url: "users",
           icon: Users,
           permissions: ["user:view"],
+        },
+        {
+          title: "Account Requests",
+          url: "account-requests",
+          icon: Inbox,
+          permissions: ["user:view", "user:create"],
         },
         {
           title: "Manage Roles",

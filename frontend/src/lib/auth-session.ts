@@ -4,7 +4,7 @@ import config from "@/configs/config";
 import { Auth } from "@/types/auth";
 import { getStoredRefreshToken } from "../../utility/auth-token";
 
-const AUTH_PATHS = ["/auth/login", "/auth/login-ldap", "/auth/refresh"];
+const AUTH_PATHS = ["/auth/login", "/auth/login-ldap", "/auth/refresh", "/auth/request-account"];
 
 const refreshClient = axios.create({
   baseURL: config.API_URL,

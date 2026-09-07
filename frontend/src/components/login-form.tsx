@@ -19,7 +19,7 @@ import { toast } from "sonner"
 
 import { AppDispatch, RootState } from "../../app/store/store";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 import { loginUser } from "@/features/user_slice";
 
@@ -158,7 +158,7 @@ export function LoginForm({
 
               <FieldDescription className="text-center">
                 Don&apos;t have an account?{" "}
-                <a href="#">Request account</a>
+                <NavLink to="/request-account">Request account</NavLink>
               </FieldDescription>
             </FieldGroup>
           </form>
