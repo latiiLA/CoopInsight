@@ -4,6 +4,8 @@ import {
   DeclineReason,
   EbirrCardlessWithdrawal,
   SuccessTransactionReport,
+  TerminalPerformanceReport,
+  TerminalPerformanceRow,
   TerminalTransaction,
 } from "@/types/report";
 import getErrorMessage from "../../utility/error-message";
@@ -20,6 +22,9 @@ interface ReportState {
   terminalTransactions: TerminalTransaction[];
   terminalTransactionsLoading: boolean;
   terminalTransactionsError: string | null;
+  terminalComparison: TerminalPerformanceReport | null;
+  terminalComparisonLoading: boolean;
+  terminalComparisonError: string | null;
 }
 
 interface FetchReportDateParams {
@@ -29,6 +34,10 @@ interface FetchReportDateParams {
 
 interface FetchTerminalTransactionsParams extends FetchReportDateParams {
   terminalId: string;
+  fleet: "atm" | "pos";
+}
+
+interface FetchTerminalComparisonParams extends FetchReportDateParams {
   fleet: "atm" | "pos";
 }
 
@@ -42,6 +51,9 @@ const initialState: ReportState = {
   terminalTransactions: [],
   terminalTransactionsLoading: false,
   terminalTransactionsError: null,
+  terminalComparison: null,
+  terminalComparisonLoading: false,
+  terminalComparisonError: null,
 };
 
 function toNumber(value: unknown): number {
@@ -262,6 +274,88 @@ export const fetchTerminalTransactions = createAsyncThunk<
   },
 );
 
+function normalizePerformanceRow(
+  row: Omit<TerminalPerformanceRow, "id">,
+  index: number,
+): TerminalPerformanceRow {
+  const terminalId = toText(row.terminalId);
+  return {
+    id: terminalId || `row-${index}`,
+    rank: toNumber(row.rank),
+    terminalId,
+    terminalName: toText(row.terminalName),
+    branchName: toText(row.branchName),
+    transactionCount: toNumber(row.transactionCount),
+    approvedCount: toNumber(row.approvedCount),
+    amount: toNumber(row.amount),
+    approvedAmount: toNumber(row.approvedAmount),
+  };
+}
+
+function normalizePerformanceReport(
+  report: TerminalPerformanceReport,
+): TerminalPerformanceReport {
+  return {
+    fleet: toText(report.fleet),
+    terminalCount: toNumber(report.terminalCount),
+    activeCount: toNumber(report.activeCount),
+    transactionCount: toNumber(report.transactionCount),
+    totalAmount: toNumber(report.totalAmount),
+    highest: (report.highest ?? []).map(normalizePerformanceRow),
+    lowest: (report.lowest ?? []).map(normalizePerformanceRow),
+    rows: (report.rows ?? []).map(normalizePerformanceRow),
+  };
+}
+
+export const fetchTerminalComparison = createAsyncThunk<
+  TerminalPerformanceReport,
+  FetchTerminalComparisonParams,
+  {
+    state: RootState;
+    rejectValue: string;
+  }
+>(
+  "report/fetchTerminalComparison",
+  async ({ fleet, dateFrom, dateTo }, thunkAPI) => {
+    try {
+      const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+      if (!token) {
+        return thunkAPI.rejectWithValue("Authentication token not found");
+      }
+
+      const path =
+        fleet === "pos"
+          ? "/reports/pos-terminal-comparison"
+          : "/reports/atm-terminal-comparison";
+
+      const response = await api.get<{
+        isSuccessful: boolean;
+        message: string;
+        data: TerminalPerformanceReport;
+      }>(path, {
+        ...withAuthHeader(token),
+        params: {
+          dateFrom,
+          dateTo,
+        },
+      });
+
+      const report = response.data.data;
+
+      if (!report) {
+        return thunkAPI.rejectWithValue(
+          "Failed to fetch terminal comparison",
+        );
+      }
+
+      return normalizePerformanceReport(report);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
 const reportSlice = createSlice({
   name: "report",
   initialState,
@@ -277,6 +371,10 @@ const reportSlice = createSlice({
     clearTerminalTransactions: (state) => {
       state.terminalTransactions = [];
       state.terminalTransactionsError = null;
+    },
+    clearTerminalComparison: (state) => {
+      state.terminalComparison = null;
+      state.terminalComparisonError = null;
     },
   },
   extraReducers: (builder) => {
@@ -320,6 +418,20 @@ const reportSlice = createSlice({
         state.terminalTransactions = [];
         state.terminalTransactionsError =
           action.payload || "Failed to fetch terminal transactions";
+      })
+      .addCase(fetchTerminalComparison.pending, (state) => {
+        state.terminalComparisonLoading = true;
+        state.terminalComparisonError = null;
+      })
+      .addCase(fetchTerminalComparison.fulfilled, (state, action) => {
+        state.terminalComparisonLoading = false;
+        state.terminalComparison = action.payload;
+      })
+      .addCase(fetchTerminalComparison.rejected, (state, action) => {
+        state.terminalComparisonLoading = false;
+        state.terminalComparison = null;
+        state.terminalComparisonError =
+          action.payload || "Failed to fetch terminal comparison";
       });
   },
 });
@@ -328,6 +440,7 @@ export const {
   clearSuccessRate,
   clearEbirrCardless,
   clearTerminalTransactions,
+  clearTerminalComparison,
 } = reportSlice.actions;
 
 export default reportSlice.reducer;

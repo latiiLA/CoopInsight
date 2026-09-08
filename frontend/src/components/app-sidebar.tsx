@@ -205,6 +205,12 @@ const data: {
           permissions: ["terminal:view-atm-transaction"],
         },
         {
+          title: "ATM Comparison",
+          url: "atm-comparison",
+          icon: ChartBar,
+          permissions: ["terminal:view-atm-transaction"],
+        },
+        {
           title: "POS Terminal",
           url: "pos-dashboard",
           icon: LucideIdCard,
@@ -214,6 +220,12 @@ const data: {
           title: "POS Transactions",
           url: "pos-transactions",
           icon: CreditCard,
+          permissions: ["terminal:view-pos-transaction"],
+        },
+        {
+          title: "POS Comparison",
+          url: "pos-comparison",
+          icon: ChartBar,
           permissions: ["terminal:view-pos-transaction"],
         },
       ],

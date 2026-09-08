@@ -31,6 +31,7 @@ import AtmDashboard from "./pages/dashboards/atm-terminals/atm-dashboard";
 import PosTerminals from "./pages/dashboards/pos-terminals/pos-terminals";
 import PosDashboard from "./pages/dashboards/pos-terminals/pos-dashboard";
 import TerminalTransactions from "./pages/dashboards/terminal-transactions/terminal-transactions";
+import TerminalComparison from "./pages/dashboards/terminal-comparison/terminal-comparison";
 import Account from "./pages/account/account";
 import Analytics from "./pages/Analytics";
 import NotFound from "./pages/not-found";
@@ -145,6 +146,14 @@ function App() {
             }
           />
           <Route
+            path="/atm-comparison"
+            element={
+              <RequirePermission permissions={["terminal:view-atm-transaction"]}>
+                <TerminalComparison fleet="atm" />
+              </RequirePermission>
+            }
+          />
+          <Route
             path="/pos-dashboard"
             element={
               <RequirePermission permissions={["terminal:view-pos"]}>
@@ -173,6 +182,14 @@ function App() {
             element={
               <RequirePermission permissions={["terminal:view-pos-transaction"]}>
                 <TerminalTransactions fleet="pos" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pos-comparison"
+            element={
+              <RequirePermission permissions={["terminal:view-pos-transaction"]}>
+                <TerminalComparison fleet="pos" />
               </RequirePermission>
             }
           />

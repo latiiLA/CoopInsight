@@ -50,3 +50,26 @@ export type TerminalTransaction = {
   date: string;
   amount: number;
 };
+
+export type TerminalPerformanceRow = {
+  id: string;
+  rank: number;
+  terminalId: string;
+  terminalName: string;
+  branchName: string;
+  transactionCount: number;
+  approvedCount: number;
+  amount: number;
+  approvedAmount: number;
+};
+
+export type TerminalPerformanceReport = {
+  fleet: string;
+  terminalCount: number;
+  activeCount: number;
+  transactionCount: number;
+  totalAmount: number;
+  highest: TerminalPerformanceRow[];
+  lowest: TerminalPerformanceRow[];
+  rows: TerminalPerformanceRow[];
+};

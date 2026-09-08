@@ -2,6 +2,7 @@ import { format, startOfDay } from "date-fns";
 import {
   ArrowRight,
   Banknote,
+  ChartBar,
   CheckCircle2,
   CircleAlert,
   CreditCard,
@@ -199,6 +200,20 @@ export default function Home() {
       description: "TLOG activity for a selected POS terminal",
       to: "/pos-transactions",
       icon: CreditCard,
+      show: hasPermission(["terminal:view-pos-transaction"]),
+    },
+    {
+      title: "ATM Comparison",
+      description: "Highest and lowest ATM transaction performers",
+      to: "/atm-comparison",
+      icon: ChartBar,
+      show: hasPermission(["terminal:view-atm-transaction"]),
+    },
+    {
+      title: "POS Comparison",
+      description: "Highest and lowest POS transaction performers",
+      to: "/pos-comparison",
+      icon: ChartBar,
       show: hasPermission(["terminal:view-pos-transaction"]),
     },
     {
