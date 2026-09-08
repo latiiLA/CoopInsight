@@ -47,6 +47,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
@@ -324,22 +327,22 @@ function NavMainItem({ item }: { item: NavItem }) {
           </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <SidebarMenu className="mt-1 ml-4 border-l border-sidebar-border pl-2">
+          <SidebarMenuSub>
             {item.items.map((subItem) => {
               const SubIcon = subItem.icon;
 
               return (
-                <SidebarMenuItem key={subItem.title}>
-                  <SidebarMenuButton asChild tooltip={subItem.title}>
+                <SidebarMenuSubItem key={subItem.title}>
+                  <SidebarMenuSubButton asChild>
                     <NavLink to={subItem.url}>
                       {SubIcon ? <SubIcon /> : null}
                       <span>{subItem.title}</span>
                     </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
               );
             })}
-          </SidebarMenu>
+          </SidebarMenuSub>
         </CollapsibleContent>
       </Collapsible>
     </SidebarMenuItem>
