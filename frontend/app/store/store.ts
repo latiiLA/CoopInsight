@@ -7,6 +7,7 @@ import reportReducer from "@/features/report_slice";
 import atmTerminalReducer from "@/features/atm_terminal_slice";
 import posTerminalReducer from "@/features/pos_terminal_slice";
 import accountRequestReducer from "@/features/account_request_slice";
+import activityLogReducer from "@/features/activity_log_slice";
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
       atmTerminal: atmTerminalReducer,
       posTerminal: posTerminalReducer,
       accountRequest: accountRequestReducer,
+      activityLog: activityLogReducer,
   },
 })
 

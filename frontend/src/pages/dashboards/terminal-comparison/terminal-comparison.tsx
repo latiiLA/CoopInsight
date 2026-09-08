@@ -96,7 +96,7 @@ export default function TerminalComparison({ fleet }: TerminalComparisonProps) {
   return (
     <div className="container mx-auto">
       <div className="flex flex-col gap-3 py-1 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="min-w-0 flex-1">
           <h3 className="text-lg font-semibold tracking-tight">
             {isPos ? "POS Comparison" : "ATM Comparison"}
           </h3>

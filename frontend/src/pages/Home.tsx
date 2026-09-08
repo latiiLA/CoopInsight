@@ -7,10 +7,8 @@ import {
   CircleAlert,
   CreditCard,
   Percent,
-  Shield,
   Activity,
   ArrowLeftRight,
-  Users,
   Wallet,
 } from "lucide-react";
 import { type ComponentType, useEffect, useMemo } from "react";
@@ -215,20 +213,6 @@ export default function Home() {
       to: "/pos-comparison",
       icon: ChartBar,
       show: hasPermission(["terminal:view-pos-transaction"]),
-    },
-    {
-      title: "Manage Users",
-      description: "Accounts, roles, and access",
-      to: "/users",
-      icon: Users,
-      show: hasPermission(["user:view", "user:view-details"]),
-    },
-    {
-      title: "Manage Roles",
-      description: "Role permissions and assignments",
-      to: "/roles",
-      icon: Shield,
-      show: hasPermission(["role:view", "role:view-details"]),
     },
   ].filter((link) => link.show);
 

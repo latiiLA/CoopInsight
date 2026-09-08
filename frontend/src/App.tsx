@@ -21,6 +21,7 @@ import ManagePermissions from "./pages/system administrations/permissions/manage
 import CreatePermission from "./pages/system administrations/permissions/create-permission";
 import EditPermission from "./pages/system administrations/permissions/edit-permission";
 import ViewPermission from "./pages/system administrations/permissions/view-permission";
+import ManageActivityLog from "./pages/system administrations/activity-log/manage-activity-log";
 import OnusMonitoring from "./pages/monitoring/onus/onus-monitoring";
 import OffusMonitoring from "./pages/monitoring/offus/offus-monitoring";
 import MastercardDebitMonitoring from "./pages/monitoring/mastercard-debit/mastercard-debit-monitoring";
@@ -294,6 +295,14 @@ function App() {
             element={
               <RequirePermission permissions={["permission:view-details"]}>
                 <ViewPermission />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/activity-log"
+            element={
+              <RequirePermission permissions={["activity:view"]}>
+                <ManageActivityLog />
               </RequirePermission>
             }
           />

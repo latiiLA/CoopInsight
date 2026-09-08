@@ -269,8 +269,9 @@ const data: {
         },
         {
           title: "Activity Log",
-          url: "#",
+          url: "activity-log",
           icon: Activity,
+          permissions: ["activity:view"],
         },
       ],
     },
