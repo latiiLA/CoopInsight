@@ -11,7 +11,10 @@ func registerAtmTerminalRoutes(protected *gin.RouterGroup, atmTerminalHandler ha
 
 	terminals.GET(
 		"/atm",
-		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"terminal:view-atm"}),
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"terminal:view-atm", "terminal:view-atm-transaction"},
+		),
 		atmTerminalHandler.GetAll,
 	)
 }

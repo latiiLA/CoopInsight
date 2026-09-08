@@ -10,6 +10,7 @@ func registerReportRoutes(
 	protected *gin.RouterGroup,
 	successTransactionHandler handler.SuccessTransactionHandler,
 	ebirrCardlessHandler handler.EbirrCardlessWithdrawalHandler,
+	terminalTransactionHandler handler.TerminalTransactionHandler,
 ) {
 	reports := protected.Group("/reports")
 
@@ -22,5 +23,21 @@ func registerReportRoutes(
 		"/ebirr-cardless-withdrawal",
 		middleware.AuthorizeRolesOrPermissions([]string{}, []string{"report:view-ebirr-cardless-withdrawal"}),
 		ebirrCardlessHandler.GetReport,
+	)
+	reports.GET(
+		"/atm-transactions",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"terminal:view-atm-transaction"},
+		),
+		terminalTransactionHandler.GetByTerminal,
+	)
+	reports.GET(
+		"/pos-transactions",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"terminal:view-pos-transaction"},
+		),
+		terminalTransactionHandler.GetByTerminal,
 	)
 }

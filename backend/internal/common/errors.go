@@ -55,6 +55,7 @@ var (
 	ErrSourceMongoUnavailable                = errors.New("source mongo is unavailable")
 	ErrInvalidReportDate                     = errors.New("dateFrom and dateTo must be MM-DD-YYYY")
 	ErrInvalidDateRange                      = errors.New("dateFrom must be on or before dateTo")
+	ErrInvalidTerminalID                     = errors.New("terminalId is required")
 	ErrFailedToFetchReport                   = errors.New("failed to fetch report")
 	ErrFailedToFetchAtmTerminals             = errors.New("failed to fetch ATM terminals")
 	ErrFailedToFetchPosTerminals             = errors.New("failed to fetch POS terminals")

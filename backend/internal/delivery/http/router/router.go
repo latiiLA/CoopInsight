@@ -18,6 +18,7 @@ type Handlers struct {
 	Test                       handler.TestHandler
 	SuccessTransaction         handler.SuccessTransactionHandler
 	EbirrCardlessWithdrawal    handler.EbirrCardlessWithdrawalHandler
+	TerminalTransaction        handler.TerminalTransactionHandler
 	AtmTerminal                handler.AtmTerminalHandler
 	PosTerminal                handler.PosTerminalHandler
 	OnusMonitoring             handler.OnusMonitoringHandler
@@ -147,6 +148,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 		oracleProtected,
 		handlers.SuccessTransaction,
 		handlers.EbirrCardlessWithdrawal,
+		handlers.TerminalTransaction,
 	)
 
 	live := api.Group("")

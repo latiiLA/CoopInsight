@@ -189,6 +189,7 @@ func main() {
 	var testHandler handler.TestHandler
 	var successTransactionHandler handler.SuccessTransactionHandler
 	var ebirrCardlessHandler handler.EbirrCardlessWithdrawalHandler
+	var terminalTransactionHandler handler.TerminalTransactionHandler
 	if oracleDB != nil {
 		testHandler = handler.NewTestHandler(
 			service.NewTestService(oracle.NewTestRepository(oracleDB)),
@@ -199,6 +200,9 @@ func main() {
 		ebirrCardlessHandler = handler.NewEbirrCardlessWithdrawalHandler(
 			service.NewEbirrCardlessWithdrawalService(oracle.NewEbirrCardlessWithdrawalRepository(oracleDB)),
 		)
+		terminalTransactionHandler = handler.NewTerminalTransactionHandler(
+			service.NewTerminalTransactionService(oracle.NewTerminalTransactionRepository(oracleDB)),
+		)
 	} else {
 		testHandler = handler.NewTestHandler(service.NewTestService(nil))
 		successTransactionHandler = handler.NewSuccessTransactionHandler(
@@ -206,6 +210,9 @@ func main() {
 		)
 		ebirrCardlessHandler = handler.NewEbirrCardlessWithdrawalHandler(
 			service.NewEbirrCardlessWithdrawalService(nil),
+		)
+		terminalTransactionHandler = handler.NewTerminalTransactionHandler(
+			service.NewTerminalTransactionService(nil),
 		)
 	}
 
@@ -293,6 +300,7 @@ func main() {
 		Test:                       testHandler,
 		SuccessTransaction:         successTransactionHandler,
 		EbirrCardlessWithdrawal:    ebirrCardlessHandler,
+		TerminalTransaction:        terminalTransactionHandler,
 		AtmTerminal:                atmTerminalHandler,
 		PosTerminal:                posTerminalHandler,
 		OnusMonitoring:             onusHandler,

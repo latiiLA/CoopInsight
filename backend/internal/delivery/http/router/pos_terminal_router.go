@@ -11,7 +11,10 @@ func registerPosTerminalRoutes(protected *gin.RouterGroup, posTerminalHandler ha
 
 	terminals.GET(
 		"/pos",
-		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"terminal:view-pos"}),
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"terminal:view-pos", "terminal:view-pos-transaction"},
+		),
 		posTerminalHandler.GetAll,
 	)
 }
