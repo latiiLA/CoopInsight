@@ -199,10 +199,22 @@ const data: {
           permissions: ["terminal:view-atm"],
         },
         {
+          title: "ATM Transactions",
+          url: "atm-transactions",
+          icon: ArrowLeftRight,
+          permissions: ["terminal:view-atm-transaction"],
+        },
+        {
           title: "POS Terminal",
           url: "pos-dashboard",
           icon: LucideIdCard,
           permissions: ["terminal:view-pos"],
+        },
+        {
+          title: "POS Transactions",
+          url: "pos-transactions",
+          icon: CreditCard,
+          permissions: ["terminal:view-pos-transaction"],
         },
       ],
     },

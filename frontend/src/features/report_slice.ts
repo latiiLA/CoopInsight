@@ -4,6 +4,7 @@ import {
   DeclineReason,
   EbirrCardlessWithdrawal,
   SuccessTransactionReport,
+  TerminalTransaction,
 } from "@/types/report";
 import getErrorMessage from "../../utility/error-message";
 import { getTokenFromAuth, withAuthHeader } from "../../utility/auth-token";
@@ -16,11 +17,19 @@ interface ReportState {
   ebirrCardless: EbirrCardlessWithdrawal[];
   ebirrCardlessLoading: boolean;
   ebirrCardlessError: string | null;
+  terminalTransactions: TerminalTransaction[];
+  terminalTransactionsLoading: boolean;
+  terminalTransactionsError: string | null;
 }
 
 interface FetchReportDateParams {
   dateFrom: string;
   dateTo: string;
+}
+
+interface FetchTerminalTransactionsParams extends FetchReportDateParams {
+  terminalId: string;
+  fleet: "atm" | "pos";
 }
 
 const initialState: ReportState = {
@@ -30,6 +39,9 @@ const initialState: ReportState = {
   ebirrCardless: [],
   ebirrCardlessLoading: false,
   ebirrCardlessError: null,
+  terminalTransactions: [],
+  terminalTransactionsLoading: false,
+  terminalTransactionsError: null,
 };
 
 function toNumber(value: unknown): number {
@@ -179,6 +191,77 @@ export const fetchEbirrCardlessWithdrawal = createAsyncThunk<
   },
 );
 
+function normalizeTerminalTransaction(
+  row: Omit<TerminalTransaction, "id">,
+  index: number,
+): TerminalTransaction {
+  const rrn = toText(row.rrn);
+  const txnCode = toText(row.txnCode);
+  return {
+    id: `${rrn || "row"}-${txnCode || index}-${index}`,
+    rrn,
+    terminalId: toText(row.terminalId),
+    terminalName: toText(row.terminalName),
+    terminalLocation: toText(row.terminalLocation),
+    txnCode,
+    txnType: toText(row.txnType) || txnCode,
+    response: toText(row.response),
+    status: toText(row.status),
+    date: toText(row.date),
+    amount: toNumber(row.amount),
+  };
+}
+
+export const fetchTerminalTransactions = createAsyncThunk<
+  TerminalTransaction[],
+  FetchTerminalTransactionsParams,
+  {
+    state: RootState;
+    rejectValue: string;
+  }
+>(
+  "report/fetchTerminalTransactions",
+  async ({ terminalId, dateFrom, dateTo, fleet }, thunkAPI) => {
+    try {
+      const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+      if (!token) {
+        return thunkAPI.rejectWithValue("Authentication token not found");
+      }
+
+      const path =
+        fleet === "pos"
+          ? "/reports/pos-transactions"
+          : "/reports/atm-transactions";
+
+      const response = await api.get<{
+        isSuccessful: boolean;
+        message: string;
+        data: Omit<TerminalTransaction, "id">[];
+      }>(path, {
+        ...withAuthHeader(token),
+        params: {
+          terminalId,
+          dateFrom,
+          dateTo,
+        },
+      });
+
+      const rows = response.data.data;
+
+      if (!rows) {
+        return thunkAPI.rejectWithValue(
+          "Failed to fetch terminal transactions",
+        );
+      }
+
+      return rows.map(normalizeTerminalTransaction);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
 const reportSlice = createSlice({
   name: "report",
   initialState,
@@ -190,6 +273,10 @@ const reportSlice = createSlice({
     clearEbirrCardless: (state) => {
       state.ebirrCardless = [];
       state.ebirrCardlessError = null;
+    },
+    clearTerminalTransactions: (state) => {
+      state.terminalTransactions = [];
+      state.terminalTransactionsError = null;
     },
   },
   extraReducers: (builder) => {
@@ -219,10 +306,28 @@ const reportSlice = createSlice({
         state.ebirrCardlessLoading = false;
         state.ebirrCardlessError =
           action.payload || "Failed to fetch Ebirr cardless withdrawal report";
+      })
+      .addCase(fetchTerminalTransactions.pending, (state) => {
+        state.terminalTransactionsLoading = true;
+        state.terminalTransactionsError = null;
+      })
+      .addCase(fetchTerminalTransactions.fulfilled, (state, action) => {
+        state.terminalTransactionsLoading = false;
+        state.terminalTransactions = action.payload;
+      })
+      .addCase(fetchTerminalTransactions.rejected, (state, action) => {
+        state.terminalTransactionsLoading = false;
+        state.terminalTransactions = [];
+        state.terminalTransactionsError =
+          action.payload || "Failed to fetch terminal transactions";
       });
   },
 });
 
-export const { clearSuccessRate, clearEbirrCardless } = reportSlice.actions;
+export const {
+  clearSuccessRate,
+  clearEbirrCardless,
+  clearTerminalTransactions,
+} = reportSlice.actions;
 
 export default reportSlice.reducer;

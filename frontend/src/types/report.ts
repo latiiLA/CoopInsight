@@ -36,3 +36,17 @@ export type EbirrCardlessWithdrawal = {
   extTxnId: string;
   bankTransferId: string;
 };
+
+export type TerminalTransaction = {
+  id: string;
+  rrn: string;
+  terminalId: string;
+  terminalName: string;
+  terminalLocation: string;
+  txnCode: string;
+  txnType: string;
+  response: string;
+  status: string;
+  date: string;
+  amount: number;
+};

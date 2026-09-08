@@ -4,9 +4,11 @@ import {
   Banknote,
   CheckCircle2,
   CircleAlert,
+  CreditCard,
   Percent,
   Shield,
   Activity,
+  ArrowLeftRight,
   Users,
   Wallet,
 } from "lucide-react";
@@ -184,6 +186,20 @@ export default function Home() {
       to: "/ebirr-cardless-withdrawal",
       icon: Wallet,
       show: hasPermission(["report:view-ebirr-cardless-withdrawal"]),
+    },
+    {
+      title: "ATM Transactions",
+      description: "TLOG activity for a selected ATM",
+      to: "/atm-transactions",
+      icon: ArrowLeftRight,
+      show: hasPermission(["terminal:view-atm-transaction"]),
+    },
+    {
+      title: "POS Transactions",
+      description: "TLOG activity for a selected POS terminal",
+      to: "/pos-transactions",
+      icon: CreditCard,
+      show: hasPermission(["terminal:view-pos-transaction"]),
     },
     {
       title: "Manage Users",

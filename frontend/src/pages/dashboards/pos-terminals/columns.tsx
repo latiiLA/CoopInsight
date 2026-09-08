@@ -1,12 +1,14 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { ArrowUpDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataRowActions } from "@/components/data-row-actions";
 import { DataTableFeatures } from "@/components/data-table-features";
 import { PosTerminal } from "@/types/pos-terminal";
+import { hasPermission } from "../../../../utility/has-permission";
 
 const columnHelper = createColumnHelper<DataTableFeatures, PosTerminal>();
 
@@ -49,6 +51,45 @@ export function posTerminalActionItems(terminal: PosTerminal) {
       },
     },
   ];
+}
+
+function PosTerminalRowActions({ terminal }: { terminal: PosTerminal }) {
+  const navigate = useNavigate();
+  const canViewTransactions = hasPermission([
+    "terminal:view-pos-transaction",
+  ]);
+
+  return (
+    <DataRowActions
+      row={terminal}
+      extraItems={[
+        ...(canViewTransactions
+          ? [
+              {
+                label: "View transactions",
+                onSelect: () => {
+                  if (!terminal.terminalId.trim()) {
+                    toast.error("Terminal ID is missing");
+                    return;
+                  }
+
+                  navigate(
+                    `/pos-terminals/${encodeURIComponent(terminal.terminalId)}/transactions`,
+                    {
+                      state: {
+                        terminalName: terminal.merchantName,
+                        merchantName: terminal.merchantName,
+                      },
+                    },
+                  );
+                },
+              },
+            ]
+          : []),
+        ...posTerminalActionItems(terminal),
+      ]}
+    />
+  );
 }
 
 export const columns = columnHelper.columns([
@@ -186,10 +227,7 @@ export const columns = columnHelper.columns([
       const terminal = row.original;
 
       return (
-        <DataRowActions
-          row={terminal}
-          extraItems={posTerminalActionItems(terminal)}
-        />
+        <PosTerminalRowActions terminal={terminal} />
       );
     },
   }),

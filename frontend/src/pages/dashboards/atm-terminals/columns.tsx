@@ -1,12 +1,14 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { ArrowUpDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataRowActions } from "@/components/data-row-actions";
 import { DataTableFeatures } from "@/components/data-table-features";
 import { AtmTerminal } from "@/types/atm-terminal";
+import { hasPermission } from "../../../../utility/has-permission";
 
 const columnHelper = createColumnHelper<DataTableFeatures, AtmTerminal>();
 
@@ -43,6 +45,44 @@ export function atmTerminalActionItems(terminal: AtmTerminal) {
       },
     },
   ];
+}
+
+function AtmTerminalRowActions({ terminal }: { terminal: AtmTerminal }) {
+  const navigate = useNavigate();
+  const canViewTransactions = hasPermission([
+    "terminal:view-atm-transaction",
+  ]);
+
+  return (
+    <DataRowActions
+      row={terminal}
+      extraItems={[
+        ...(canViewTransactions
+          ? [
+              {
+                label: "View transactions",
+                onSelect: () => {
+                  if (!terminal.terminalId.trim()) {
+                    toast.error("Terminal ID is missing");
+                    return;
+                  }
+
+                  navigate(
+                    `/atm-terminals/${encodeURIComponent(terminal.terminalId)}/transactions`,
+                    {
+                      state: {
+                        terminalName: terminal.terminalName,
+                      },
+                    },
+                  );
+                },
+              },
+            ]
+          : []),
+        ...atmTerminalActionItems(terminal),
+      ]}
+    />
+  );
 }
 
 export const columns = columnHelper.columns([
@@ -180,10 +220,7 @@ export const columns = columnHelper.columns([
       const terminal = row.original;
 
       return (
-        <DataRowActions
-          row={terminal}
-          extraItems={atmTerminalActionItems(terminal)}
-        />
+        <AtmTerminalRowActions terminal={terminal} />
       );
     },
   }),

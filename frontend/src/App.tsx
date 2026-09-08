@@ -30,6 +30,7 @@ import AtmTerminals from "./pages/dashboards/atm-terminals/atm-terminals";
 import AtmDashboard from "./pages/dashboards/atm-terminals/atm-dashboard";
 import PosTerminals from "./pages/dashboards/pos-terminals/pos-terminals";
 import PosDashboard from "./pages/dashboards/pos-terminals/pos-dashboard";
+import TerminalTransactions from "./pages/dashboards/terminal-transactions/terminal-transactions";
 import Account from "./pages/account/account";
 import Analytics from "./pages/Analytics";
 import NotFound from "./pages/not-found";
@@ -128,6 +129,22 @@ function App() {
             }
           />
           <Route
+            path="/atm-terminals/:terminalId/transactions"
+            element={
+              <RequirePermission permissions={["terminal:view-atm-transaction"]}>
+                <TerminalTransactions fleet="atm" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/atm-transactions"
+            element={
+              <RequirePermission permissions={["terminal:view-atm-transaction"]}>
+                <TerminalTransactions fleet="atm" />
+              </RequirePermission>
+            }
+          />
+          <Route
             path="/pos-dashboard"
             element={
               <RequirePermission permissions={["terminal:view-pos"]}>
@@ -140,6 +157,22 @@ function App() {
             element={
               <RequirePermission permissions={["terminal:view-pos"]}>
                 <PosTerminals />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pos-terminals/:terminalId/transactions"
+            element={
+              <RequirePermission permissions={["terminal:view-pos-transaction"]}>
+                <TerminalTransactions fleet="pos" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pos-transactions"
+            element={
+              <RequirePermission permissions={["terminal:view-pos-transaction"]}>
+                <TerminalTransactions fleet="pos" />
               </RequirePermission>
             }
           />
