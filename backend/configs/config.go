@@ -22,7 +22,6 @@ var (
 	SourceDBName         string
 	SourceMongoURL       string
 	Timeout              time.Duration
-	DisableMigration     string
 	FileUploadPath       string
 	LogLevel             string
 
@@ -120,11 +119,6 @@ func LoadConfig() {
 	MongoURL = os.Getenv("MONGO_URL")
 	if MongoURL == "" {
 		log.Fatal("Mongo url is required but not set")
-	}
-
-	DisableMigration = os.Getenv("DISABLE_MIGRATION")
-	if DisableMigration == "" {
-		log.Fatal("DisableMigration status is required but not set")
 	}
 
 	JwtSecret = os.Getenv("JWT_SECRET")
