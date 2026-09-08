@@ -80,8 +80,8 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 
 	router.Static("/uploads", configs.FileUploadPath)
 
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
+	// Health check (root + /api for vite/nginx proxies that only forward /api)
+	healthHandler := func(c *gin.Context) {
 		oracleStatus := "disabled"
 		if configs.OracleEnabled {
 			if configs.OracleConnected {
@@ -106,9 +106,11 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 			"oracle":      oracleStatus,
 			"sourceMongo": sourceMongoStatus,
 		})
-	})
+	}
+	router.GET("/health", healthHandler)
 
 	api := router.Group("/api")
+	api.GET("/health", healthHandler)
 
 	// --------------------------------------------------
 	// Public routes
