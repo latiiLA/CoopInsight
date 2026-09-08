@@ -34,7 +34,7 @@ func EnsurePermissionIndexes(ctx context.Context, db *mongo.Database) error {
 			SetName("uniq_permission_name_active").
 			SetUnique(true).
 			SetPartialFilterExpression(bson.M{
-				"status": bson.M{"$ne": model.PermissionStatusDeleted},
+				"status": model.PermissionStatusActive,
 			}),
 	})
 	if err == nil {
