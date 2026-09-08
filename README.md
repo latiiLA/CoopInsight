@@ -45,7 +45,7 @@ go run ./cmd/coopinsight
 # or: air   (if you use hot reload)
 ```
 
-Default listen port follows the app’s HTTP server config (commonly `:8080`).
+Default listen port is **`:8088`** (HTTPS).
 
 ### 4. Frontend env and dev server
 
@@ -71,6 +71,28 @@ npm run dev
 
 Sign in as `systemadmin` with the password you set in `BOOTSTRAP_ADMIN_PASSWORD` at first seed.
 
+## HTTPS via nginx (:8443)
+
+Build the SPA and front it with nginx (TLS from `certificates/`, API upstream `https://127.0.0.1:8088`):
+
+```bash
+cd frontend && npm run build && cd ..
+mkdir -p tmp
+# API already running on https://localhost:8088
+nginx -p "$(pwd)" -c deploy/nginx/nginx.conf
+```
+
+Open **https://localhost:8443**. Details: [deploy/README.md](deploy/README.md).
+
+## Agent smoke testing
+
+See [AGENTS.md](AGENTS.md). Quick API check (API must be on `:8088`):
+
+```bash
+powershell -File scripts/smoke-check.ps1
+powershell -File scripts/smoke-check.ps1 -Login
+```
+
 ## Useful commands
 
 | Area | Command |
@@ -79,10 +101,13 @@ Sign in as `systemadmin` with the password you set in `BOOTSTRAP_ADMIN_PASSWORD`
 | Indexes only | `cd backend && go run ./cmd/migrate up` |
 | Seeds only | `cd backend && go run ./cmd/migrate seed` |
 | Frontend build | `cd frontend && npm run build` |
+| nginx (8443) | `nginx -p "$(pwd)" -c deploy/nginx/nginx.conf` |
 
 ## Repo layout
 
 - `backend/` — API, migrate CLI, Mongo seeds
 - `frontend/` — Vite React SPA
+- `deploy/nginx/` — nginx config for the built SPA
+- `certificates/` — TLS material for nginx (gitignored except README)
 
 Keep backend and frontend changes in **separate git commits**.
