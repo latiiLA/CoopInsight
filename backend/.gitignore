@@ -3,7 +3,8 @@ tmp
 /uploads
 /logs
 *.exe
-coop-forex-server
+coopinsight
+coopinsight.exe
 credentials/
 
 # SSL certificates
