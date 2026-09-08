@@ -56,6 +56,7 @@ var (
 	ErrInvalidReportDate                     = errors.New("dateFrom and dateTo must be MM-DD-YYYY")
 	ErrInvalidDateRange                      = errors.New("dateFrom must be on or before dateTo")
 	ErrInvalidTerminalID                     = errors.New("terminalId is required")
+	ErrInvalidFleet                          = errors.New("fleet must be atm or pos")
 	ErrFailedToFetchReport                   = errors.New("failed to fetch report")
 	ErrFailedToFetchAtmTerminals             = errors.New("failed to fetch ATM terminals")
 	ErrFailedToFetchPosTerminals             = errors.New("failed to fetch POS terminals")

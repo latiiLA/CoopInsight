@@ -11,4 +11,8 @@ type TerminalTransactionRepository interface {
 		ctx context.Context,
 		terminalID, dateFrom, dateTo string,
 	) ([]model.TerminalTransaction, error)
+	GetPerformance(
+		ctx context.Context,
+		dateFrom, dateTo string,
+	) ([]model.TerminalPerformanceRow, error)
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/configs"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/handler"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/router"
+	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/database"
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/logger"
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/sshswitch"
@@ -172,19 +173,19 @@ func main() {
 	roleService := service.NewRoleService(roleRepository, userRepository)
 	roleHandler := handler.NewRoleHandler(roleService)
 
-	var atmTerminalHandler handler.AtmTerminalHandler
-	var posTerminalHandler handler.PosTerminalHandler
+	var atmTerminalRepo repository.AtmTerminalRepository
+	var posTerminalRepo repository.PosTerminalRepository
 	if tmsDB != nil {
-		atmTerminalHandler = handler.NewAtmTerminalHandler(
-			service.NewAtmTerminalService(mongodb.NewAtmTerminalRepository(tmsDB)),
-		)
-		posTerminalHandler = handler.NewPosTerminalHandler(
-			service.NewPosTerminalService(mongodb.NewPosTerminalRepository(tmsDB)),
-		)
-	} else {
-		atmTerminalHandler = handler.NewAtmTerminalHandler(service.NewAtmTerminalService(nil))
-		posTerminalHandler = handler.NewPosTerminalHandler(service.NewPosTerminalService(nil))
+		atmTerminalRepo = mongodb.NewAtmTerminalRepository(tmsDB)
+		posTerminalRepo = mongodb.NewPosTerminalRepository(tmsDB)
 	}
+
+	atmTerminalHandler := handler.NewAtmTerminalHandler(
+		service.NewAtmTerminalService(atmTerminalRepo),
+	)
+	posTerminalHandler := handler.NewPosTerminalHandler(
+		service.NewPosTerminalService(posTerminalRepo),
+	)
 
 	var testHandler handler.TestHandler
 	var successTransactionHandler handler.SuccessTransactionHandler
@@ -201,7 +202,11 @@ func main() {
 			service.NewEbirrCardlessWithdrawalService(oracle.NewEbirrCardlessWithdrawalRepository(oracleDB)),
 		)
 		terminalTransactionHandler = handler.NewTerminalTransactionHandler(
-			service.NewTerminalTransactionService(oracle.NewTerminalTransactionRepository(oracleDB)),
+			service.NewTerminalTransactionService(
+				oracle.NewTerminalTransactionRepository(oracleDB),
+				atmTerminalRepo,
+				posTerminalRepo,
+			),
 		)
 	} else {
 		testHandler = handler.NewTestHandler(service.NewTestService(nil))
@@ -212,7 +217,7 @@ func main() {
 			service.NewEbirrCardlessWithdrawalService(nil),
 		)
 		terminalTransactionHandler = handler.NewTerminalTransactionHandler(
-			service.NewTerminalTransactionService(nil),
+			service.NewTerminalTransactionService(nil, atmTerminalRepo, posTerminalRepo),
 		)
 	}
 

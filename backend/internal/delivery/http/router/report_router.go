@@ -40,4 +40,20 @@ func registerReportRoutes(
 		),
 		terminalTransactionHandler.GetByTerminal,
 	)
+	reports.GET(
+		"/atm-terminal-comparison",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"terminal:view-atm-transaction"},
+		),
+		terminalTransactionHandler.GetAtmComparison,
+	)
+	reports.GET(
+		"/pos-terminal-comparison",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"terminal:view-pos-transaction"},
+		),
+		terminalTransactionHandler.GetPosComparison,
+	)
 }

@@ -11,6 +11,8 @@ import (
 
 type TerminalTransactionHandler interface {
 	GetByTerminal(c *gin.Context)
+	GetAtmComparison(c *gin.Context)
+	GetPosComparison(c *gin.Context)
 }
 
 type terminalTransactionHandler struct {
@@ -49,5 +51,39 @@ func (h *terminalTransactionHandler) GetByTerminal(c *gin.Context) {
 		IsSuccessful: true,
 		Message:      "Terminal transactions fetched successfully",
 		Data:         rows,
+	})
+}
+
+func (h *terminalTransactionHandler) GetAtmComparison(c *gin.Context) {
+	h.writeComparison(c, "atm")
+}
+
+func (h *terminalTransactionHandler) GetPosComparison(c *gin.Context) {
+	h.writeComparison(c, "pos")
+}
+
+func (h *terminalTransactionHandler) writeComparison(c *gin.Context, fleet string) {
+	dateFrom := c.Query("dateFrom")
+	dateTo := c.Query("dateTo")
+
+	if dateFrom == "" || dateTo == "" {
+		c.JSON(http.StatusBadRequest, response.Status{
+			IsSuccessful: false,
+			Message:      common.ErrInvalidReportDate.Error(),
+			Error:        common.MessInvalidRequest,
+		})
+		return
+	}
+
+	report, err := h.service.GetComparison(c.Request.Context(), fleet, dateFrom, dateTo)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Terminal comparison fetched successfully",
+		Data:         report,
 	})
 }

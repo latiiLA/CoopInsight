@@ -63,6 +63,7 @@ var appErrors = []struct {
 	{common.ErrInvalidReportDate, http.StatusBadRequest},
 	{common.ErrInvalidDateRange, http.StatusBadRequest},
 	{common.ErrInvalidTerminalID, http.StatusBadRequest},
+	{common.ErrInvalidFleet, http.StatusBadRequest},
 	{common.ErrFailedToFetchReport, http.StatusInternalServerError},
 	{common.ErrFailedToFetchAtmTerminals, http.StatusInternalServerError},
 	{common.ErrFailedToFetchPosTerminals, http.StatusInternalServerError},

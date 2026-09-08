@@ -27,6 +27,21 @@ WHERE TRIM(tl.TERMCODE) = TRIM(:terminal_id)
 ORDER BY tl.DATELOCAL DESC, tl.RRN DESC
 `
 
+const terminalPerformanceQuery = `
+SELECT
+	TRIM(tl.TERMCODE) AS terminal_id,
+	MAX(tl.CRDACPTLOC) AS terminal_name,
+	COUNT(*) AS transaction_count,
+	SUM(CASE WHEN tl.RSPCODE = '00' THEN 1 ELSE 0 END) AS approved_count,
+	SUM(tl.AMTTXN) AS total_amount,
+	SUM(CASE WHEN tl.RSPCODE = '00' THEN tl.AMTTXN ELSE 0 END) AS approved_amount
+FROM cortex.tlog tl
+WHERE tl.DATELOCAL >= TO_DATE(:date_from, 'MM-DD-YYYY')
+	AND tl.DATELOCAL < TO_DATE(:date_to, 'MM-DD-YYYY') + 1
+	AND TRIM(tl.TERMCODE) IS NOT NULL
+GROUP BY TRIM(tl.TERMCODE)
+`
+
 type terminalTransactionRepository struct {
 	db *sql.DB
 }
@@ -94,6 +109,71 @@ func (r *terminalTransactionRepository) GetByTerminal(
 		}
 		if amount.Valid {
 			row.Amount = amount.Float64
+		}
+
+		results = append(results, row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, wrapError(common.ErrFailedToFetchReport, err)
+	}
+
+	return results, nil
+}
+
+func (r *terminalTransactionRepository) GetPerformance(
+	ctx context.Context,
+	dateFrom, dateTo string,
+) ([]model.TerminalPerformanceRow, error) {
+	rows, err := r.db.QueryContext(
+		ctx,
+		terminalPerformanceQuery,
+		sql.Named("date_from", dateFrom),
+		sql.Named("date_to", dateTo),
+	)
+	if err != nil {
+		return nil, wrapError(common.ErrFailedToFetchReport, err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	results := make([]model.TerminalPerformanceRow, 0)
+
+	for rows.Next() {
+		var (
+			terminalID       sql.NullString
+			terminalName     sql.NullString
+			transactionCount sql.NullInt64
+			approvedCount    sql.NullInt64
+			totalAmount      sql.NullFloat64
+			approvedAmount   sql.NullFloat64
+		)
+
+		if err := rows.Scan(
+			&terminalID,
+			&terminalName,
+			&transactionCount,
+			&approvedCount,
+			&totalAmount,
+			&approvedAmount,
+		); err != nil {
+			return nil, wrapError(common.ErrFailedToFetchReport, err)
+		}
+
+		row := model.TerminalPerformanceRow{
+			TerminalID:   terminalID.String,
+			TerminalName: terminalName.String,
+		}
+		if transactionCount.Valid {
+			row.TransactionCount = int(transactionCount.Int64)
+		}
+		if approvedCount.Valid {
+			row.ApprovedCount = int(approvedCount.Int64)
+		}
+		if totalAmount.Valid {
+			row.Amount = totalAmount.Float64
+		}
+		if approvedAmount.Valid {
+			row.ApprovedAmount = approvedAmount.Float64
 		}
 
 		results = append(results, row)
