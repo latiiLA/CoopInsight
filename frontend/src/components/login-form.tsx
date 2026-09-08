@@ -77,6 +77,7 @@ export function LoginForm({
           <form
             onSubmit={handleSubmit(onSubmit)}
             className="p-6 md:p-8"
+            data-testid="login-form"
           >
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
@@ -98,6 +99,8 @@ export function LoginForm({
                 <Input
                   id="username"
                   type="text"
+                  data-testid="login-username"
+                  autoComplete="username"
                   {...register("username")}
                 />
 
@@ -120,6 +123,8 @@ export function LoginForm({
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    data-testid="login-password"
+                    autoComplete="current-password"
                     {...register("password")}
                   />
 
@@ -150,6 +155,7 @@ export function LoginForm({
                 type="submit"
                 className="w-full"
                 disabled={authLoading}
+                data-testid="login-submit"
               >
                 {authLoading ? (
                   <>
