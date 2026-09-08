@@ -11,6 +11,7 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/infrastructure/sshswitch"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const switchCommandTimeout = 45 * time.Second
@@ -25,11 +26,12 @@ type SwitchCommandService interface {
 }
 
 type switchCommandService struct {
-	client *sshswitch.Client
+	client      *sshswitch.Client
+	activityLog ActivityLogService
 }
 
-func NewSwitchCommandService(client *sshswitch.Client) SwitchCommandService {
-	return &switchCommandService{client: client}
+func NewSwitchCommandService(client *sshswitch.Client, activityLog ActivityLogService) SwitchCommandService {
+	return &switchCommandService{client: client, activityLog: activityLog}
 }
 
 func (s *switchCommandService) Run(ctx context.Context, actor, command, institution, atm string) (*model.SwitchCommandResult, error) {
@@ -44,13 +46,15 @@ func (s *switchCommandService) Run(ctx context.Context, actor, command, institut
 			"institution": institution,
 			"atm":         atm,
 		}).Info("switch command dry-run; SSH is not connected")
-		return &model.SwitchCommandResult{
+		result := &model.SwitchCommandResult{
 			OK:       true,
 			DryRun:   true,
 			ExitCode: 0,
 			Output:   "dry-run: load_atm " + institution + " " + atm + "\nSSH is not connected; the command was not sent to the switch.",
 			Command:  sshswitch.LoadATMCommand(institution, atm),
-		}, nil
+		}
+		s.recordSwitchActivity(ctx, actor, institution, atm, result, nil)
+		return result, nil
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, switchCommandTimeout)
@@ -74,24 +78,78 @@ func (s *switchCommandService) Run(ctx context.Context, actor, command, institut
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			log.Warn("switch command timed out")
-			return &model.SwitchCommandResult{
+			out := &model.SwitchCommandResult{
 				OK:       false,
 				ExitCode: result.ExitCode,
 				Output:   result.Output,
 				Command:  remote,
-			}, common.ErrSwitchCommandTimeout
+			}
+			s.recordSwitchActivity(ctx, actor, institution, atm, out, common.ErrSwitchCommandTimeout)
+			return out, common.ErrSwitchCommandTimeout
 		}
 		log.WithError(err).Warn("switch command failed")
+		s.recordSwitchActivity(ctx, actor, institution, atm, nil, common.ErrSwitchCommandUnavailable)
 		return nil, common.ErrSwitchCommandUnavailable
 	}
 
 	log.Info("switch command finished")
-	return &model.SwitchCommandResult{
+	out := &model.SwitchCommandResult{
 		OK:       result.ExitCode == 0,
 		ExitCode: result.ExitCode,
 		Output:   result.Output,
 		Command:  remote,
-	}, nil
+	}
+	s.recordSwitchActivity(ctx, actor, institution, atm, out, nil)
+	return out, nil
+}
+
+func (s *switchCommandService) recordSwitchActivity(
+	ctx context.Context,
+	actor, institution, atm string,
+	result *model.SwitchCommandResult,
+	runErr error,
+) {
+	if s.activityLog == nil {
+		return
+	}
+
+	var actorID *primitive.ObjectID
+	if id, err := primitive.ObjectIDFromHex(actor); err == nil {
+		actorID = &id
+	}
+
+	status := model.ActivityStatusSuccess
+	summary := "Ran load_atm " + institution + " " + atm
+	meta := map[string]interface{}{
+		"command":     "load_atm",
+		"institution": institution,
+		"atm":         atm,
+	}
+	if result != nil {
+		meta["dryRun"] = result.DryRun
+		meta["exitCode"] = result.ExitCode
+		meta["ok"] = result.OK
+		if !result.OK {
+			status = model.ActivityStatusFailure
+			summary = "load_atm failed for " + institution + " " + atm
+		}
+	}
+	if runErr != nil {
+		status = model.ActivityStatusFailure
+		meta["error"] = runErr.Error()
+		summary = "load_atm failed for " + institution + " " + atm
+	}
+
+	s.activityLog.Record(ctx, ActivityEvent{
+		ActorUserID:   actorID,
+		ActorUsername: actor,
+		Action:        model.ActivitySwitchCommandRun,
+		ResourceType:  "switch_command",
+		ResourceID:    institution + ":" + atm,
+		Summary:       summary,
+		Status:        status,
+		Metadata:      meta,
+	})
 }
 
 func truncateSwitchOutput(raw string) string {

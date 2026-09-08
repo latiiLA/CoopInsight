@@ -24,17 +24,20 @@ type permissionService struct {
 	permissionRepository repository.PermissionRepository
 	roleRepository       repository.RoleRepository
 	userRepository       repository.UserRepository
+	activityLog          ActivityLogService
 }
 
 func NewPermissionService(
 	permissionRepository repository.PermissionRepository,
 	roleRepository repository.RoleRepository,
 	userRepository repository.UserRepository,
+	activityLog ActivityLogService,
 ) PermissionService {
 	return &permissionService{
 		permissionRepository: permissionRepository,
 		roleRepository:       roleRepository,
 		userRepository:       userRepository,
+		activityLog:          activityLog,
 	}
 }
 
@@ -96,7 +99,23 @@ func (s *permissionService) Create(ctx context.Context, createdBy primitive.Obje
 		CreatedBy:   createdBy,
 	}
 
-	return s.permissionRepository.Create(ctx, permission)
+	if err := s.permissionRepository.Create(ctx, permission); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUserID:   objectIDPtr(createdBy),
+		ActorUsername: actorUsername(ctx, s.userRepository, createdBy),
+		Action:        model.ActivityPermissionCreate,
+		ResourceType:  "permission",
+		ResourceID:    permission.ID.Hex(),
+		Summary:       "Created permission " + name,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"name": name,
+		},
+	})
+	return nil
 }
 
 func (s *permissionService) Update(ctx context.Context, updatedBy primitive.ObjectID, permissionID primitive.ObjectID, req *dto.UpdatePermissionRequest) error {
@@ -135,7 +154,23 @@ func (s *permissionService) Update(ctx context.Context, updatedBy primitive.Obje
 	existing.UpdatedAt = time.Now()
 	existing.UpdatedBy = &updatedBy
 
-	return s.permissionRepository.Update(ctx, existing)
+	if err := s.permissionRepository.Update(ctx, existing); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUserID:   objectIDPtr(updatedBy),
+		ActorUsername: actorUsername(ctx, s.userRepository, updatedBy),
+		Action:        model.ActivityPermissionUpdate,
+		ResourceType:  "permission",
+		ResourceID:    existing.ID.Hex(),
+		Summary:       "Updated permission " + existing.Name,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"name": existing.Name,
+		},
+	})
+	return nil
 }
 
 func (s *permissionService) Delete(ctx context.Context, deletedBy primitive.ObjectID, permissionID primitive.ObjectID) error {
@@ -154,7 +189,31 @@ func (s *permissionService) Delete(ctx context.Context, deletedBy primitive.Obje
 	existing.DeletedBy = &deletedBy
 	existing.UpdatedAt = now
 
-	return s.permissionRepository.Delete(ctx, existing)
+	permissionName := existing.Name
+	if err := s.permissionRepository.Delete(ctx, existing); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUserID:   objectIDPtr(deletedBy),
+		ActorUsername: actorUsername(ctx, s.userRepository, deletedBy),
+		Action:        model.ActivityPermissionDelete,
+		ResourceType:  "permission",
+		ResourceID:    existing.ID.Hex(),
+		Summary:       "Deleted permission " + permissionName,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"name": permissionName,
+		},
+	})
+	return nil
+}
+
+func (s *permissionService) recordActivity(ctx context.Context, event ActivityEvent) {
+	if s.activityLog == nil {
+		return
+	}
+	s.activityLog.Record(ctx, event)
 }
 
 func (s *permissionService) isAssigned(ctx context.Context, name string) (bool, error) {

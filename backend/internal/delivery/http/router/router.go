@@ -15,6 +15,7 @@ type Handlers struct {
 	User                       handler.UserHandler
 	Permission                 handler.PermissionHandler
 	Role                       handler.RoleHandler
+	ActivityLog                handler.ActivityLogHandler
 	Test                       handler.TestHandler
 	SuccessTransaction         handler.SuccessTransactionHandler
 	EbirrCardlessWithdrawal    handler.EbirrCardlessWithdrawalHandler
@@ -130,6 +131,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	registerAccountRoutes(protected, handlers.User)
 	registerPermissionRoutes(protected, handlers.Permission)
 	registerRoleRoutes(protected, handlers.Role)
+	registerActivityLogRoutes(protected, handlers.ActivityLog)
 	registerAtmTerminalRoutes(protected, handlers.AtmTerminal)
 	registerPosTerminalRoutes(protected, handlers.PosTerminal)
 

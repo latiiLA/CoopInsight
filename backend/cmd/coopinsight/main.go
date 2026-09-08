@@ -76,6 +76,10 @@ func main() {
 		logrus.WithError(err).Warn("Could not create unique permission name index; duplicate names may already exist")
 	}
 
+	if err := mongodb.EnsureActivityLogIndexes(ctx, db); err != nil {
+		logrus.WithError(err).Warn("Could not create activity log indexes")
+	}
+
 	sourceClient, tmsDB, sourceErr := database.OpenSourceMongo(ctx, mongoClient)
 	if !configs.SourceMongoEnabled {
 		logrus.Info("Source Mongo is disabled; skipping connection")
@@ -147,11 +151,15 @@ func main() {
 	// Mongodb user dependencies
 	userRepository := mongodb.NewUserRepository(db)
 	roleRepository := mongodb.NewRoleRepository(db)
+	activityLogRepository := mongodb.NewActivityLogRepository(db)
+	activityLogService := service.NewActivityLogService(activityLogRepository)
+	activityLogHandler := handler.NewActivityLogHandler(activityLogService)
 
 	userService := service.NewUserService(
 		userRepository,
 		roleRepository,
 		mongodb.NewAccountRequestRepository(db),
+		activityLogService,
 		configs.LDAPHost,
 		configs.LDAPPort,
 		configs.LDAPBaseDN,
@@ -160,17 +168,18 @@ func main() {
 		"sAMAccountName",
 	)
 
-	userHandler := handler.NewUserHandler(userService)
+	userHandler := handler.NewUserHandler(userService, activityLogService)
 
 	permissionRepository := mongodb.NewPermissionRepository(db)
 	permissionService := service.NewPermissionService(
 		permissionRepository,
 		roleRepository,
 		userRepository,
+		activityLogService,
 	)
 	permissionHandler := handler.NewPermissionHandler(permissionService)
 
-	roleService := service.NewRoleService(roleRepository, userRepository)
+	roleService := service.NewRoleService(roleRepository, userRepository, activityLogService)
 	roleHandler := handler.NewRoleHandler(roleService)
 
 	var atmTerminalRepo repository.AtmTerminalRepository
@@ -291,7 +300,7 @@ func main() {
 		logrus.Info("Switch commands are in dry-run mode (SSH not connected)")
 	}
 	switchCommandHandler := handler.NewSwitchCommandHandler(
-		service.NewSwitchCommandService(switchCommandClient),
+		service.NewSwitchCommandService(switchCommandClient, activityLogService),
 	)
 
 	// --------------------------------------------------
@@ -302,6 +311,7 @@ func main() {
 		User:                       userHandler,
 		Permission:                 permissionHandler,
 		Role:                       roleHandler,
+		ActivityLog:                activityLogHandler,
 		Test:                       testHandler,
 		SuccessTransaction:         successTransactionHandler,
 		EbirrCardlessWithdrawal:    ebirrCardlessHandler,

@@ -37,11 +37,13 @@ type UserHandler interface {
 
 type userHandler struct {
 	userService service.UserService
+	activityLog service.ActivityLogService
 }
 
-func NewUserHandler(userService service.UserService) UserHandler {
+func NewUserHandler(userService service.UserService, activityLog service.ActivityLogService) UserHandler {
 	return &userHandler{
 		userService: userService,
+		activityLog: activityLog,
 	}
 }
 
@@ -60,7 +62,7 @@ func (a *userHandler) Login(c *gin.Context) {
 		c.ClientIP(),
 	)
 
-	a.writeLoginResult(c, user, err)
+	a.writeLoginResult(c, username, user, err)
 }
 
 func (a *userHandler) LoginLocal(c *gin.Context) {
@@ -78,7 +80,7 @@ func (a *userHandler) LoginLocal(c *gin.Context) {
 		c.ClientIP(),
 	)
 
-	a.writeLoginResult(c, user, err)
+	a.writeLoginResult(c, username, user, err)
 }
 
 func (a *userHandler) Refresh(c *gin.Context) {
@@ -93,7 +95,42 @@ func (a *userHandler) Refresh(c *gin.Context) {
 	}
 
 	user, err := a.userService.RefreshSession(c, req.RefreshToken, c.ClientIP())
-	a.writeLoginResult(c, user, err)
+	if err != nil {
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrInvalidRefreshToken):
+			status = http.StatusUnauthorized
+			message = "Session expired. Please sign in again"
+		case errors.Is(err, common.ErrUserAccessRevoked):
+			status = http.StatusUnauthorized
+			message = "Account status has been disabled"
+		case errors.Is(err, common.ErrAccountPendingApproval):
+			status = http.StatusForbidden
+			message = "Your account request is pending approval"
+		case errors.Is(err, common.ErrUserNotFound):
+			status = http.StatusForbidden
+			message = "User isn't registered for the system"
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{
+			Message: message,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Logged in successfully",
+		Data:         user,
+	})
 }
 
 func bindLoginRequest(c *gin.Context) (dto.LoginRequest, bool) {
@@ -125,7 +162,7 @@ func bindLoginRequest(c *gin.Context) (dto.LoginRequest, bool) {
 	return req, true
 }
 
-func (a *userHandler) writeLoginResult(c *gin.Context, user *dto.LoginResponse, err error) {
+func (a *userHandler) writeLoginResult(c *gin.Context, username string, user *dto.LoginResponse, err error) {
 	if err != nil {
 		var (
 			status  int
@@ -162,6 +199,11 @@ func (a *userHandler) writeLoginResult(c *gin.Context, user *dto.LoginResponse, 
 			message = common.MessInternalServerError
 		}
 
+		// Keep real login failures only.
+		if strings.TrimSpace(username) != "" {
+			a.recordLoginActivity(c, username, nil, false, message)
+		}
+
 		c.JSON(status, response.Status{
 			Message: message,
 			Error:   err.Error(),
@@ -169,10 +211,53 @@ func (a *userHandler) writeLoginResult(c *gin.Context, user *dto.LoginResponse, 
 		return
 	}
 
+	if user != nil {
+		a.recordLoginActivity(c, user.User.Username, &user.User.ID, true, "Logged in successfully")
+	}
+
 	c.JSON(http.StatusOK, response.Status{
 		IsSuccessful: true,
 		Message:      "Logged in successfully",
 		Data:         user,
+	})
+}
+
+func (a *userHandler) recordLoginActivity(
+	c *gin.Context,
+	username string,
+	userID *primitive.ObjectID,
+	success bool,
+	reason string,
+) {
+	if a.activityLog == nil {
+		return
+	}
+
+	action := model.ActivityAuthLoginFailure
+	status := model.ActivityStatusFailure
+	summary := "Failed login for " + username
+	if success {
+		action = model.ActivityAuthLoginSuccess
+		status = model.ActivityStatusSuccess
+		summary = "Logged in as " + username
+	}
+
+	a.activityLog.Record(c, service.ActivityEvent{
+		ActorUserID:   userID,
+		ActorUsername: username,
+		Action:        action,
+		ResourceType:  "user",
+		ResourceID: func() string {
+			if userID == nil {
+				return ""
+			}
+			return userID.Hex()
+		}(),
+		Summary: summary,
+		Status:  status,
+		Metadata: map[string]interface{}{
+			"reason": reason,
+		},
 	})
 }
 

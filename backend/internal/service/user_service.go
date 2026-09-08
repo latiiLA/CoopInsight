@@ -45,6 +45,7 @@ type userService struct {
 	userRepository           repository.UserRepository
 	roleRepository           repository.RoleRepository
 	accountRequestRepository repository.AccountRequestRepository
+	activityLog              ActivityLogService
 	host                     string
 	port                     string
 	basedDN                  string
@@ -57,12 +58,14 @@ func NewUserService(
 	userRepository repository.UserRepository,
 	roleRepository repository.RoleRepository,
 	accountRequestRepository repository.AccountRequestRepository,
+	activityLog ActivityLogService,
 	host, port, baseDN, bindUser, bindPassword, userFilter string,
 ) UserService {
 	return &userService{
 		userRepository:           userRepository,
 		roleRepository:           roleRepository,
 		accountRequestRepository: accountRequestRepository,
+		activityLog:              activityLog,
 		host:                     host,
 		port:                     port,
 		basedDN:                  baseDN,
@@ -390,7 +393,24 @@ func (s *userService) Update(ctx context.Context, updatedBy primitive.ObjectID, 
 	existing.UpdatedAt = now
 	existing.UpdatedBy = &updatedBy
 
-	return s.userRepository.Update(ctx, existing)
+	if err := s.userRepository.Update(ctx, existing); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUserID:   objectIDPtr(updatedBy),
+		ActorUsername: actorUsername(ctx, s.userRepository, updatedBy),
+		Action:        model.ActivityUserUpdate,
+		ResourceType:  "user",
+		ResourceID:    existing.ID.Hex(),
+		Summary:       "Updated user " + existing.Username,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"username": existing.Username,
+			"status":   string(existing.Status),
+		},
+	})
+	return nil
 }
 
 func (s *userService) Delete(ctx context.Context, deletedBy primitive.ObjectID, userID primitive.ObjectID) error {
@@ -417,7 +437,23 @@ func (s *userService) Delete(ctx context.Context, deletedBy primitive.ObjectID, 
 	existing.DeletedBy = &deletedBy
 	existing.UpdatedAt = now
 
-	return s.userRepository.Delete(ctx, existing)
+	if err := s.userRepository.Delete(ctx, existing); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUserID:   objectIDPtr(deletedBy),
+		ActorUsername: actorUsername(ctx, s.userRepository, deletedBy),
+		Action:        model.ActivityUserDelete,
+		ResourceType:  "user",
+		ResourceID:    existing.ID.Hex(),
+		Summary:       "Deleted user " + existing.Username,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"username": existing.Username,
+		},
+	})
+	return nil
 }
 
 func (s *userService) UpdateAvatar(ctx context.Context, userID primitive.ObjectID, avatar string) error {
@@ -576,7 +612,24 @@ func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID
 		stubUser.UpdatedAt = now
 		stubUser.UpdatedBy = &createdBy
 
-		return s.userRepository.Update(ctx, stubUser)
+		if err := s.userRepository.Update(ctx, stubUser); err != nil {
+			return err
+		}
+
+		s.recordActivity(ctx, ActivityEvent{
+			ActorUserID:   objectIDPtr(createdBy),
+			ActorUsername: actorUsername(ctx, s.userRepository, createdBy),
+			Action:        model.ActivityUserCreate,
+			ResourceType:  "user",
+			ResourceID:    stubUser.ID.Hex(),
+			Summary:       "Created user " + username + " from account request",
+			Status:        model.ActivityStatusSuccess,
+			Metadata: map[string]interface{}{
+				"username":  username,
+				"requestId": stubUser.ID.Hex(),
+			},
+		})
+		return nil
 	}
 
 	user := &model.User{
@@ -598,10 +651,37 @@ func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID
 		return err
 	}
 
+	actorName := actorUsername(ctx, s.userRepository, createdBy)
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUserID:   objectIDPtr(createdBy),
+		ActorUsername: actorName,
+		Action:        model.ActivityUserCreate,
+		ResourceType:  "user",
+		ResourceID:    user.ID.Hex(),
+		Summary:       "Created user " + username,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"username": username,
+		},
+	})
+
 	if accountRequest != nil {
 		if err := s.accountRequestRepository.Fulfill(ctx, accountRequest.ID, createdBy, user.ID, now); err != nil {
 			return err
 		}
+		s.recordActivity(ctx, ActivityEvent{
+			ActorUserID:   objectIDPtr(createdBy),
+			ActorUsername: actorName,
+			Action:        model.ActivityAccountRequestFulfill,
+			ResourceType:  "account_request",
+			ResourceID:    accountRequest.ID.Hex(),
+			Summary:       "Approved account request for " + username,
+			Status:        model.ActivityStatusSuccess,
+			Metadata: map[string]interface{}{
+				"username": username,
+				"userId":   user.ID.Hex(),
+			},
+		})
 	}
 
 	return nil
@@ -643,7 +723,23 @@ func (s *userService) RequestAccount(ctx context.Context, req *dto.RequestAccoun
 		UpdatedAt:  now,
 	}
 
-	return s.accountRequestRepository.Create(ctx, request)
+	if err := s.accountRequestRepository.Create(ctx, request); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUsername: username,
+		Action:        model.ActivityAccountRequestCreate,
+		ResourceType:  "account_request",
+		ResourceID:    request.ID.Hex(),
+		Summary:       "Submitted account request for " + username,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"username": username,
+			"email":    request.Email,
+		},
+	})
+	return nil
 }
 
 func accountRequestFromUser(user *model.User) model.AccountRequest {
@@ -716,4 +812,11 @@ func (s *userService) GetAccountRequest(ctx context.Context, id primitive.Object
 
 	converted := accountRequestFromUser(user)
 	return &converted, nil
+}
+
+func (s *userService) recordActivity(ctx context.Context, event ActivityEvent) {
+	if s.activityLog == nil {
+		return
+	}
+	s.activityLog.Record(ctx, event)
 }

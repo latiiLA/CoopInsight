@@ -23,15 +23,18 @@ type RoleService interface {
 type roleService struct {
 	roleRepository repository.RoleRepository
 	userRepository repository.UserRepository
+	activityLog    ActivityLogService
 }
 
 func NewRoleService(
 	roleRepository repository.RoleRepository,
 	userRepository repository.UserRepository,
+	activityLog ActivityLogService,
 ) RoleService {
 	return &roleService{
 		roleRepository: roleRepository,
 		userRepository: userRepository,
+		activityLog:    activityLog,
 	}
 }
 
@@ -87,7 +90,23 @@ func (s *roleService) Create(ctx context.Context, createdBy primitive.ObjectID, 
 		CreatedBy:   createdBy,
 	}
 
-	return s.roleRepository.Create(ctx, role)
+	if err := s.roleRepository.Create(ctx, role); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUserID:   objectIDPtr(createdBy),
+		ActorUsername: actorUsername(ctx, s.userRepository, createdBy),
+		Action:        model.ActivityRoleCreate,
+		ResourceType:  "role",
+		ResourceID:    role.ID.Hex(),
+		Summary:       "Created role " + name,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"name": name,
+		},
+	})
+	return nil
 }
 
 func (s *roleService) Update(ctx context.Context, updatedBy primitive.ObjectID, roleID primitive.ObjectID, req *dto.UpdateRoleRequest) error {
@@ -120,7 +139,23 @@ func (s *roleService) Update(ctx context.Context, updatedBy primitive.ObjectID, 
 	existing.UpdatedAt = time.Now()
 	existing.UpdatedBy = &updatedBy
 
-	return s.roleRepository.Update(ctx, existing)
+	if err := s.roleRepository.Update(ctx, existing); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUserID:   objectIDPtr(updatedBy),
+		ActorUsername: actorUsername(ctx, s.userRepository, updatedBy),
+		Action:        model.ActivityRoleUpdate,
+		ResourceType:  "role",
+		ResourceID:    existing.ID.Hex(),
+		Summary:       "Updated role " + name,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"name": name,
+		},
+	})
+	return nil
 }
 
 func (s *roleService) Delete(ctx context.Context, deletedBy primitive.ObjectID, roleID primitive.ObjectID) error {
@@ -151,5 +186,29 @@ func (s *roleService) Delete(ctx context.Context, deletedBy primitive.ObjectID, 
 	existing.DeletedBy = &deletedBy
 	existing.UpdatedAt = now
 
-	return s.roleRepository.Delete(ctx, existing)
+	roleName := existing.Name
+	if err := s.roleRepository.Delete(ctx, existing); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUserID:   objectIDPtr(deletedBy),
+		ActorUsername: actorUsername(ctx, s.userRepository, deletedBy),
+		Action:        model.ActivityRoleDelete,
+		ResourceType:  "role",
+		ResourceID:    existing.ID.Hex(),
+		Summary:       "Deleted role " + roleName,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"name": roleName,
+		},
+	})
+	return nil
+}
+
+func (s *roleService) recordActivity(ctx context.Context, event ActivityEvent) {
+	if s.activityLog == nil {
+		return
+	}
+	s.activityLog.Record(ctx, event)
 }

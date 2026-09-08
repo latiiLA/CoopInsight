@@ -45,6 +45,14 @@ func RequestLogger() gin.HandlerFunc {
 		// Store TraceID in Gin context.
 		c.Set(TraceIDKey, traceID)
 
+		// Attach request meta for services that use c.Request.Context().
+		c.Request = c.Request.WithContext(utils.WithRequestMeta(
+			c.Request.Context(),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+			traceID,
+		))
+
 		// Return TraceID to the client.
 		c.Header("X-Trace-ID", traceID)
 

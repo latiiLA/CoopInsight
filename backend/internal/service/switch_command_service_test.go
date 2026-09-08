@@ -52,7 +52,7 @@ func TestParseSwitchCommandOneLine(t *testing.T) {
 	}
 }
 func TestSwitchCommandDryRunWithoutSSH(t *testing.T) {
-	result, err := NewSwitchCommandService(nil).Run(context.Background(), "dev", "load_atm", "CBOBNA", "005")
+	result, err := NewSwitchCommandService(nil, nil).Run(context.Background(), "dev", "load_atm", "CBOBNA", "005")
 	if err != nil {
 		t.Fatal(err)
 	}
