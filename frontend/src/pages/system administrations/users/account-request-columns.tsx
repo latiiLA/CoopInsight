@@ -77,6 +77,29 @@ export const accountRequestColumns = columnHelper.columns([
   columnHelper.accessor("email", {
     header: "Email",
   }),
+  columnHelper.accessor("department", {
+    header: "Department",
+    cell: ({ getValue }) => getValue() || "—",
+  }),
+  columnHelper.accessor("subProcess", {
+    header: "Subprocess",
+    cell: ({ getValue }) => getValue() || "—",
+  }),
+  columnHelper.accessor("process", {
+    header: "Process",
+    cell: ({ getValue }) => getValue() || "—",
+  }),
+  columnHelper.accessor("accessPurpose", {
+    header: "Purpose",
+    cell: ({ getValue }) => {
+      const value = getValue();
+      if (!value) {
+        return "—";
+      }
+
+      return value.length > 80 ? `${value.slice(0, 80)}…` : value;
+    },
+  }),
   columnHelper.accessor("createdAt", {
     header: ({ column }) => (
       <Button

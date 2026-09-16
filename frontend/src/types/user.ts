@@ -3,6 +3,8 @@ import { Role, getRoleId } from "./role";
 export type UserProfile = {
   jobTitle?: string;
   department?: string;
+  subProcess?: string;
+  process?: string;
   branch?: string;
   phone?: string;
   bio?: string;
@@ -33,6 +35,9 @@ export interface CreateUserDTO {
   middleName: string;
   lastName: string;
   email: string;
+  department: string;
+  subProcess: string;
+  process: string;
   role: string;
   permissions?: string[];
   requestId?: string;
@@ -44,6 +49,10 @@ export interface RequestAccountDTO {
   middleName: string;
   lastName: string;
   email: string;
+  department: string;
+  process: string;
+  subProcess: string;
+  accessPurpose: string;
 }
 
 export interface UpdateUserDTO {
@@ -51,6 +60,9 @@ export interface UpdateUserDTO {
   middleName: string;
   lastName: string;
   email: string;
+  department: string;
+  subProcess: string;
+  process: string;
   role: string;
   permissions?: string[];
   status: string;

@@ -51,6 +51,9 @@ const emptyFormValues: EditUserFormValues = {
   middleName: "",
   lastName: "",
   email: "",
+  department: "",
+  subProcess: "",
+  process: "",
   role: "",
   permissions: [],
   status: "new",
@@ -93,6 +96,9 @@ const EditUser = () => {
       middleName: selectedUser.middleName ?? "",
       lastName: selectedUser.lastName ?? "",
       email: selectedUser.email ?? "",
+      department: selectedUser.profile?.department ?? "",
+      subProcess: selectedUser.profile?.subProcess ?? "",
+      process: selectedUser.profile?.process ?? "",
       role: roleId,
       permissions: (selectedUser.permissions ?? []).filter(
         (permission) => !rolePermissions.includes(permission),
@@ -180,6 +186,9 @@ const EditUser = () => {
       middleName: values.middleName.trim(),
       lastName: values.lastName.trim(),
       email: values.email.trim().toLowerCase(),
+      department: values.department.trim(),
+      subProcess: values.subProcess.trim(),
+      process: values.process.trim(),
       role: values.role,
       permissions: values.permissions ?? [],
       status: values.status,
@@ -306,6 +315,61 @@ const EditUser = () => {
                           autoComplete="family-name"
                           {...field}
                         />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-base font-semibold">Work context</h2>
+                <p className="text-sm text-muted-foreground">
+                  Department, subprocess, and process for this user.
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter department" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="subProcess"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subprocess</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter subprocess" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="process"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Process</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter process" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

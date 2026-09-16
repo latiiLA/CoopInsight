@@ -16,6 +16,13 @@ export const nameSchema = (fieldName: string, minLength: number) =>
     .min(minLength, `${fieldName} must be at least ${minLength} characters`)
     .regex(/^[a-zA-Z\s]+$/, `${fieldName} can only contain letters and spaces`);
 
+const orgField = (fieldName: string) =>
+  z
+    .string()
+    .trim()
+    .min(2, `${fieldName} is required`)
+    .max(100, `${fieldName} must be at most 100 characters`);
+
 const profileFields = {
   firstName: nameSchema("First name", 3),
   middleName: nameSchema("Father name", 3),
@@ -25,6 +32,9 @@ const profileFields = {
     .trim()
     .min(1, "Email is required")
     .email("Enter a valid email address"),
+  department: orgField("Department"),
+  subProcess: orgField("Subprocess"),
+  process: orgField("Process"),
   role: z.string().min(1, "Role is required"),
   permissions: z.array(z.string()),
 };

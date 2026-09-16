@@ -84,6 +84,9 @@ const CreateUser = () => {
       lastName: "",
       username: "",
       email: "",
+      department: "",
+      subProcess: "",
+      process: "",
       role: "",
       permissions: [],
     },
@@ -137,6 +140,9 @@ const CreateUser = () => {
       lastName: selectedRequest.lastName,
       username: selectedRequest.username,
       email: selectedRequest.email,
+      department: selectedRequest.department ?? "",
+      subProcess: selectedRequest.subProcess ?? "",
+      process: selectedRequest.process ?? "",
       role: "",
       permissions: [],
     });
@@ -171,6 +177,9 @@ const CreateUser = () => {
       middleName: values.middleName.trim(),
       lastName: values.lastName.trim(),
       email: values.email.trim().toLowerCase(),
+      department: values.department.trim(),
+      subProcess: values.subProcess.trim(),
+      process: values.process.trim(),
       role: values.role,
       permissions: values.permissions ?? [],
       ...(requestId ? { requestId } : {}),
@@ -240,6 +249,23 @@ const CreateUser = () => {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            {fromRequest && selectedRequest?.accessPurpose ? (
+              <section className="space-y-4">
+                <div>
+                  <h2 className="text-base font-semibold">Request purpose</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Why this person asked for access.
+                  </p>
+                </div>
+
+                <Separator />
+
+                <p className="whitespace-pre-wrap text-sm">
+                  {selectedRequest.accessPurpose}
+                </p>
+              </section>
+            ) : null}
+
             <section className="space-y-4">
               <div>
                 <h2 className="text-base font-semibold">
@@ -301,6 +327,61 @@ const CreateUser = () => {
                           autoComplete="family-name"
                           {...field}
                         />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-base font-semibold">Work context</h2>
+                <p className="text-sm text-muted-foreground">
+                  Department, subprocess, and process for this user.
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter department" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="subProcess"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subprocess</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter subprocess" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="process"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Process</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter process" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

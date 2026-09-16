@@ -5,6 +5,10 @@ export type AccountRequest = {
   middleName: string;
   lastName: string;
   email: string;
+  department?: string;
+  process?: string;
+  subProcess?: string;
+  accessPurpose?: string;
   status: string;
   createdAt: string;
 };

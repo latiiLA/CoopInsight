@@ -37,6 +37,8 @@ const PHONE_PATTERN = /^[+0-9() .\-]*$/;
 const normalizeProfile = (profile?: UserProfile | null): UserProfile => ({
   jobTitle: profile?.jobTitle ?? "",
   department: profile?.department ?? "",
+  subProcess: profile?.subProcess ?? "",
+  process: profile?.process ?? "",
   branch: profile?.branch ?? "",
   phone: profile?.phone ?? "",
   bio: profile?.bio ?? "",
@@ -80,6 +82,8 @@ const Account = () => {
   const profileDirty =
     (profileForm.jobTitle ?? "") !== (savedProfile.jobTitle ?? "") ||
     (profileForm.department ?? "") !== (savedProfile.department ?? "") ||
+    (profileForm.subProcess ?? "") !== (savedProfile.subProcess ?? "") ||
+    (profileForm.process ?? "") !== (savedProfile.process ?? "") ||
     (profileForm.branch ?? "") !== (savedProfile.branch ?? "") ||
     (profileForm.phone ?? "") !== (savedProfile.phone ?? "") ||
     (profileForm.bio ?? "") !== (savedProfile.bio ?? "");
@@ -155,8 +159,16 @@ const Account = () => {
       toast.error("Job title must be 80 characters or less");
       return;
     }
-    if ((nextProfile.department ?? "").length > 80) {
-      toast.error("Department must be 80 characters or less");
+    if ((nextProfile.department ?? "").length > 100) {
+      toast.error("Department must be 100 characters or less");
+      return;
+    }
+    if ((nextProfile.subProcess ?? "").length > 100) {
+      toast.error("Subprocess must be 100 characters or less");
+      return;
+    }
+    if ((nextProfile.process ?? "").length > 100) {
+      toast.error("Process must be 100 characters or less");
       return;
     }
     if ((nextProfile.branch ?? "").length > 80) {
@@ -349,7 +361,7 @@ const Account = () => {
                 <Label htmlFor="department">Department</Label>
                 <Input
                   id="department"
-                  maxLength={80}
+                  maxLength={100}
                   placeholder="e.g. Digital banking"
                   value={profileForm.department}
                   disabled={profileLoading}
@@ -357,6 +369,38 @@ const Account = () => {
                     setProfileForm((current) => ({
                       ...current,
                       department: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subProcess">Subprocess</Label>
+                <Input
+                  id="subProcess"
+                  maxLength={100}
+                  placeholder="e.g. ATM operations"
+                  value={profileForm.subProcess}
+                  disabled={profileLoading}
+                  onChange={(event) =>
+                    setProfileForm((current) => ({
+                      ...current,
+                      subProcess: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="process">Process</Label>
+                <Input
+                  id="process"
+                  maxLength={100}
+                  placeholder="e.g. Channel monitoring"
+                  value={profileForm.process}
+                  disabled={profileLoading}
+                  onChange={(event) =>
+                    setProfileForm((current) => ({
+                      ...current,
+                      process: event.target.value,
                     }))
                   }
                 />

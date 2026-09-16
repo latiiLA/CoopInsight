@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FieldDescription } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,6 +34,26 @@ const requestAccountSchema = z.object({
     .trim()
     .min(1, "Email is required")
     .email("Enter a valid email address"),
+  department: z
+    .string()
+    .trim()
+    .min(2, "Department is required")
+    .max(100, "Department must be at most 100 characters"),
+  process: z
+    .string()
+    .trim()
+    .min(2, "Process is required")
+    .max(100, "Process must be at most 100 characters"),
+  subProcess: z
+    .string()
+    .trim()
+    .min(2, "Subprocess is required")
+    .max(100, "Subprocess must be at most 100 characters"),
+  accessPurpose: z
+    .string()
+    .trim()
+    .min(10, "Describe why you need access (at least 10 characters)")
+    .max(500, "Purpose must be at most 500 characters"),
 });
 
 type RequestAccountFormInputs = z.infer<typeof requestAccountSchema>;
@@ -72,6 +93,10 @@ export function RequestAccountForm({
         middleName: data.middleName.trim(),
         lastName: data.lastName.trim(),
         email: data.email.trim().toLowerCase(),
+        department: data.department.trim(),
+        process: data.process.trim(),
+        subProcess: data.subProcess.trim(),
+        accessPurpose: data.accessPurpose.trim(),
       }),
     );
 
@@ -159,6 +184,58 @@ export function RequestAccountForm({
                 />
                 <FieldError message={errors.email?.message} />
               </div>
+            </div>
+
+            <div className="space-y-0.5 pt-1">
+              <h2 className="text-sm font-medium">Work context</h2>
+              <p className="text-sm text-muted-foreground">
+                Tell us where you work and why you need access to Switch Hub.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-1">
+                <Label htmlFor="department">Department</Label>
+                <Input
+                  id="department"
+                  autoComplete="organization"
+                  aria-invalid={Boolean(errors.department)}
+                  {...register("department")}
+                />
+                <FieldError message={errors.department?.message} />
+              </div>
+
+              <div className="grid gap-1">
+                <Label htmlFor="subProcess">Subprocess</Label>
+                <Input
+                  id="subProcess"
+                  aria-invalid={Boolean(errors.subProcess)}
+                  {...register("subProcess")}
+                />
+                <FieldError message={errors.subProcess?.message} />
+              </div>
+
+              <div className="grid gap-1">
+                <Label htmlFor="process">Process</Label>
+                <Input
+                  id="process"
+                  aria-invalid={Boolean(errors.process)}
+                  {...register("process")}
+                />
+                <FieldError message={errors.process?.message} />
+              </div>
+            </div>
+
+            <div className="grid gap-1">
+              <Label htmlFor="accessPurpose">Purpose of accessing the system</Label>
+              <Textarea
+                id="accessPurpose"
+                rows={4}
+                placeholder="Describe the work you will do in Switch Hub and why you need an account."
+                aria-invalid={Boolean(errors.accessPurpose)}
+                {...register("accessPurpose")}
+              />
+              <FieldError message={errors.accessPurpose?.message} />
             </div>
 
             <Button
