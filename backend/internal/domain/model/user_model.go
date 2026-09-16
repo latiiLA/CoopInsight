@@ -57,6 +57,8 @@ func (u *User) HasAssignedRole() bool {
 type UserProfile struct {
 	JobTitle   string `json:"jobTitle,omitempty" bson:"jobTitle,omitempty"`
 	Department string `json:"department,omitempty" bson:"department,omitempty"`
+	SubProcess string `json:"subProcess,omitempty" bson:"subProcess,omitempty"`
+	Process    string `json:"process,omitempty" bson:"process,omitempty"`
 	Branch     string `json:"branch,omitempty" bson:"branch,omitempty"`
 	Phone      string `json:"phone,omitempty" bson:"phone,omitempty"`
 	Bio        string `json:"bio,omitempty" bson:"bio,omitempty"`

@@ -8,21 +8,26 @@ import (
 
 const (
 	ProfileTitleMax = 80
+	ProfileOrgMax   = 100
 	ProfilePhoneMax = 30
 	ProfileBioMax   = 500
 )
 
-func NormalizeProfile(jobTitle, department, branch, phone, bio string) (UserProfile, bool) {
+func NormalizeProfile(jobTitle, department, subProcess, process, branch, phone, bio string) (UserProfile, bool) {
 	profile := UserProfile{
 		JobTitle:   strings.TrimSpace(jobTitle),
 		Department: strings.TrimSpace(department),
+		SubProcess: strings.TrimSpace(subProcess),
+		Process:    strings.TrimSpace(process),
 		Branch:     strings.TrimSpace(branch),
 		Phone:      strings.TrimSpace(phone),
 		Bio:        strings.TrimSpace(bio),
 	}
 
 	if utf8.RuneCountInString(profile.JobTitle) > ProfileTitleMax ||
-		utf8.RuneCountInString(profile.Department) > ProfileTitleMax ||
+		utf8.RuneCountInString(profile.Department) > ProfileOrgMax ||
+		utf8.RuneCountInString(profile.SubProcess) > ProfileOrgMax ||
+		utf8.RuneCountInString(profile.Process) > ProfileOrgMax ||
 		utf8.RuneCountInString(profile.Branch) > ProfileTitleMax ||
 		utf8.RuneCountInString(profile.Phone) > ProfilePhoneMax ||
 		utf8.RuneCountInString(profile.Bio) > ProfileBioMax {

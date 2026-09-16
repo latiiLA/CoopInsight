@@ -15,17 +15,24 @@ type RegisterRequest struct {
 	MiddleName  string   `json:"middleName" binding:"required,min=3,max=50"`
 	LastName    string   `json:"lastName" binding:"required,min=3,max=50"`
 	Email       string   `json:"email" binding:"required,email"`
+	Department  string   `json:"department" binding:"required,min=2,max=100"`
+	SubProcess  string   `json:"subProcess" binding:"required,min=2,max=100"`
+	Process     string   `json:"process" binding:"required,min=2,max=100"`
 	Role        string   `json:"role" binding:"required"`
 	Permissions []string `json:"permissions"`
 	RequestID   string   `json:"requestId"`
 }
 
 type RequestAccountRequest struct {
-	Username   string `json:"username" binding:"required,min=2,max=50"`
-	FirstName  string `json:"firstName" binding:"required,min=3,max=50"`
-	MiddleName string `json:"middleName" binding:"required,min=3,max=50"`
-	LastName   string `json:"lastName" binding:"required,min=3,max=50"`
-	Email      string `json:"email" binding:"required,email"`
+	Username      string `json:"username" binding:"required,min=2,max=50"`
+	FirstName     string `json:"firstName" binding:"required,min=3,max=50"`
+	MiddleName    string `json:"middleName" binding:"required,min=3,max=50"`
+	LastName      string `json:"lastName" binding:"required,min=3,max=50"`
+	Email         string `json:"email" binding:"required,email"`
+	Department    string `json:"department" binding:"required,min=2,max=100"`
+	Process       string `json:"process" binding:"required,min=2,max=100"`
+	SubProcess    string `json:"subProcess" binding:"required,min=2,max=100"`
+	AccessPurpose string `json:"accessPurpose" binding:"required,min=10,max=500"`
 }
 
 type LoginResponse struct {

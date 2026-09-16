@@ -20,6 +20,10 @@ type AccountRequest struct {
 	MiddleName      string               `json:"middleName" bson:"middleName"`
 	LastName        string               `json:"lastName" bson:"lastName"`
 	Email           string               `json:"email" bson:"email"`
+	Department      string               `json:"department" bson:"department"`
+	Process         string               `json:"process" bson:"process"`
+	SubProcess      string               `json:"subProcess" bson:"subProcess"`
+	AccessPurpose   string               `json:"accessPurpose" bson:"accessPurpose"`
 	Status          AccountRequestStatus `json:"status" bson:"status"`
 	CreatedAt       time.Time            `json:"createdAt" bson:"createdAt"`
 	UpdatedAt       time.Time            `json:"updatedAt" bson:"updatedAt"`

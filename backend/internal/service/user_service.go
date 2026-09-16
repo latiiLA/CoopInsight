@@ -387,6 +387,9 @@ func (s *userService) Update(ctx context.Context, updatedBy primitive.ObjectID, 
 	existing.MiddleName = strings.TrimSpace(req.MiddleName)
 	existing.LastName = strings.TrimSpace(req.LastName)
 	existing.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	existing.Profile.Department = strings.TrimSpace(req.Department)
+	existing.Profile.SubProcess = strings.TrimSpace(req.SubProcess)
+	existing.Profile.Process = strings.TrimSpace(req.Process)
 	existing.RoleID = roleID
 	existing.Permissions = permissions
 	existing.Status = model.UserStatus(req.Status)
@@ -512,7 +515,7 @@ func (s *userService) UpdateProfile(ctx context.Context, userID primitive.Object
 		return nil, err
 	}
 
-	profile, ok := model.NormalizeProfile(req.JobTitle, req.Department, req.Branch, req.Phone, req.Bio)
+	profile, ok := model.NormalizeProfile(req.JobTitle, req.Department, req.SubProcess, req.Process, req.Branch, req.Phone, req.Bio)
 	if !ok {
 		return nil, common.ErrInvalidProfile
 	}
@@ -606,6 +609,9 @@ func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID
 		stubUser.MiddleName = strings.TrimSpace(req.MiddleName)
 		stubUser.LastName = strings.TrimSpace(req.LastName)
 		stubUser.Email = email
+		stubUser.Profile.Department = strings.TrimSpace(req.Department)
+		stubUser.Profile.SubProcess = strings.TrimSpace(req.SubProcess)
+		stubUser.Profile.Process = strings.TrimSpace(req.Process)
 		stubUser.RoleID = roleID
 		stubUser.Permissions = permissions
 		stubUser.Username = username
@@ -633,11 +639,16 @@ func (s *userService) Register(ctx context.Context, createdBy primitive.ObjectID
 	}
 
 	user := &model.User{
-		ID:          primitive.NewObjectID(),
-		FirstName:   strings.TrimSpace(req.FirstName),
-		MiddleName:  strings.TrimSpace(req.MiddleName),
-		LastName:    strings.TrimSpace(req.LastName),
-		Email:       email,
+		ID:         primitive.NewObjectID(),
+		FirstName:  strings.TrimSpace(req.FirstName),
+		MiddleName: strings.TrimSpace(req.MiddleName),
+		LastName:   strings.TrimSpace(req.LastName),
+		Email:      email,
+		Profile: model.UserProfile{
+			Department: strings.TrimSpace(req.Department),
+			SubProcess: strings.TrimSpace(req.SubProcess),
+			Process:    strings.TrimSpace(req.Process),
+		},
 		RoleID:      roleID,
 		Permissions: permissions,
 		Username:    username,
@@ -712,15 +723,19 @@ func (s *userService) RequestAccount(ctx context.Context, req *dto.RequestAccoun
 
 	now := time.Now()
 	request := &model.AccountRequest{
-		ID:         primitive.NewObjectID(),
-		Username:   username,
-		FirstName:  strings.TrimSpace(req.FirstName),
-		MiddleName: strings.TrimSpace(req.MiddleName),
-		LastName:   strings.TrimSpace(req.LastName),
-		Email:      strings.ToLower(strings.TrimSpace(req.Email)),
-		Status:     model.AccountRequestPending,
-		CreatedAt:  now,
-		UpdatedAt:  now,
+		ID:            primitive.NewObjectID(),
+		Username:      username,
+		FirstName:     strings.TrimSpace(req.FirstName),
+		MiddleName:    strings.TrimSpace(req.MiddleName),
+		LastName:      strings.TrimSpace(req.LastName),
+		Email:         strings.ToLower(strings.TrimSpace(req.Email)),
+		Department:    strings.TrimSpace(req.Department),
+		Process:       strings.TrimSpace(req.Process),
+		SubProcess:    strings.TrimSpace(req.SubProcess),
+		AccessPurpose: strings.TrimSpace(req.AccessPurpose),
+		Status:        model.AccountRequestPending,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
 	if err := s.accountRequestRepository.Create(ctx, request); err != nil {
@@ -735,8 +750,12 @@ func (s *userService) RequestAccount(ctx context.Context, req *dto.RequestAccoun
 		Summary:       "Submitted account request for " + username,
 		Status:        model.ActivityStatusSuccess,
 		Metadata: map[string]interface{}{
-			"username": username,
-			"email":    request.Email,
+			"username":      username,
+			"email":         request.Email,
+			"department":    request.Department,
+			"process":       request.Process,
+			"subProcess":    request.SubProcess,
+			"accessPurpose": request.AccessPurpose,
 		},
 	})
 	return nil
