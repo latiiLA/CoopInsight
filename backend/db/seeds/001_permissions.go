@@ -56,6 +56,12 @@ var Catalog = []permissionSeed{
 	{Name: "terminal:view-atm-transaction", Resource: "terminal", Action: "view-atm-transaction", Description: "View ATM transactions and comparison"},
 	{Name: "terminal:view-pos-transaction", Resource: "terminal", Action: "view-pos-transaction", Description: "View POS transactions and comparison"},
 
+	{Name: "clearing:view-uncleared-eth", Resource: "clearing", Action: "view-uncleared-eth", Description: "View uncleared ETH (domestic) clearing items"},
+	{Name: "clearing:view-uncleared-visa", Resource: "clearing", Action: "view-uncleared-visa", Description: "View uncleared VISA clearing items"},
+	{Name: "clearing:view-uncleared-mastercard", Resource: "clearing", Action: "view-uncleared-mastercard", Description: "View uncleared Mastercard (MDS) clearing items"},
+
+	{Name: "settlement:view-unsettled-eth", Resource: "settlement", Action: "view-unsettled-eth", Description: "View unsettled ETH (domestic) settlement items"},
+
 	{Name: "activity:view", Resource: "activity", Action: "view", Description: "View activity log"},
 }
 

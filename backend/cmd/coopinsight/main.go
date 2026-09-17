@@ -200,6 +200,8 @@ func main() {
 	var successTransactionHandler handler.SuccessTransactionHandler
 	var ebirrCardlessHandler handler.EbirrCardlessWithdrawalHandler
 	var terminalTransactionHandler handler.TerminalTransactionHandler
+	var unclearedHandler handler.UnclearedHandler
+	var unsettledHandler handler.UnsettledHandler
 	if oracleDB != nil {
 		testHandler = handler.NewTestHandler(
 			service.NewTestService(oracle.NewTestRepository(oracleDB)),
@@ -217,6 +219,12 @@ func main() {
 				posTerminalRepo,
 			),
 		)
+		unclearedHandler = handler.NewUnclearedHandler(
+			service.NewUnclearedService(oracle.NewUnclearedRepository(oracleDB)),
+		)
+		unsettledHandler = handler.NewUnsettledHandler(
+			service.NewUnsettledService(oracle.NewUnsettledRepository(oracleDB)),
+		)
 	} else {
 		testHandler = handler.NewTestHandler(service.NewTestService(nil))
 		successTransactionHandler = handler.NewSuccessTransactionHandler(
@@ -228,6 +236,8 @@ func main() {
 		terminalTransactionHandler = handler.NewTerminalTransactionHandler(
 			service.NewTerminalTransactionService(nil, atmTerminalRepo, posTerminalRepo),
 		)
+		unclearedHandler = handler.NewUnclearedHandler(service.NewUnclearedService(nil))
+		unsettledHandler = handler.NewUnsettledHandler(service.NewUnsettledService(nil))
 	}
 
 	var onusCollector *sshswitch.Collector
@@ -324,6 +334,8 @@ func main() {
 		MastercardCreditMonitoring: mastercardCreditHandler,
 		VisaMonitoring:             visaHandler,
 		SwitchCommand:              switchCommandHandler,
+		Uncleared:                  unclearedHandler,
+		Unsettled:                  unsettledHandler,
 	})
 
 	// --------------------------------------------------
