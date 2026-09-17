@@ -28,15 +28,15 @@ func (r *atmTerminalRepository) FindAll(ctx context.Context) ([]model.AtmTermina
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "branchDoc"},
 		}}},
-		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "districts"},
-			{Key: "localField", Value: "district"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "districtDoc"},
-		}}},
 		bson.D{{Key: "$unwind", Value: bson.D{
 			{Key: "path", Value: "$branchDoc"},
 			{Key: "preserveNullAndEmptyArrays", Value: true},
+		}}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "districts"},
+			{Key: "localField", Value: "branchDoc.district"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "districtDoc"},
 		}}},
 		bson.D{{Key: "$unwind", Value: bson.D{
 			{Key: "path", Value: "$districtDoc"},
