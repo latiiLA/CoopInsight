@@ -8,6 +8,8 @@ import atmTerminalReducer from "@/features/atm_terminal_slice";
 import posTerminalReducer from "@/features/pos_terminal_slice";
 import accountRequestReducer from "@/features/account_request_slice";
 import activityLogReducer from "@/features/activity_log_slice";
+import unclearedReducer from "@/features/uncleared_slice";
+import unsettledReducer from "@/features/unsettled_slice";
 
 export const store = configureStore({
   reducer: {
@@ -20,6 +22,8 @@ export const store = configureStore({
       posTerminal: posTerminalReducer,
       accountRequest: accountRequestReducer,
       activityLog: activityLogReducer,
+      uncleared: unclearedReducer,
+      unsettled: unsettledReducer,
   },
 })
 

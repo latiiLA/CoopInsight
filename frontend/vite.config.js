@@ -23,6 +23,10 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         ws: true,
+        // Oracle clearing reports can take >60s; default proxy idle cut drops the body
+        // while Gin still logs 200 — UI then stays stuck in loading.
+        timeout: 180_000,
+        proxyTimeout: 180_000,
       },
       "/uploads": {
         target: "https://localhost:8088",

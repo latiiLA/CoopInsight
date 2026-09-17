@@ -35,6 +35,8 @@ import TerminalTransactions from "./pages/dashboards/terminal-transactions/termi
 import TerminalComparison from "./pages/dashboards/terminal-comparison/terminal-comparison";
 import Account from "./pages/account/account";
 import Analytics from "./pages/Analytics";
+import Uncleared from "./pages/clearing/uncleared";
+import UnsettledETH from "./pages/settlement/unsettled-eth";
 import NotFound from "./pages/not-found";
 import { RequirePermission } from "./components/require-permission";
 
@@ -191,6 +193,68 @@ function App() {
             element={
               <RequirePermission permissions={["terminal:view-pos-transaction"]}>
                 <TerminalComparison fleet="pos" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/uncleared-eth"
+            element={
+              <RequirePermission permissions={["clearing:view-uncleared-eth"]}>
+                <Uncleared
+                  key="ETB"
+                  product="ETB"
+                  title="Uncleared ETH"
+                  description="Approved domestic POS purchases that still need clearing."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/uncleared-visa"
+            element={
+              <RequirePermission permissions={["clearing:view-uncleared-visa"]}>
+                <Uncleared
+                  key="VISA"
+                  product="VISA"
+                  title="Uncleared VISA"
+                  description="Approved Visa POS purchases that still need clearing."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/uncleared-mastercard"
+            element={
+              <RequirePermission
+                permissions={["clearing:view-uncleared-mastercard"]}
+              >
+                <Uncleared
+                  key="MDS"
+                  product="MDS"
+                  title="Uncleared Mastercard"
+                  description="Approved Mastercard POS purchases that still need clearing."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/uncleared"
+            element={
+              <RequirePermission permissions={["clearing:view-uncleared-eth"]}>
+                <Uncleared
+                  key="ETB-alias"
+                  product="ETB"
+                  title="Uncleared ETH"
+                  description="Approved domestic POS purchases that still need clearing."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/unsettled-eth"
+            element={
+              <RequirePermission permissions={["settlement:view-unsettled-eth"]}>
+                <UnsettledETH />
               </RequirePermission>
             }
           />

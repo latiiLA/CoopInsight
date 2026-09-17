@@ -142,7 +142,13 @@ export function DataTable<TData extends RowData>({
 
     const headers = exportableColumns.map((column) => column.id);
 
-    const rows = table.getFilteredRowModel().rows.map((row) =>
+    const selectedRows = table.getSelectedRowModel().rows;
+    const rowsToExport =
+      selectedRows.length > 0
+        ? selectedRows
+        : table.getFilteredRowModel().rows;
+
+    const rows = rowsToExport.map((row) =>
       exportableColumns.map((column) => {
         const cell = row
           .getVisibleCells()
@@ -234,17 +240,23 @@ export function DataTable<TData extends RowData>({
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
                   <FolderUp />
-                  Export
+                  {table.getSelectedRowModel().rows.length > 0
+                    ? `Export (${table.getSelectedRowModel().rows.length})`
+                    : "Export"}
                 </Button>
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={exportToCSV}>
-                  Export as CSV
+                  {table.getSelectedRowModel().rows.length > 0
+                    ? "Export selected as CSV"
+                    : "Export as CSV"}
                 </DropdownMenuItem>
 
                 <DropdownMenuItem onClick={exportToXLSX}>
-                  Export as XLSX
+                  {table.getSelectedRowModel().rows.length > 0
+                    ? "Export selected as XLSX"
+                    : "Export as XLSX"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
