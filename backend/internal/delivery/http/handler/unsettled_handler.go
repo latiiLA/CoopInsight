@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,8 @@ import (
 
 type UnsettledHandler interface {
 	ListETH(c *gin.Context)
+	ListVisa(c *gin.Context)
+	ListMastercard(c *gin.Context)
 }
 
 type unsettledHandler struct {
@@ -23,9 +26,23 @@ func NewUnsettledHandler(service service.UnsettledService) UnsettledHandler {
 }
 
 func (h *unsettledHandler) ListETH(c *gin.Context) {
+	h.list(c, h.service.ListETH)
+}
+
+func (h *unsettledHandler) ListVisa(c *gin.Context) {
+	h.list(c, h.service.ListVisa)
+}
+
+func (h *unsettledHandler) ListMastercard(c *gin.Context) {
+	h.list(c, h.service.ListMastercard)
+}
+
+func (h *unsettledHandler) list(
+	c *gin.Context,
+	fetch func(ctx context.Context, dateFrom, dateTo string, page, pageSize int) (service.ClearingPageResult[model.UnsettledTransaction], error),
+) {
 	dateFrom := c.Query("dateFrom")
 	dateTo := c.Query("dateTo")
-
 	if dateFrom == "" || dateTo == "" {
 		c.JSON(http.StatusBadRequest, response.Status{
 			IsSuccessful: false,
@@ -35,19 +52,16 @@ func (h *unsettledHandler) ListETH(c *gin.Context) {
 		return
 	}
 
-	rows, err := h.service.ListETH(c.Request.Context(), dateFrom, dateTo)
+	page, pageSize := parseClearingPagination(c)
+	result, err := fetch(c.Request.Context(), dateFrom, dateTo, page, pageSize)
 	if err != nil {
 		writeAppError(c, err)
 		return
 	}
 
-	if rows == nil {
-		rows = []model.UnsettledTransaction{}
-	}
-
 	c.JSON(http.StatusOK, response.Status{
 		IsSuccessful: true,
 		Message:      "Unsettled transactions fetched successfully",
-		Data:         rows,
+		Data:         result,
 	})
 }

@@ -223,6 +223,56 @@ func (c *Client) Run(ctx context.Context, command string) (CommandResult, error)
 	return result, fmt.Errorf("ssh command: %w", runErr)
 }
 
+// Exec runs a non-interactive remote command (batch scripts, echo, etc.).
+func (c *Client) Exec(ctx context.Context, command string) (CommandResult, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	command = strings.TrimSpace(command)
+	if command == "" {
+		return CommandResult{}, fmt.Errorf("empty ssh command")
+	}
+
+	session, err := c.newSession()
+	if err != nil {
+		return CommandResult{}, err
+	}
+	defer func() { _ = session.Close() }()
+
+	type execOutcome struct {
+		output []byte
+		err    error
+	}
+	done := make(chan execOutcome, 1)
+	go func() {
+		out, runErr := session.CombinedOutput(command)
+		done <- execOutcome{output: out, err: runErr}
+	}()
+
+	var outcome execOutcome
+	select {
+	case <-ctx.Done():
+		_ = session.Close()
+		<-done
+		return CommandResult{ExitCode: -1, Output: ""}, ctx.Err()
+	case outcome = <-done:
+	}
+
+	result := CommandResult{Output: truncateOutput(string(outcome.output))}
+	if outcome.err == nil {
+		return result, nil
+	}
+
+	var exitErr *ssh.ExitError
+	if errors.As(outcome.err, &exitErr) {
+		result.ExitCode = exitErr.ExitStatus()
+		return result, nil
+	}
+
+	c.reset()
+	return result, fmt.Errorf("ssh exec: %w", outcome.err)
+}
+
 func (c *Client) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -264,7 +314,7 @@ func (c *Client) dial() (*ssh.Client, error) {
 	hostKeyCallback := ssh.InsecureIgnoreHostKey()
 	if !c.cfg.Insecure {
 		if c.cfg.KnownHosts == "" {
-			return nil, fmt.Errorf("SSH_SWITCH_KNOWN_HOSTS is required when SSH_SWITCH_INSECURE is false")
+			return nil, fmt.Errorf("known_hosts path is required when insecure host key check is disabled")
 		}
 
 		callback, err := knownhosts.New(c.cfg.KnownHosts)

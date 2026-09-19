@@ -7,5 +7,5 @@ import (
 )
 
 type UnclearedRepository interface {
-	List(ctx context.Context, dateFrom, dateTo string, sourceBin, destBin int64) ([]model.UnclearedTransaction, error)
+	List(ctx context.Context, dateFrom, dateTo string, sourceBin, destBin int64, page, pageSize int) ([]model.UnclearedTransaction, bool, error)
 }

@@ -11,68 +11,33 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 )
 
-// Shared scheme BIN constants (uncleared + unsettled ETH).
+// Shared scheme BIN constants (uncleared + unsettled + cleared + settled ETH).
 const (
 	sourceBinETH = int64(1000000011)
 	destBinETH   = int64(1000000010)
 )
 
-// TRIM/RTRIM only where CLEARING.TRANS_LOG stores padding:
-//   TR_CARDPRODUCT VARCHAR2(10) — often right-padded
-//   TR_DBA         VARCHAR2(100) — sometimes trailing spaces
-// TR_SOURCE_BIN / TR_DEST_BIN are NUMBER — compare as numbers, no TRIM.
-// ISS_ACQ, POS_ATM, TR_RESPCODE, TR_ARF, etc. have no padding in recent data.
-const unclearedSelectColumns = `
-	NVL(t.TRANS_LOG_ID, t.ID) AS id,
-	TO_CHAR(t.TR_ADDED_DATE, 'YYYY-MM-DD') AS tr_date,
-	LPAD(TO_CHAR(NVL(t.TR_TIME, 0)), 6, '0') AS tr_time,
-	NVL(t.MSGTYPE, 0) AS msgtype,
-	NVL(t.PROC_CODE, 0) AS proc_code,
-	t.TR_ARF AS rrn,
-	LPAD(TO_CHAR(NVL(t.TR_TRACE, 0)), 6, '0') AS stan,
-	t.TR_RESPCODE AS resp_code,
-	NVL(t.TR_AMOUNT_SOURCE, 0) AS amount,
-	NVL(t.TR_CURRENCY_SOURCE, 0) AS currency,
-	t.TR_TERM_ID AS terminal_id,
-	RTRIM(t.TR_DBA) AS merchant,
-	RTRIM(t.TR_CARDPRODUCT) AS card_product,
-	t.TR_TXNSRC AS txn_source,
-	t.TR_TXNDEST AS txn_dest,
-	t.ISS_ACQ AS issuer_acquirer,
-	t.POS_ATM AS pos_atm
-`
+// Keep alias used by older references in this package.
+const unclearedSelectColumns = clearingSelectColumns
 
-// Exclude 210s whose RRN (TR_ARF) matches a 410/420/430 reversal.
-// Reversal rows themselves are never selected (MSGTYPE = 210 only).
 const unclearedBaseWhere = `
 WHERE t.ISS_ACQ = 'ACQ'
 	AND t.POS_ATM = 'POS'
 	AND t.MSGTYPE = 210
 	AND t.TR_RESPCODE = '0'
-	AND NVL(t.TR_POSTED, 0) = 0
+	AND (t.TR_POSTED = 0 OR t.TR_POSTED IS NULL)
 	AND t.TR_SETTLE = '0'
-	AND t.TR_ADDED_DATE >= TO_DATE(:date_from, 'MM-DD-YYYY')
-	AND t.TR_ADDED_DATE < TO_DATE(:date_to, 'MM-DD-YYYY') + 1
-	AND NOT EXISTS (
-		SELECT 1
-		FROM clearing.trans_log r
-		WHERE r.MSGTYPE IN (410, 420, 430)
-			AND r.TR_ARF = t.TR_ARF
-	)
-`
+	AND t.TR_CONV_DATE >= TO_DATE(:date_from, 'MM-DD-YYYY')
+	AND t.TR_CONV_DATE < TO_DATE(:date_to, 'MM-DD-YYYY') + 1
+` + clearingAdviceNotExists
 
-const unclearedOrderBy = `
-ORDER BY t.TR_ADDED_DATE DESC, t.TR_TIME DESC, t.TR_TRACE DESC
-`
-
-// Filter by TR_SOURCE_BIN + TR_DEST_BIN.
 const unclearedBinQuery = `
-SELECT` + unclearedSelectColumns + `
+SELECT` + clearingSelectColumns + `
 FROM clearing.trans_log t
 ` + unclearedBaseWhere + `
 	AND t.TR_SOURCE_BIN = :source_bin
 	AND t.TR_DEST_BIN = :dest_bin
-` + unclearedOrderBy
+` + clearingOrderBy + clearingPageClause
 
 type unclearedRepository struct {
 	db *sql.DB
@@ -86,21 +51,26 @@ func (r *unclearedRepository) List(
 	ctx context.Context,
 	dateFrom, dateTo string,
 	sourceBin, destBin int64,
-) ([]model.UnclearedTransaction, error) {
+	page, pageSize int,
+) ([]model.UnclearedTransaction, bool, error) {
+	page, pageSize = normalizeClearingPage(page, pageSize)
 	rows, err := r.db.QueryContext(
 		ctx,
 		unclearedBinQuery,
-		sql.Named("source_bin", sourceBin),
-		sql.Named("dest_bin", destBin),
-		sql.Named("date_from", dateFrom),
-		sql.Named("date_to", dateTo),
+		clearingListArgs(sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
 	)
 	if err != nil {
-		return nil, wrapError(common.ErrFailedToFetchReport, err)
+		return nil, false, wrapError(common.ErrFailedToFetchReport, err)
 	}
 	defer func() { _ = rows.Close() }()
 
-	return scanUnclearedRows(rows)
+	results, err := scanUnclearedRows(rows)
+	if err != nil {
+		return nil, false, err
+	}
+
+	trimmed, hasMore := trimClearingPage(results, pageSize)
+	return trimmed, hasMore, nil
 }
 
 func scanUnclearedRows(rows *sql.Rows) ([]model.UnclearedTransaction, error) {

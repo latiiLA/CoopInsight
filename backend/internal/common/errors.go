@@ -55,6 +55,7 @@ var (
 	ErrSourceMongoUnavailable                = errors.New("source mongo is unavailable")
 	ErrInvalidReportDate                     = errors.New("dateFrom and dateTo must be MM-DD-YYYY")
 	ErrInvalidDateRange                      = errors.New("dateFrom must be on or before dateTo")
+	ErrDateRangeTooLarge                     = errors.New("date range must be 31 days or less")
 	ErrInvalidTerminalID                     = errors.New("terminalId is required")
 	ErrInvalidFleet                          = errors.New("fleet must be atm or pos")
 	ErrFailedToFetchReport                   = errors.New("failed to fetch report")
@@ -68,6 +69,9 @@ var (
 	ErrSwitchCommandUnavailable              = errors.New("switch command is unavailable")
 	ErrInvalidSwitchCommand                  = errors.New("invalid switch command")
 	ErrSwitchCommandTimeout                  = errors.New("switch command timed out")
+	ErrMasSSHUnavailable                     = errors.New("MAS SSH is unavailable")
+	ErrInvalidMasSSHCommand                  = errors.New("invalid MAS SSH command")
+	ErrMasSSHTimeout                         = errors.New("MAS SSH command timed out")
 )
 
 var (

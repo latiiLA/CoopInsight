@@ -11,35 +11,35 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
 )
 
-type UnclearedHandler interface {
+type SettledHandler interface {
 	ListETH(c *gin.Context)
 	ListVisa(c *gin.Context)
 	ListMastercard(c *gin.Context)
 }
 
-type unclearedHandler struct {
-	service service.UnclearedService
+type settledHandler struct {
+	service service.SettledService
 }
 
-func NewUnclearedHandler(service service.UnclearedService) UnclearedHandler {
-	return &unclearedHandler{service: service}
+func NewSettledHandler(service service.SettledService) SettledHandler {
+	return &settledHandler{service: service}
 }
 
-func (h *unclearedHandler) ListETH(c *gin.Context) {
+func (h *settledHandler) ListETH(c *gin.Context) {
 	h.list(c, h.service.ListETH)
 }
 
-func (h *unclearedHandler) ListVisa(c *gin.Context) {
+func (h *settledHandler) ListVisa(c *gin.Context) {
 	h.list(c, h.service.ListVisa)
 }
 
-func (h *unclearedHandler) ListMastercard(c *gin.Context) {
+func (h *settledHandler) ListMastercard(c *gin.Context) {
 	h.list(c, h.service.ListMastercard)
 }
 
-func (h *unclearedHandler) list(
+func (h *settledHandler) list(
 	c *gin.Context,
-	fetch func(ctx context.Context, dateFrom, dateTo string, page, pageSize int) (service.ClearingPageResult[model.UnclearedTransaction], error),
+	fetch func(ctx context.Context, dateFrom, dateTo string, page, pageSize int) (service.ClearingPageResult[model.SettledTransaction], error),
 ) {
 	dateFrom := c.Query("dateFrom")
 	dateTo := c.Query("dateTo")
@@ -61,7 +61,7 @@ func (h *unclearedHandler) list(
 
 	c.JSON(http.StatusOK, response.Status{
 		IsSuccessful: true,
-		Message:      "Uncleared transactions fetched successfully",
+		Message:      "Settled transactions fetched successfully",
 		Data:         result,
 	})
 }

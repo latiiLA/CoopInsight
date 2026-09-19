@@ -7,5 +7,5 @@ import (
 )
 
 type UnsettledRepository interface {
-	ListETH(ctx context.Context, dateFrom, dateTo string) ([]model.UnsettledTransaction, error)
+	List(ctx context.Context, dateFrom, dateTo string, sourceBin, destBin int64, page, pageSize int) ([]model.UnsettledTransaction, bool, error)
 }

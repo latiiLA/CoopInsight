@@ -10,39 +10,42 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 )
 
-const unsettledBinQuery = `
-SELECT` + clearingSelectColumns + `
-FROM clearing.trans_log t
+const clearedBaseWhere = `
 WHERE t.ISS_ACQ = 'ACQ'
 	AND t.POS_ATM = 'POS'
 	AND t.MSGTYPE = 210
 	AND t.TR_RESPCODE = '0'
 	AND t.TR_POSTED = 1
-	AND t.TR_SETTLE = '0'
 	AND t.TR_CONV_DATE >= TO_DATE(:date_from, 'MM-DD-YYYY')
 	AND t.TR_CONV_DATE < TO_DATE(:date_to, 'MM-DD-YYYY') + 1
+` + clearingAdviceNotExists
+
+const clearedBinQuery = `
+SELECT` + clearingSelectColumns + `
+FROM clearing.trans_log t
+` + clearedBaseWhere + `
 	AND t.TR_SOURCE_BIN = :source_bin
 	AND t.TR_DEST_BIN = :dest_bin
-` + clearingAdviceNotExists + clearingOrderBy + clearingPageClause
+` + clearingOrderBy + clearingPageClause
 
-type unsettledRepository struct {
+type clearedRepository struct {
 	db *sql.DB
 }
 
-func NewUnsettledRepository(db *sql.DB) repository.UnsettledRepository {
-	return &unsettledRepository{db: db}
+func NewClearedRepository(db *sql.DB) repository.ClearedRepository {
+	return &clearedRepository{db: db}
 }
 
-func (r *unsettledRepository) List(
+func (r *clearedRepository) List(
 	ctx context.Context,
 	dateFrom, dateTo string,
 	sourceBin, destBin int64,
 	page, pageSize int,
-) ([]model.UnsettledTransaction, bool, error) {
+) ([]model.ClearedTransaction, bool, error) {
 	page, pageSize = normalizeClearingPage(page, pageSize)
 	rows, err := r.db.QueryContext(
 		ctx,
-		unsettledBinQuery,
+		clearedBinQuery,
 		clearingListArgs(sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
 	)
 	if err != nil {
@@ -50,7 +53,7 @@ func (r *unsettledRepository) List(
 	}
 	defer func() { _ = rows.Close() }()
 
-	results, err := scanUnsettledRows(rows)
+	results, err := scanClearedRows(rows)
 	if err != nil {
 		return nil, false, err
 	}
@@ -59,8 +62,8 @@ func (r *unsettledRepository) List(
 	return trimmed, hasMore, nil
 }
 
-func scanUnsettledRows(rows *sql.Rows) ([]model.UnsettledTransaction, error) {
-	results := make([]model.UnsettledTransaction, 0)
+func scanClearedRows(rows *sql.Rows) ([]model.ClearedTransaction, error) {
+	results := make([]model.ClearedTransaction, 0)
 
 	for rows.Next() {
 		var (
@@ -105,7 +108,7 @@ func scanUnsettledRows(rows *sql.Rows) ([]model.UnsettledTransaction, error) {
 			return nil, wrapError(common.ErrFailedToFetchReport, err)
 		}
 
-		results = append(results, model.UnsettledTransaction{
+		results = append(results, model.ClearedTransaction{
 			ID:             int64(id.Float64),
 			Date:           strings.TrimSpace(date.String),
 			Time:           formatClearingTime(timeVal.String),

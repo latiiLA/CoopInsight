@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/latiiLA/CoopInsight/backend/configs"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/handler"
@@ -201,7 +202,9 @@ func main() {
 	var ebirrCardlessHandler handler.EbirrCardlessWithdrawalHandler
 	var terminalTransactionHandler handler.TerminalTransactionHandler
 	var unclearedHandler handler.UnclearedHandler
+	var clearedHandler handler.ClearedHandler
 	var unsettledHandler handler.UnsettledHandler
+	var settledHandler handler.SettledHandler
 	if oracleDB != nil {
 		testHandler = handler.NewTestHandler(
 			service.NewTestService(oracle.NewTestRepository(oracleDB)),
@@ -222,8 +225,14 @@ func main() {
 		unclearedHandler = handler.NewUnclearedHandler(
 			service.NewUnclearedService(oracle.NewUnclearedRepository(oracleDB)),
 		)
+		clearedHandler = handler.NewClearedHandler(
+			service.NewClearedService(oracle.NewClearedRepository(oracleDB)),
+		)
 		unsettledHandler = handler.NewUnsettledHandler(
 			service.NewUnsettledService(oracle.NewUnsettledRepository(oracleDB)),
+		)
+		settledHandler = handler.NewSettledHandler(
+			service.NewSettledService(oracle.NewSettledRepository(oracleDB)),
 		)
 	} else {
 		testHandler = handler.NewTestHandler(service.NewTestService(nil))
@@ -237,7 +246,9 @@ func main() {
 			service.NewTerminalTransactionService(nil, atmTerminalRepo, posTerminalRepo),
 		)
 		unclearedHandler = handler.NewUnclearedHandler(service.NewUnclearedService(nil))
+		clearedHandler = handler.NewClearedHandler(service.NewClearedService(nil))
 		unsettledHandler = handler.NewUnsettledHandler(service.NewUnsettledService(nil))
+		settledHandler = handler.NewSettledHandler(service.NewSettledService(nil))
 	}
 
 	var onusCollector *sshswitch.Collector
@@ -313,6 +324,25 @@ func main() {
 		service.NewSwitchCommandService(switchCommandClient, activityLogService),
 	)
 
+	var masSSHService service.MasSSHService
+	if configs.SSHMASEnabled {
+		masClient := newMASSSHClient()
+		defer masClient.Close()
+		masSSHService = service.NewMasSSHService(masClient, configs.SSHMASTimeout)
+
+		pingCtx, pingCancel := context.WithTimeout(ctx, 15*time.Second)
+		if err := masSSHService.Ping(pingCtx); err != nil {
+			logrus.WithError(err).Warn("MAS SSH ping failed; clearing batch jobs will be unavailable until connectivity is fixed")
+		} else {
+			logrus.Info("MAS SSH connected successfully")
+		}
+		pingCancel()
+	} else {
+		masSSHService = service.NewMasSSHService(nil, configs.SSHMASTimeout)
+		logrus.Info("MAS SSH is disabled")
+	}
+	logrus.WithField("enabled", masSSHService.Enabled()).Info("MAS SSH service ready for clearing batch jobs")
+
 	// --------------------------------------------------
 	// Router
 	// --------------------------------------------------
@@ -335,7 +365,9 @@ func main() {
 		VisaMonitoring:             visaHandler,
 		SwitchCommand:              switchCommandHandler,
 		Uncleared:                  unclearedHandler,
+		Cleared:                    clearedHandler,
 		Unsettled:                  unsettledHandler,
+		Settled:                    settledHandler,
 	})
 
 	// --------------------------------------------------
@@ -362,5 +394,17 @@ func newSwitchSSHClient(debugPath string) *sshswitch.Client {
 		TailLines:  configs.SSHSwitchTailLines,
 		Insecure:   configs.SSHSwitchInsecure,
 		KnownHosts: configs.SSHSwitchKnownHosts,
+	})
+}
+
+func newMASSSHClient() *sshswitch.Client {
+	return sshswitch.NewClient(sshswitch.ClientConfig{
+		Host:       configs.SSHMASHost,
+		Port:       configs.SSHMASPort,
+		User:       configs.SSHMASUser,
+		KeyPath:    configs.SSHMASKeyPath,
+		Password:   configs.SSHMASPassword,
+		Insecure:   configs.SSHMASInsecure,
+		KnownHosts: configs.SSHMASKnownHosts,
 	})
 }

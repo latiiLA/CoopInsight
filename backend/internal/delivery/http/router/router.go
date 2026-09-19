@@ -29,7 +29,9 @@ type Handlers struct {
 	VisaMonitoring             handler.OnusMonitoringHandler
 	SwitchCommand              handler.SwitchCommandHandler
 	Uncleared                  handler.UnclearedHandler
+	Cleared                    handler.ClearedHandler
 	Unsettled                  handler.UnsettledHandler
+	Settled                    handler.SettledHandler
 }
 
 func SetupRouter(handlers Handlers) *gin.Engine {
@@ -156,8 +158,8 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 		handlers.EbirrCardlessWithdrawal,
 		handlers.TerminalTransaction,
 	)
-	registerClearingRoutes(oracleProtected, handlers.Uncleared)
-	registerSettlementRoutes(oracleProtected, handlers.Unsettled)
+	registerClearingRoutes(oracleProtected, handlers.Uncleared, handlers.Cleared)
+	registerSettlementRoutes(oracleProtected, handlers.Unsettled, handlers.Settled)
 
 	live := api.Group("")
 	live.Use(middleware.JwtAuthMiddleware())

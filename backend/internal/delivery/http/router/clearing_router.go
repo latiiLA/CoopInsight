@@ -9,6 +9,7 @@ import (
 func registerClearingRoutes(
 	protected *gin.RouterGroup,
 	unclearedHandler handler.UnclearedHandler,
+	clearedHandler handler.ClearedHandler,
 ) {
 	clearing := protected.Group("/clearing")
 
@@ -35,5 +36,30 @@ func registerClearingRoutes(
 			[]string{"clearing:view-uncleared-mastercard"},
 		),
 		unclearedHandler.ListMastercard,
+	)
+
+	clearing.GET(
+		"/cleared/eth",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"clearing:view-cleared-eth"},
+		),
+		clearedHandler.ListETH,
+	)
+	clearing.GET(
+		"/cleared/visa",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"clearing:view-cleared-visa"},
+		),
+		clearedHandler.ListVisa,
+	)
+	clearing.GET(
+		"/cleared/mastercard",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"clearing:view-cleared-mastercard"},
+		),
+		clearedHandler.ListMastercard,
 	)
 }

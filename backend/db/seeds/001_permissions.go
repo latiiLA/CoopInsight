@@ -60,7 +60,17 @@ var Catalog = []permissionSeed{
 	{Name: "clearing:view-uncleared-visa", Resource: "clearing", Action: "view-uncleared-visa", Description: "View uncleared VISA clearing items"},
 	{Name: "clearing:view-uncleared-mastercard", Resource: "clearing", Action: "view-uncleared-mastercard", Description: "View uncleared Mastercard (MDS) clearing items"},
 
+	{Name: "clearing:view-cleared-eth", Resource: "clearing", Action: "view-cleared-eth", Description: "View cleared ETH (domestic) clearing items"},
+	{Name: "clearing:view-cleared-visa", Resource: "clearing", Action: "view-cleared-visa", Description: "View cleared VISA clearing items"},
+	{Name: "clearing:view-cleared-mastercard", Resource: "clearing", Action: "view-cleared-mastercard", Description: "View cleared Mastercard (MDS) clearing items"},
+
 	{Name: "settlement:view-unsettled-eth", Resource: "settlement", Action: "view-unsettled-eth", Description: "View unsettled ETH (domestic) settlement items"},
+	{Name: "settlement:view-unsettled-visa", Resource: "settlement", Action: "view-unsettled-visa", Description: "View unsettled VISA settlement items"},
+	{Name: "settlement:view-unsettled-mastercard", Resource: "settlement", Action: "view-unsettled-mastercard", Description: "View unsettled Mastercard (MDS) settlement items"},
+
+	{Name: "settlement:view-settled-eth", Resource: "settlement", Action: "view-settled-eth", Description: "View settled ETH (domestic) settlement items"},
+	{Name: "settlement:view-settled-visa", Resource: "settlement", Action: "view-settled-visa", Description: "View settled VISA settlement items"},
+	{Name: "settlement:view-settled-mastercard", Resource: "settlement", Action: "view-settled-mastercard", Description: "View settled Mastercard (MDS) settlement items"},
 
 	{Name: "activity:view", Resource: "activity", Action: "view", Description: "View activity log"},
 }

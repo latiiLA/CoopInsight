@@ -2,15 +2,23 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 )
 
+const (
+	unsettledSourceBinETH = int64(1000000011)
+	unsettledDestBinETH   = int64(1000000010)
+	unsettledVisaBin      = int64(4)
+	unsettledMDSBin       = int64(5)
+)
+
 type UnsettledService interface {
-	ListETH(ctx context.Context, dateFrom, dateTo string) ([]model.UnsettledTransaction, error)
+	ListETH(ctx context.Context, dateFrom, dateTo string, page, pageSize int) (ClearingPageResult[model.UnsettledTransaction], error)
+	ListVisa(ctx context.Context, dateFrom, dateTo string, page, pageSize int) (ClearingPageResult[model.UnsettledTransaction], error)
+	ListMastercard(ctx context.Context, dateFrom, dateTo string, page, pageSize int) (ClearingPageResult[model.UnsettledTransaction], error)
 }
 
 type unsettledService struct {
@@ -24,34 +32,61 @@ func NewUnsettledService(repository repository.UnsettledRepository) UnsettledSer
 func (s *unsettledService) ListETH(
 	ctx context.Context,
 	dateFrom, dateTo string,
-) ([]model.UnsettledTransaction, error) {
+	page, pageSize int,
+) (ClearingPageResult[model.UnsettledTransaction], error) {
+	return s.list(ctx, dateFrom, dateTo, unsettledSourceBinETH, unsettledDestBinETH, page, pageSize)
+}
+
+func (s *unsettledService) ListVisa(
+	ctx context.Context,
+	dateFrom, dateTo string,
+	page, pageSize int,
+) (ClearingPageResult[model.UnsettledTransaction], error) {
+	return s.list(ctx, dateFrom, dateTo, unsettledVisaBin, unsettledVisaBin, page, pageSize)
+}
+
+func (s *unsettledService) ListMastercard(
+	ctx context.Context,
+	dateFrom, dateTo string,
+	page, pageSize int,
+) (ClearingPageResult[model.UnsettledTransaction], error) {
+	return s.list(ctx, dateFrom, dateTo, unsettledMDSBin, unsettledMDSBin, page, pageSize)
+}
+
+func (s *unsettledService) list(
+	ctx context.Context,
+	dateFrom, dateTo string,
+	sourceBin, destBin int64,
+	page, pageSize int,
+) (ClearingPageResult[model.UnsettledTransaction], error) {
+	empty := ClearingPageResult[model.UnsettledTransaction]{
+		Items:    []model.UnsettledTransaction{},
+		Page:     page,
+		PageSize: pageSize,
+	}
+
 	if s.repository == nil {
-		return nil, common.ErrOracleUnavailable
+		return empty, common.ErrOracleUnavailable
 	}
 
-	from, err := parseReportDate(dateFrom)
+	from, to, page, pageSize, err := parseClearingListArgs(dateFrom, dateTo, page, pageSize)
 	if err != nil {
-		return nil, err
+		return empty, err
 	}
+	empty.Page, empty.PageSize = page, pageSize
 
-	to, err := parseReportDate(dateTo)
+	rows, hasMore, err := s.repository.List(ctx, from, to, sourceBin, destBin, page, pageSize)
 	if err != nil {
-		return nil, err
-	}
-
-	fromTime, _ := time.Parse("01-02-2006", from)
-	toTime, _ := time.Parse("01-02-2006", to)
-	if fromTime.After(toTime) {
-		return nil, common.ErrInvalidDateRange
-	}
-
-	rows, err := s.repository.ListETH(ctx, from, to)
-	if err != nil {
-		return nil, err
+		return empty, err
 	}
 	if rows == nil {
-		return []model.UnsettledTransaction{}, nil
+		rows = []model.UnsettledTransaction{}
 	}
 
-	return rows, nil
+	return ClearingPageResult[model.UnsettledTransaction]{
+		Items:    rows,
+		Page:     page,
+		PageSize: pageSize,
+		HasMore:  hasMore,
+	}, nil
 }

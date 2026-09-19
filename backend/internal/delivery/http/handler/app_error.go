@@ -62,6 +62,7 @@ var appErrors = []struct {
 	{common.ErrSourceMongoUnavailable, http.StatusServiceUnavailable},
 	{common.ErrInvalidReportDate, http.StatusBadRequest},
 	{common.ErrInvalidDateRange, http.StatusBadRequest},
+	{common.ErrDateRangeTooLarge, http.StatusBadRequest},
 	{common.ErrInvalidTerminalID, http.StatusBadRequest},
 	{common.ErrInvalidFleet, http.StatusBadRequest},
 	{common.ErrFailedToFetchReport, http.StatusInternalServerError},

@@ -103,6 +103,17 @@ var (
 	SSHSwitchInsecure          bool
 	SSHSwitchKnownHosts        string
 	LiveMonitoringEnabled      bool
+
+	// SSH MAS host (clearing batch jobs — separate from switch monitoring)
+	SSHMASEnabled    bool
+	SSHMASHost       string
+	SSHMASPort       string
+	SSHMASUser       string
+	SSHMASPassword   string
+	SSHMASKeyPath    string
+	SSHMASInsecure   bool
+	SSHMASKnownHosts string
+	SSHMASTimeout    time.Duration
 )
 
 func LoadConfig() {
@@ -386,8 +397,8 @@ func LoadConfig() {
 
 		oracleTimeoutStr := os.Getenv("ORACLE_TIMEOUT")
 		if oracleTimeoutStr == "" {
-			OracleTimeout = 30 * time.Second
-			log.Print("ORACLE_TIMEOUT is not set, defaulting to 30s")
+			OracleTimeout = 180 * time.Second
+			log.Print("ORACLE_TIMEOUT is not set, defaulting to 180s")
 		} else {
 			OracleTimeout, err = time.ParseDuration(oracleTimeoutStr)
 			if err != nil {
@@ -498,6 +509,57 @@ func LoadConfig() {
 	} else {
 		LiveMonitoringEnabled = SSHSwitchEnabled
 	}
+
+	explicitMASEnabled, masEnabled := parseBoolEnv("SSH_MAS_ENABLED")
+	SSHMASHost = strings.TrimSpace(os.Getenv("SSH_MAS_HOST"))
+	if explicitMASEnabled {
+		SSHMASEnabled = masEnabled
+	} else {
+		SSHMASEnabled = SSHMASHost != ""
+	}
+
+	if SSHMASEnabled {
+		if SSHMASHost == "" {
+			log.Fatal("SSH_MAS_HOST is required when MAS SSH is enabled")
+		}
+
+		SSHMASPort = strings.TrimSpace(os.Getenv("SSH_MAS_PORT"))
+		if SSHMASPort == "" {
+			SSHMASPort = "22"
+		}
+
+		SSHMASUser = strings.TrimSpace(os.Getenv("SSH_MAS_USER"))
+		if SSHMASUser == "" {
+			log.Fatal("SSH_MAS_USER is required when MAS SSH is enabled")
+		}
+
+		SSHMASKeyPath = strings.TrimSpace(os.Getenv("SSH_MAS_KEY_PATH"))
+		SSHMASPassword = trimEnvQuotes(os.Getenv("SSH_MAS_PASSWORD"))
+		if SSHMASKeyPath == "" && SSHMASPassword == "" {
+			log.Fatal("SSH_MAS_KEY_PATH or SSH_MAS_PASSWORD is required when MAS SSH is enabled")
+		}
+
+		SSHMASKnownHosts = strings.TrimSpace(os.Getenv("SSH_MAS_KNOWN_HOSTS"))
+		_, masInsecure := parseBoolEnv("SSH_MAS_INSECURE")
+		if SSHMASKnownHosts == "" && !masInsecure {
+			log.Print("SSH_MAS_KNOWN_HOSTS is empty; allowing insecure host key check. Set SSH_MAS_INSECURE=false and SSH_MAS_KNOWN_HOSTS in production")
+			SSHMASInsecure = true
+		} else {
+			SSHMASInsecure = masInsecure
+		}
+
+		timeoutRaw := strings.TrimSpace(os.Getenv("SSH_MAS_TIMEOUT"))
+		if timeoutRaw == "" {
+			SSHMASTimeout = 60 * time.Second
+		} else {
+			SSHMASTimeout, err = time.ParseDuration(timeoutRaw)
+			if err != nil {
+				log.Fatalf("Invalid SSH_MAS_TIMEOUT format: %v", err)
+			}
+		}
+	} else {
+		log.Print("MAS SSH is disabled")
+	}
 }
 
 func parseIntEnv(key string, fallback int) int {
@@ -529,6 +591,16 @@ func parseBoolEnv(key string) (set bool, value bool) {
 		log.Fatalf("invalid %s value %q; use true or false", key, raw)
 		return false, false
 	}
+}
+
+func trimEnvQuotes(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) >= 2 {
+		if (s[0] == '\'' && s[len(s)-1] == '\'') || (s[0] == '"' && s[len(s)-1] == '"') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
 }
 
 func LoadEmailsFromEnv(key string) []string {
