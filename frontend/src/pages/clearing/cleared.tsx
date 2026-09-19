@@ -6,33 +6,33 @@ import { toast } from "sonner";
 
 import { DataTable } from "@/components/data-table";
 import { DatePickerWithRange } from "@/components/date-picker";
-import { CLEARING_MAX_AUTO_PAGES } from "@/features/clearing_constants";
 import {
-  clearUncleared,
-  fetchUncleared,
-  type UnclearedProduct,
-} from "@/features/uncleared_slice";
+  clearCleared,
+  fetchCleared,
+  type ClearedProduct,
+} from "@/features/cleared_slice";
+import { CLEARING_MAX_AUTO_PAGES } from "@/features/clearing_constants";
 import { AppDispatch, RootState } from "../../../app/store/store";
-import { unclearedColumns } from "./columns";
+import { clearedColumns } from "./cleared-columns";
 
-type UnclearedPageProps = {
-  product: UnclearedProduct;
+type ClearedPageProps = {
+  product: ClearedProduct;
   title: string;
   description: string;
 };
 
-export default function Uncleared({
+export default function Cleared({
   product,
   title,
   description,
-}: UnclearedPageProps) {
+}: ClearedPageProps) {
   const dispatch = useDispatch<AppDispatch>();
-  const columns = useMemo(() => unclearedColumns, []);
+  const columns = useMemo(() => clearedColumns, []);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const requestIdRef = useRef(0);
 
   const { rows, loading, loadingMore, truncated } = useSelector(
-    (state: RootState) => state.uncleared,
+    (state: RootState) => state.cleared,
   );
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function Uncleared({
 
       while (continueFetch && !cancelled && requestId === requestIdRef.current) {
         const promise = dispatch(
-          fetchUncleared({
+          fetchCleared({
             dateFrom,
             dateTo,
             product,
@@ -66,14 +66,14 @@ export default function Uncleared({
           return;
         }
 
-        if (fetchUncleared.rejected.match(result)) {
+        if (fetchCleared.rejected.match(result)) {
           if (!result.meta.aborted) {
-            toast.error(result.payload || "Failed to fetch uncleared transactions");
+            toast.error(result.payload || "Failed to fetch cleared transactions");
           }
           return;
         }
 
-        if (!fetchUncleared.fulfilled.match(result)) {
+        if (!fetchCleared.fulfilled.match(result)) {
           return;
         }
 
@@ -93,7 +93,7 @@ export default function Uncleared({
 
   useEffect(() => {
     return () => {
-      dispatch(clearUncleared());
+      dispatch(clearCleared());
     };
   }, [dispatch]);
 
@@ -120,7 +120,7 @@ export default function Uncleared({
         columns={columns}
         data={rows}
         loading={loading}
-        searchPlaceholder="Search uncleared transactions..."
+        searchPlaceholder="Search cleared transactions..."
         exportFileName={title.replace(/\s+/g, "")}
       />
     </div>

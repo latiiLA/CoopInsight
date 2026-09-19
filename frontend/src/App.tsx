@@ -36,7 +36,9 @@ import TerminalComparison from "./pages/dashboards/terminal-comparison/terminal-
 import Account from "./pages/account/account";
 import Analytics from "./pages/Analytics";
 import Uncleared from "./pages/clearing/uncleared";
-import UnsettledETH from "./pages/settlement/unsettled-eth";
+import Cleared from "./pages/clearing/cleared";
+import Unsettled from "./pages/settlement/unsettled";
+import Settled from "./pages/settlement/settled";
 import NotFound from "./pages/not-found";
 import { RequirePermission } from "./components/require-permission";
 
@@ -251,10 +253,125 @@ function App() {
             }
           />
           <Route
+            path="/cleared-eth"
+            element={
+              <RequirePermission permissions={["clearing:view-cleared-eth"]}>
+                <Cleared
+                  key="cleared-ETB"
+                  product="ETB"
+                  title="Cleared ETH"
+                  description="Approved domestic POS purchases that have been posted for clearing."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/cleared-visa"
+            element={
+              <RequirePermission permissions={["clearing:view-cleared-visa"]}>
+                <Cleared
+                  key="cleared-VISA"
+                  product="VISA"
+                  title="Cleared VISA"
+                  description="Approved Visa POS purchases that have been posted for clearing."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/cleared-mastercard"
+            element={
+              <RequirePermission
+                permissions={["clearing:view-cleared-mastercard"]}
+              >
+                <Cleared
+                  key="cleared-MDS"
+                  product="MDS"
+                  title="Cleared Mastercard"
+                  description="Approved Mastercard POS purchases that have been posted for clearing."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
             path="/unsettled-eth"
             element={
               <RequirePermission permissions={["settlement:view-unsettled-eth"]}>
-                <UnsettledETH />
+                <Unsettled
+                  key="unsettled-ETB"
+                  product="ETB"
+                  title="Unsettled ETH"
+                  description="Domestic POS purchases that have been cleared but are not yet settled."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/unsettled-visa"
+            element={
+              <RequirePermission permissions={["settlement:view-unsettled-visa"]}>
+                <Unsettled
+                  key="unsettled-VISA"
+                  product="VISA"
+                  title="Unsettled VISA"
+                  description="Visa POS purchases that have been cleared but are not yet settled."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/unsettled-mastercard"
+            element={
+              <RequirePermission
+                permissions={["settlement:view-unsettled-mastercard"]}
+              >
+                <Unsettled
+                  key="unsettled-MDS"
+                  product="MDS"
+                  title="Unsettled Mastercard"
+                  description="Mastercard POS purchases that have been cleared but are not yet settled."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/settled-eth"
+            element={
+              <RequirePermission permissions={["settlement:view-settled-eth"]}>
+                <Settled
+                  key="settled-ETB"
+                  product="ETB"
+                  title="Settled ETH"
+                  description="Domestic POS purchases that have been cleared and settled."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/settled-visa"
+            element={
+              <RequirePermission permissions={["settlement:view-settled-visa"]}>
+                <Settled
+                  key="settled-VISA"
+                  product="VISA"
+                  title="Settled VISA"
+                  description="Visa POS purchases that have been cleared and settled."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/settled-mastercard"
+            element={
+              <RequirePermission
+                permissions={["settlement:view-settled-mastercard"]}
+              >
+                <Settled
+                  key="settled-MDS"
+                  product="MDS"
+                  title="Settled Mastercard"
+                  description="Mastercard POS purchases that have been cleared and settled."
+                />
               </RequirePermission>
             }
           />

@@ -2,41 +2,41 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
 import api from "@/lib/api";
-import { UnsettledTransaction } from "@/types/unsettled";
+import { ClearedTransaction } from "@/types/cleared";
 import { RootState } from "../../app/store/store";
 import { getTokenFromAuth, withAuthHeader } from "../../utility/auth-token";
 import getErrorMessage from "../../utility/error-message";
 import { CLEARING_MAX_AUTO_PAGES, CLEARING_PAGE_SIZE } from "./clearing_constants";
 
-export type UnsettledProduct = "ETB" | "VISA" | "MDS";
+export type ClearedProduct = "ETB" | "VISA" | "MDS";
 
-const unsettledProductPath: Record<UnsettledProduct, string> = {
+const clearedProductPath: Record<ClearedProduct, string> = {
   ETB: "eth",
   VISA: "visa",
   MDS: "mastercard",
 };
 
 type ClearingPagePayload = {
-  items: UnsettledTransaction[];
+  items: ClearedTransaction[];
   page: number;
   pageSize: number;
   hasMore: boolean;
 };
 
-interface UnsettledState {
-  rows: UnsettledTransaction[];
+interface ClearedState {
+  rows: ClearedTransaction[];
   loading: boolean;
   loadingMore: boolean;
   error: string | null;
   dateFrom: string | null;
   dateTo: string | null;
-  product: UnsettledProduct | null;
+  product: ClearedProduct | null;
   page: number;
   hasMore: boolean;
   truncated: boolean;
 }
 
-const initialState: UnsettledState = {
+const initialState: ClearedState = {
   rows: [],
   loading: false,
   loadingMore: false,
@@ -49,26 +49,26 @@ const initialState: UnsettledState = {
   truncated: false,
 };
 
-export type FetchUnsettledArgs = {
+export type FetchClearedArgs = {
   dateFrom: string;
   dateTo: string;
-  product: UnsettledProduct;
+  product: ClearedProduct;
   page?: number;
 };
 
-export const fetchUnsettled = createAsyncThunk<
+export const fetchCleared = createAsyncThunk<
   {
-    items: UnsettledTransaction[];
+    items: ClearedTransaction[];
     dateFrom: string;
     dateTo: string;
-    product: UnsettledProduct;
+    product: ClearedProduct;
     page: number;
     pageSize: number;
     hasMore: boolean;
   },
-  FetchUnsettledArgs,
+  FetchClearedArgs,
   { state: RootState; rejectValue: string }
->("unsettled/fetchUnsettled", async ({ dateFrom, dateTo, product, page = 1 }, thunkAPI) => {
+>("cleared/fetchCleared", async ({ dateFrom, dateTo, product, page = 1 }, thunkAPI) => {
   try {
     const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
 
@@ -77,7 +77,7 @@ export const fetchUnsettled = createAsyncThunk<
     }
 
     const response = await api.get<{ data: ClearingPagePayload }>(
-      `/settlement/unsettled/${unsettledProductPath[product]}`,
+      `/clearing/cleared/${clearedProductPath[product]}`,
       {
         ...withAuthHeader(token),
         params: {
@@ -112,15 +112,15 @@ export const fetchUnsettled = createAsyncThunk<
   }
 });
 
-const unsettledSlice = createSlice({
-  name: "unsettled",
+const clearedSlice = createSlice({
+  name: "cleared",
   initialState,
   reducers: {
-    clearUnsettled: () => ({ ...initialState }),
+    clearCleared: () => ({ ...initialState }),
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchUnsettled.pending, (state, action) => {
+      .addCase(fetchCleared.pending, (state, action) => {
         const page = action.meta.arg.page ?? 1;
         state.error = null;
         if (page <= 1) {
@@ -134,7 +134,7 @@ const unsettledSlice = createSlice({
           state.loadingMore = true;
         }
       })
-      .addCase(fetchUnsettled.fulfilled, (state, action) => {
+      .addCase(fetchCleared.fulfilled, (state, action) => {
         state.loading = false;
         state.loadingMore = false;
         state.dateFrom = action.payload.dateFrom;
@@ -152,17 +152,17 @@ const unsettledSlice = createSlice({
           state.truncated = true;
         }
       })
-      .addCase(fetchUnsettled.rejected, (state, action) => {
+      .addCase(fetchCleared.rejected, (state, action) => {
         if (action.meta.aborted) {
           return;
         }
         state.loading = false;
         state.loadingMore = false;
-        state.error = action.payload || "Failed to fetch unsettled transactions";
+        state.error = action.payload || "Failed to fetch cleared transactions";
       });
   },
 });
 
-export const { clearUnsettled } = unsettledSlice.actions;
+export const { clearCleared } = clearedSlice.actions;
 
-export default unsettledSlice.reducer;
+export default clearedSlice.reducer;

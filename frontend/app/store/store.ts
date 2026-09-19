@@ -9,7 +9,9 @@ import posTerminalReducer from "@/features/pos_terminal_slice";
 import accountRequestReducer from "@/features/account_request_slice";
 import activityLogReducer from "@/features/activity_log_slice";
 import unclearedReducer from "@/features/uncleared_slice";
+import clearedReducer from "@/features/cleared_slice";
 import unsettledReducer from "@/features/unsettled_slice";
+import settledReducer from "@/features/settled_slice";
 
 export const store = configureStore({
   reducer: {
@@ -23,7 +25,9 @@ export const store = configureStore({
       accountRequest: accountRequestReducer,
       activityLog: activityLogReducer,
       uncleared: unclearedReducer,
+      cleared: clearedReducer,
       unsettled: unsettledReducer,
+      settled: settledReducer,
   },
 })
 

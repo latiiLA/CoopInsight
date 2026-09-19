@@ -8,31 +8,31 @@ import { DataTable } from "@/components/data-table";
 import { DatePickerWithRange } from "@/components/date-picker";
 import { CLEARING_MAX_AUTO_PAGES } from "@/features/clearing_constants";
 import {
-  clearUncleared,
-  fetchUncleared,
-  type UnclearedProduct,
-} from "@/features/uncleared_slice";
+  clearUnsettled,
+  fetchUnsettled,
+  type UnsettledProduct,
+} from "@/features/unsettled_slice";
 import { AppDispatch, RootState } from "../../../app/store/store";
-import { unclearedColumns } from "./columns";
+import { unsettledColumns } from "./columns";
 
-type UnclearedPageProps = {
-  product: UnclearedProduct;
+type UnsettledPageProps = {
+  product: UnsettledProduct;
   title: string;
   description: string;
 };
 
-export default function Uncleared({
+export default function Unsettled({
   product,
   title,
   description,
-}: UnclearedPageProps) {
+}: UnsettledPageProps) {
   const dispatch = useDispatch<AppDispatch>();
-  const columns = useMemo(() => unclearedColumns, []);
+  const columns = useMemo(() => unsettledColumns, []);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const requestIdRef = useRef(0);
 
   const { rows, loading, loadingMore, truncated } = useSelector(
-    (state: RootState) => state.uncleared,
+    (state: RootState) => state.unsettled,
   );
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function Uncleared({
 
       while (continueFetch && !cancelled && requestId === requestIdRef.current) {
         const promise = dispatch(
-          fetchUncleared({
+          fetchUnsettled({
             dateFrom,
             dateTo,
             product,
@@ -66,14 +66,14 @@ export default function Uncleared({
           return;
         }
 
-        if (fetchUncleared.rejected.match(result)) {
+        if (fetchUnsettled.rejected.match(result)) {
           if (!result.meta.aborted) {
-            toast.error(result.payload || "Failed to fetch uncleared transactions");
+            toast.error(result.payload || "Failed to fetch unsettled transactions");
           }
           return;
         }
 
-        if (!fetchUncleared.fulfilled.match(result)) {
+        if (!fetchUnsettled.fulfilled.match(result)) {
           return;
         }
 
@@ -93,7 +93,7 @@ export default function Uncleared({
 
   useEffect(() => {
     return () => {
-      dispatch(clearUncleared());
+      dispatch(clearUnsettled());
     };
   }, [dispatch]);
 
@@ -120,7 +120,7 @@ export default function Uncleared({
         columns={columns}
         data={rows}
         loading={loading}
-        searchPlaceholder="Search uncleared transactions..."
+        searchPlaceholder="Search unsettled transactions..."
         exportFileName={title.replace(/\s+/g, "")}
       />
     </div>

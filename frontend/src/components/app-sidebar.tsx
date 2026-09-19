@@ -13,8 +13,6 @@ import {
   Wallet,
   ArrowLeftRight,
   CreditCard,
-  Globe,
-  Landmark,
   LucideIdCard,
   Scale,
   Settings,
@@ -22,7 +20,6 @@ import {
   SquareArrowOutDownRight,
   Terminal,
   Users,
-  type LucideIcon,
 } from "lucide-react";
 
 import {
@@ -57,6 +54,8 @@ import {
 
 import { VersionSwitcher } from "./version-switcher";
 import { NavUser } from "./nav-user";
+import { VisaIcon } from "./icons/visa-icon";
+import { MastercardIcon } from "./icons/mastercard-icon";
 import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../../app/store/store";
@@ -67,9 +66,11 @@ import { avatarSrc } from "@/lib/avatars";
 // Types
 // ------------------------------------
 
+type NavIcon = React.ComponentType<{ className?: string }>;
+
 type NavSubItem = {
   title: string;
-  icon?: LucideIcon;
+  icon?: NavIcon;
   url: string;
   isActive?: boolean;
   permissions?: string[];
@@ -77,14 +78,14 @@ type NavSubItem = {
 
 type NavItem = {
   title: string;
-  icon?: LucideIcon;
+  icon?: NavIcon;
   url: string;
   items: NavSubItem[];
 };
 
 type NavHome = {
   title: string;
-  icon?: LucideIcon;
+  icon?: NavIcon;
   url: string;
 };
 
@@ -173,19 +174,19 @@ const data: {
         },
         {
           title: "Mastercard debit",
-          icon: Landmark,
+          icon: MastercardIcon,
           url: "mastercard-debit-monitoring",
           permissions: ["monitoring:view-mastercard-debit"],
         },
         {
           title: "Mastercard credit",
-          icon: CreditCard,
+          icon: MastercardIcon,
           url: "mastercard-credit-monitoring",
           permissions: ["monitoring:view-mastercard-credit"],
         },
         {
           title: "Visa monitoring",
-          icon: Globe,
+          icon: VisaIcon,
           url: "visa-monitoring",
           permissions: ["monitoring:view-visa"],
         },
@@ -242,26 +243,74 @@ const data: {
         {
           title: "Uncleared ETH",
           url: "uncleared-eth",
-          icon: Inbox,
+          icon: Wallet,
           permissions: ["clearing:view-uncleared-eth"],
         },
         {
           title: "Uncleared VISA",
           url: "uncleared-visa",
-          icon: Inbox,
+          icon: VisaIcon,
           permissions: ["clearing:view-uncleared-visa"],
         },
         {
           title: "Uncleared Mastercard",
           url: "uncleared-mastercard",
-          icon: Inbox,
+          icon: MastercardIcon,
           permissions: ["clearing:view-uncleared-mastercard"],
+        },
+        {
+          title: "Cleared ETH",
+          url: "cleared-eth",
+          icon: Wallet,
+          permissions: ["clearing:view-cleared-eth"],
+        },
+        {
+          title: "Cleared VISA",
+          url: "cleared-visa",
+          icon: VisaIcon,
+          permissions: ["clearing:view-cleared-visa"],
+        },
+        {
+          title: "Cleared Mastercard",
+          url: "cleared-mastercard",
+          icon: MastercardIcon,
+          permissions: ["clearing:view-cleared-mastercard"],
         },
         {
           title: "Unsettled ETH",
           url: "unsettled-eth",
-          icon: Inbox,
+          icon: Wallet,
           permissions: ["settlement:view-unsettled-eth"],
+        },
+        {
+          title: "Unsettled VISA",
+          url: "unsettled-visa",
+          icon: VisaIcon,
+          permissions: ["settlement:view-unsettled-visa"],
+        },
+        {
+          title: "Unsettled Mastercard",
+          url: "unsettled-mastercard",
+          icon: MastercardIcon,
+          permissions: ["settlement:view-unsettled-mastercard"],
+        },
+        {
+          title: "Settled ETH",
+          url: "settled-eth",
+          icon: Wallet,
+          permissions: ["settlement:view-settled-eth"],
+        },
+        {
+          title: "Settled VISA",
+          url: "settled-visa",
+          icon: VisaIcon,
+          permissions: ["settlement:view-settled-visa"],
+        },
+        {
+          title: "Settled Mastercard",
+          url: "settled-mastercard",
+          icon: MastercardIcon,
+          permissions: ["settlement:view-settled-mastercard"],
         },
       ],
     },

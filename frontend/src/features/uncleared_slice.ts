@@ -6,6 +6,10 @@ import { UnclearedTransaction } from "@/types/uncleared";
 import { RootState } from "../../app/store/store";
 import { getTokenFromAuth, withAuthHeader } from "../../utility/auth-token";
 import getErrorMessage from "../../utility/error-message";
+import {
+  CLEARING_MAX_AUTO_PAGES,
+  CLEARING_PAGE_SIZE,
+} from "./clearing_constants";
 
 export type UnclearedProduct = "ETB" | "VISA" | "MDS";
 
@@ -15,40 +19,61 @@ const unclearedProductPath: Record<UnclearedProduct, string> = {
   MDS: "mastercard",
 };
 
+export { CLEARING_MAX_AUTO_PAGES, CLEARING_PAGE_SIZE } from "./clearing_constants";
+
+type ClearingPagePayload = {
+  items: UnclearedTransaction[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+};
+
 interface UnclearedState {
   rows: UnclearedTransaction[];
   loading: boolean;
+  loadingMore: boolean;
   error: string | null;
   dateFrom: string | null;
   dateTo: string | null;
   product: UnclearedProduct | null;
+  page: number;
+  hasMore: boolean;
+  truncated: boolean;
 }
 
 const initialState: UnclearedState = {
   rows: [],
   loading: false,
+  loadingMore: false,
   error: null,
   dateFrom: null,
   dateTo: null,
   product: null,
+  page: 0,
+  hasMore: false,
+  truncated: false,
 };
 
 export type FetchUnclearedArgs = {
   dateFrom: string;
   dateTo: string;
   product: UnclearedProduct;
+  page?: number;
 };
 
 export const fetchUncleared = createAsyncThunk<
   {
-    rows: UnclearedTransaction[];
+    items: UnclearedTransaction[];
     dateFrom: string;
     dateTo: string;
     product: UnclearedProduct;
+    page: number;
+    pageSize: number;
+    hasMore: boolean;
   },
   FetchUnclearedArgs,
   { state: RootState; rejectValue: string }
->("uncleared/fetchUncleared", async ({ dateFrom, dateTo, product }, thunkAPI) => {
+>("uncleared/fetchUncleared", async ({ dateFrom, dateTo, product, page = 1 }, thunkAPI) => {
   try {
     const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
 
@@ -56,22 +81,30 @@ export const fetchUncleared = createAsyncThunk<
       return thunkAPI.rejectWithValue("Authentication token not found");
     }
 
-    const response = await api.get<{ data: UnclearedTransaction[] }>(
+    const response = await api.get<{ data: ClearingPagePayload }>(
       `/clearing/uncleared/${unclearedProductPath[product]}`,
       {
         ...withAuthHeader(token),
-        params: { dateFrom, dateTo },
+        params: {
+          dateFrom,
+          dateTo,
+          page,
+          pageSize: CLEARING_PAGE_SIZE,
+        },
         signal: thunkAPI.signal,
-        // Match long Oracle reports; without this a dropped proxy leaves loading=true forever.
         timeout: 180_000,
       },
     );
 
+    const payload = response.data.data;
     return {
-      rows: response.data.data ?? [],
+      items: payload?.items ?? [],
       dateFrom,
       dateTo,
       product,
+      page: payload?.page ?? page,
+      pageSize: payload?.pageSize ?? CLEARING_PAGE_SIZE,
+      hasMore: Boolean(payload?.hasMore),
     };
   } catch (error) {
     if (
@@ -88,34 +121,48 @@ const unclearedSlice = createSlice({
   name: "uncleared",
   initialState,
   reducers: {
-    clearUncleared: (state) => {
-      state.rows = [];
-      state.loading = false;
-      state.error = null;
-      state.dateFrom = null;
-      state.dateTo = null;
-      state.product = null;
-    },
+    clearUncleared: () => ({ ...initialState }),
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchUncleared.pending, (state) => {
-        state.loading = true;
+      .addCase(fetchUncleared.pending, (state, action) => {
+        const page = action.meta.arg.page ?? 1;
         state.error = null;
-        state.rows = [];
+        if (page <= 1) {
+          state.loading = true;
+          state.loadingMore = false;
+          state.rows = [];
+          state.truncated = false;
+          state.hasMore = false;
+          state.page = 0;
+        } else {
+          state.loadingMore = true;
+        }
       })
       .addCase(fetchUncleared.fulfilled, (state, action) => {
         state.loading = false;
-        state.rows = action.payload.rows;
+        state.loadingMore = false;
         state.dateFrom = action.payload.dateFrom;
         state.dateTo = action.payload.dateTo;
         state.product = action.payload.product;
+        state.page = action.payload.page;
+        state.hasMore = action.payload.hasMore;
+        if (action.payload.page <= 1) {
+          state.rows = action.payload.items;
+        } else {
+          state.rows = state.rows.concat(action.payload.items);
+        }
+        if (action.payload.page >= CLEARING_MAX_AUTO_PAGES && action.payload.hasMore) {
+          state.hasMore = false;
+          state.truncated = true;
+        }
       })
       .addCase(fetchUncleared.rejected, (state, action) => {
         if (action.meta.aborted) {
           return;
         }
         state.loading = false;
+        state.loadingMore = false;
         state.error = action.payload || "Failed to fetch uncleared transactions";
       });
   },
