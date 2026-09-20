@@ -35,6 +35,8 @@ type UserService interface {
 	GetByID(ctx context.Context, userID primitive.ObjectID) (*model.User, error)
 	GetAll(ctx context.Context) ([]model.User, error)
 	Update(ctx context.Context, updatedBy primitive.ObjectID, userID primitive.ObjectID, req *dto.UpdateUserRequest) error
+	Suspend(ctx context.Context, actorID primitive.ObjectID, userID primitive.ObjectID) error
+	Unsuspend(ctx context.Context, actorID primitive.ObjectID, userID primitive.ObjectID) error
 	Delete(ctx context.Context, deletedBy primitive.ObjectID, userID primitive.ObjectID) error
 	UpdateAvatar(ctx context.Context, userID primitive.ObjectID, avatar string) error
 	UploadAvatarPhoto(ctx context.Context, userID primitive.ObjectID, data []byte) (string, error)
@@ -165,7 +167,7 @@ func (s *userService) RefreshSession(ctx context.Context, refreshToken, ip strin
 		return nil, common.ErrUserNotFound
 	}
 
-	if existingUser.Status != model.StatusNew && existingUser.Status != model.StatusActive {
+	if !existingUser.Status.AllowsLogin() {
 		return nil, common.ErrUserAccessRevoked
 	}
 
@@ -185,7 +187,7 @@ func (s *userService) findEligibleUser(ctx context.Context, username string) (*m
 		return nil, common.ErrUserNotFound
 	}
 
-	if existingUser.Status != model.StatusNew && existingUser.Status != model.StatusActive {
+	if !existingUser.Status.AllowsLogin() {
 		logrus.Println("user access has been revoked")
 		return nil, common.ErrUserAccessRevoked
 	}
@@ -234,10 +236,14 @@ func (s *userService) issueSessionResponse(ctx context.Context, existingUser *mo
 		}
 
 		now := time.Now()
+		wasNew := existingUser.Status == model.StatusNew
 		if err := s.userRepository.UpdateLastLogin(ctx, existingUser.ID, now); err != nil {
 			logrus.WithError(err).Warn("failed to record last login")
 		} else {
 			existingUser.LastLogin = &now
+			if wasNew {
+				existingUser.Status = model.StatusActive
+			}
 		}
 	}
 
@@ -407,6 +413,85 @@ func (s *userService) Update(ctx context.Context, updatedBy primitive.ObjectID, 
 		ResourceType:  "user",
 		ResourceID:    existing.ID.Hex(),
 		Summary:       "Updated user " + existing.Username,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"username": existing.Username,
+			"status":   string(existing.Status),
+		},
+	})
+	return nil
+}
+
+func (s *userService) Suspend(ctx context.Context, actorID primitive.ObjectID, userID primitive.ObjectID) error {
+	if actorID == userID {
+		return common.ErrCannotSuspendSelf
+	}
+
+	existing, err := s.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	switch existing.Status {
+	case model.StatusSuspended:
+		return common.ErrUserAlreadySuspended
+	case model.StatusNew, model.StatusActive:
+		// allowed
+	default:
+		return common.ErrCannotSuspendUser
+	}
+
+	now := time.Now()
+	existing.Status = model.StatusSuspended
+	existing.UpdatedAt = now
+	existing.UpdatedBy = &actorID
+
+	if err := s.userRepository.Update(ctx, existing); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUserID:   objectIDPtr(actorID),
+		ActorUsername: actorUsername(ctx, s.userRepository, actorID),
+		Action:        model.ActivityUserSuspend,
+		ResourceType:  "user",
+		ResourceID:    existing.ID.Hex(),
+		Summary:       "Suspended user " + existing.Username,
+		Status:        model.ActivityStatusSuccess,
+		Metadata: map[string]interface{}{
+			"username": existing.Username,
+			"status":   string(existing.Status),
+		},
+	})
+	return nil
+}
+
+func (s *userService) Unsuspend(ctx context.Context, actorID primitive.ObjectID, userID primitive.ObjectID) error {
+	existing, err := s.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if existing.Status != model.StatusSuspended {
+		return common.ErrUserNotSuspended
+	}
+
+	now := time.Now()
+	existing.Status = model.StatusActive
+	existing.UpdatedAt = now
+	existing.UpdatedBy = &actorID
+
+	if err := s.userRepository.Update(ctx, existing); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, ActivityEvent{
+		ActorUserID:   objectIDPtr(actorID),
+		ActorUsername: actorUsername(ctx, s.userRepository, actorID),
+		Action:        model.ActivityUserUnsuspend,
+		ResourceType:  "user",
+		ResourceID:    existing.ID.Hex(),
+		Summary:       "Unsuspended user " + existing.Username,
 		Status:        model.ActivityStatusSuccess,
 		Metadata: map[string]interface{}{
 			"username": existing.Username,

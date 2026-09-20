@@ -13,5 +13,7 @@ func registerUserRoutes(protected *gin.RouterGroup, userHandler handler.UserHand
 	users.GET("/:id", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"user:view-details", "user:update"}), userHandler.GetByID)
 	users.POST("", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"user:create"}), userHandler.Create)
 	users.PUT("/:id", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"user:update"}), userHandler.Update)
+	users.POST("/:id/suspend", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"user:suspend", "user:update"}), userHandler.Suspend)
+	users.POST("/:id/unsuspend", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"user:suspend", "user:update"}), userHandler.Unsuspend)
 	users.DELETE("/:id", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"user:delete"}), userHandler.Delete)
 }

@@ -14,6 +14,8 @@ const (
 	ActivityAuthLoginFailure       = "auth.login.failure"
 	ActivityUserCreate             = "user.create"
 	ActivityUserUpdate             = "user.update"
+	ActivityUserSuspend            = "user.suspend"
+	ActivityUserUnsuspend          = "user.unsuspend"
 	ActivityUserDelete             = "user.delete"
 	ActivityRoleCreate             = "role.create"
 	ActivityRoleUpdate             = "role.update"

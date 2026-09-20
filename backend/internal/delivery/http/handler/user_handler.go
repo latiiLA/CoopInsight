@@ -29,6 +29,8 @@ type UserHandler interface {
 	ListAccountRequests(c *gin.Context)
 	GetAccountRequest(c *gin.Context)
 	Update(c *gin.Context)
+	Suspend(c *gin.Context)
+	Unsuspend(c *gin.Context)
 	UpdateAvatar(c *gin.Context)
 	UploadAvatarPhoto(c *gin.Context)
 	UpdateProfile(c *gin.Context)
@@ -568,6 +570,60 @@ func (h *userHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Status{
 		IsSuccessful: true,
 		Message:      "User updated successfully",
+	})
+}
+
+func (h *userHandler) Suspend(c *gin.Context) {
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessUnauthorized,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	userID, ok := parseObjectIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if err := h.userService.Suspend(c, authUserID, userID); err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "User suspended successfully",
+	})
+}
+
+func (h *userHandler) Unsuspend(c *gin.Context) {
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{
+			IsSuccessful: false,
+			Message:      common.MessUnauthorized,
+			Error:        err.Error(),
+		})
+		return
+	}
+
+	userID, ok := parseObjectIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if err := h.userService.Unsuspend(c, authUserID, userID); err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "User unsuspended successfully",
 	})
 }
 

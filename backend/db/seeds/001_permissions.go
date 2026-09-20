@@ -26,6 +26,7 @@ var Catalog = []permissionSeed{
 	{Name: "user:view-details", Resource: "user", Action: "view-details", Description: "View user details"},
 	{Name: "user:create", Resource: "user", Action: "create", Description: "Create users and fulfill account requests"},
 	{Name: "user:update", Resource: "user", Action: "update", Description: "Update users"},
+	{Name: "user:suspend", Resource: "user", Action: "suspend", Description: "Suspend and unsuspend users"},
 	{Name: "user:delete", Resource: "user", Action: "delete", Description: "Delete users"},
 
 	{Name: "role:view", Resource: "role", Action: "view", Description: "List roles"},

@@ -502,14 +502,16 @@ func (ur *userRepository) CountByRole(ctx context.Context, roleID primitive.Obje
 }
 
 func (ur *userRepository) UpdateLastLogin(ctx context.Context, userID primitive.ObjectID, lastLogin time.Time) error {
+	filter := bson.M{
+		"_id": userID,
+		"status": bson.M{
+			"$in": []model.UserStatus{model.StatusNew, model.StatusActive},
+		},
+	}
+
 	result, err := ur.collection.UpdateOne(
 		ctx,
-		bson.M{
-			"_id": userID,
-			"status": bson.M{
-				"$ne": model.StatusDeleted,
-			},
-		},
+		filter,
 		bson.M{
 			"$set": bson.M{
 				"lastLogin": lastLogin,
@@ -519,9 +521,25 @@ func (ur *userRepository) UpdateLastLogin(ctx context.Context, userID primitive.
 	if err != nil {
 		return wrapDBError(common.ErrFailedToUpdateUser, err)
 	}
-
 	if result.MatchedCount == 0 {
 		return common.ErrUserNotFound
+	}
+
+	// Promote new → active only; leave already-active users unchanged.
+	_, err = ur.collection.UpdateOne(
+		ctx,
+		bson.M{
+			"_id":    userID,
+			"status": model.StatusNew,
+		},
+		bson.M{
+			"$set": bson.M{
+				"status": model.StatusActive,
+			},
+		},
+	)
+	if err != nil {
+		return wrapDBError(common.ErrFailedToUpdateUser, err)
 	}
 
 	return nil

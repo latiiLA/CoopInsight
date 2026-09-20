@@ -54,6 +54,11 @@ func (u *User) HasAssignedRole() bool {
 	return u.Role != nil && !u.Role.ID.IsZero()
 }
 
+// AllowsLogin is true for new accounts and active users.
+func (s UserStatus) AllowsLogin() bool {
+	return s == StatusNew || s == StatusActive
+}
+
 type UserProfile struct {
 	JobTitle   string `json:"jobTitle,omitempty" bson:"jobTitle,omitempty"`
 	Department string `json:"department,omitempty" bson:"department,omitempty"`

@@ -5,13 +5,8 @@ tmp
 *.exe
 coopinsight
 coopinsight.exe
+migrate
 credentials/
-
-# SSL certificates
-ssl
-ssl/*.key
-ssl/*.pem
-ssl/*.crt
 
 # SSL certificates
 ssl
