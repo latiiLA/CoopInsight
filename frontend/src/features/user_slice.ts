@@ -284,6 +284,52 @@ export const deleteUser = createAsyncThunk<
   }
 });
 
+export const suspendUser = createAsyncThunk<
+  string,
+  string,
+  { state: RootState; rejectValue: string }
+>("user/suspendUser", async (id, thunkAPI) => {
+  try {
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
+    }
+
+    const response = await api.post<{
+      isSuccessful: boolean;
+      message: string;
+    }>(`/users/${id}/suspend`, {}, withAuthHeader(token));
+
+    return response.data.message || "User suspended successfully";
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
+export const unsuspendUser = createAsyncThunk<
+  string,
+  string,
+  { state: RootState; rejectValue: string }
+>("user/unsuspendUser", async (id, thunkAPI) => {
+  try {
+    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+    if (!token) {
+      return thunkAPI.rejectWithValue("Authentication token not found");
+    }
+
+    const response = await api.post<{
+      isSuccessful: boolean;
+      message: string;
+    }>(`/users/${id}/unsuspend`, {}, withAuthHeader(token));
+
+    return response.data.message || "User unsuspended successfully";
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
+
 export const updateAvatar = createAsyncThunk<
   string,
   string,

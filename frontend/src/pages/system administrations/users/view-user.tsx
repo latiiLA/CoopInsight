@@ -4,16 +4,15 @@ import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, Loader2, Pencil, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import {
-  clearSelectedUser,
-  fetchUserById,
-} from "@/features/user_slice";
+import { clearSelectedUser, fetchUserById } from "@/features/user_slice";
 import { fetchPermissions } from "@/features/permission_slice";
+import { avatarInitial, avatarSrc } from "@/lib/avatars";
 import { AppDispatch, RootState } from "../../../../app/store/store";
-import { getUserId } from "@/types/user";
+import { User, getUserId } from "@/types/user";
 import { hasPermission } from "../../../../utility/has-permission";
 import { formatLabel } from "./user-form-schema";
 
@@ -31,6 +30,25 @@ const formatDate = (value?: Date | string | null) => {
   return date.toLocaleString();
 };
 
+const personLabel = (
+  person?: Pick<User, "username" | "firstName" | "middleName" | "lastName"> | null,
+) => {
+  if (!person) {
+    return "—";
+  }
+
+  const name = [person.firstName, person.middleName, person.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  if (name && person.username) {
+    return `${name} (@${person.username})`;
+  }
+
+  return name || person.username || "—";
+};
+
 const DetailItem = ({
   label,
   value,
@@ -40,7 +58,9 @@ const DetailItem = ({
 }) => (
   <div className="space-y-1">
     <p className="text-sm text-muted-foreground">{label}</p>
-    <p className="text-sm font-medium">{value || "—"}</p>
+    <p className="text-sm font-medium whitespace-pre-wrap break-words">
+      {value || "—"}
+    </p>
   </div>
 );
 
@@ -85,11 +105,11 @@ const ViewUser = () => {
     );
   }, [allPermissions, rolePermissionNames]);
 
-  const extraPermissions = useMemo(() => {
-    return allPermissions.filter(
-      (permission) => !rolePermissionNames.includes(permission.name),
+  const grantedExtraPermissions = useMemo(() => {
+    return allPermissions.filter((permission) =>
+      assignedExtraNames.includes(permission.name),
     );
-  }, [allPermissions, rolePermissionNames]);
+  }, [allPermissions, assignedExtraNames]);
 
   const canEdit = hasPermission(["user:update"]);
 
@@ -106,21 +126,49 @@ const ViewUser = () => {
   }
 
   const userId = getUserId(selectedUser);
+  const fullName = [
+    selectedUser.firstName,
+    selectedUser.middleName,
+    selectedUser.lastName,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const pictureSrc = avatarSrc(selectedUser.avatar);
+  const initial = avatarInitial(
+    selectedUser.firstName || fullName,
+    selectedUser.username,
+  );
+  const profile = selectedUser.profile;
 
   return (
-    <div className="w-full pb-8">
+    <div className="w-full px-4 pb-8 sm:px-6">
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <UserRound className="h-5 w-5" />
-              <h1 className="text-2xl font-semibold tracking-tight">
-                User Details
-              </h1>
+          <div className="flex items-start gap-4">
+            <Avatar className="h-14 w-14">
+              {pictureSrc ? <AvatarImage src={pictureSrc} alt={fullName} /> : null}
+              <AvatarFallback>{initial}</AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="flex items-center gap-2">
+                <UserRound className="h-5 w-5" />
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  {fullName || selectedUser.username}
+                </h1>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                @{selectedUser.username}
+                {selectedUser.status
+                  ? ` · ${formatLabel(selectedUser.status)}`
+                  : ""}
+                {selectedUser.role?.name
+                  ? ` · ${formatLabel(selectedUser.role.name)}`
+                  : ""}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Review this user's profile, role, activity, and permissions.
+              </p>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Review this user's profile, role, and assigned permissions.
-            </p>
           </div>
 
           <div className="flex gap-2">
@@ -155,6 +203,8 @@ const ViewUser = () => {
                 label="Grandfather Name"
                 value={selectedUser.lastName}
               />
+              <DetailItem label="Email" value={selectedUser.email} />
+              <DetailItem label="Phone" value={profile?.phone} />
             </div>
           </section>
 
@@ -162,19 +212,15 @@ const ViewUser = () => {
             <h2 className="text-base font-semibold">Work context</h2>
             <Separator />
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <DetailItem
-                label="Department"
-                value={selectedUser.profile?.department}
-              />
-              <DetailItem
-                label="Subprocess"
-                value={selectedUser.profile?.subProcess}
-              />
-              <DetailItem
-                label="Process"
-                value={selectedUser.profile?.process}
-              />
+              <DetailItem label="Job title" value={profile?.jobTitle} />
+              <DetailItem label="Department" value={profile?.department} />
+              <DetailItem label="Subprocess" value={profile?.subProcess} />
+              <DetailItem label="Process" value={profile?.process} />
+              <DetailItem label="Branch / office" value={profile?.branch} />
             </div>
+            {profile?.bio ? (
+              <DetailItem label="About" value={profile.bio} />
+            ) : null}
           </section>
 
           <section className="space-y-4">
@@ -182,7 +228,6 @@ const ViewUser = () => {
             <Separator />
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <DetailItem label="Username" value={selectedUser.username} />
-              <DetailItem label="Email" value={selectedUser.email} />
               <DetailItem
                 label="Role"
                 value={formatLabel(selectedUser.role?.name)}
@@ -192,12 +237,37 @@ const ViewUser = () => {
                 value={formatLabel(selectedUser.status)}
               />
               <DetailItem
+                label="Last login"
+                value={formatDate(selectedUser.lastLogin)}
+              />
+              <DetailItem
                 label="Created At"
                 value={formatDate(selectedUser.createdAt)}
               />
               <DetailItem
                 label="Updated At"
                 value={formatDate(selectedUser.updatedAt)}
+              />
+              {selectedUser.deletedAt ? (
+                <DetailItem
+                  label="Deleted At"
+                  value={formatDate(selectedUser.deletedAt)}
+                />
+              ) : null}
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-base font-semibold">Audit</h2>
+            <Separator />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <DetailItem
+                label="Created by"
+                value={personLabel(selectedUser.creator)}
+              />
+              <DetailItem
+                label="Last updated by"
+                value={personLabel(selectedUser.updater)}
               />
             </div>
           </section>
@@ -224,7 +294,9 @@ const ViewUser = () => {
                 <div className="space-y-6">
                   {roleIncludedPermissions.length > 0 && (
                     <div className="space-y-3">
-                      <p className="text-sm font-medium">Included with role</p>
+                      <p className="text-sm font-medium">
+                        Included with role ({roleIncludedPermissions.length})
+                      </p>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {roleIncludedPermissions.map((permission) => (
                           <div
@@ -248,46 +320,40 @@ const ViewUser = () => {
                     </div>
                   )}
 
-                  {extraPermissions.length > 0 ? (
+                  {grantedExtraPermissions.length > 0 ? (
                     <div className="space-y-3">
-                      <p className="text-sm font-medium">Extra permissions</p>
+                      <p className="text-sm font-medium">
+                        Extra permissions ({grantedExtraPermissions.length})
+                      </p>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {extraPermissions.map((permission) => {
-                          const checked = assignedExtraNames.includes(
-                            permission.name,
-                          );
-
-                          return (
-                            <div
-                              key={permission.id}
-                              className={`flex items-start gap-3 rounded-md border p-3 ${
-                                checked ? "" : "opacity-60"
-                              }`}
-                            >
-                              <Checkbox
-                                checked={checked}
-                                disabled
-                                className="mt-0.5"
-                              />
-                              <span className="space-y-1">
-                                <span className="block text-sm leading-none">
-                                  {permission.name}
-                                </span>
-                                {permission.description ? (
-                                  <span className="block text-xs text-muted-foreground">
-                                    {permission.description}
-                                  </span>
-                                ) : null}
+                        {grantedExtraPermissions.map((permission) => (
+                          <div
+                            key={permission.id}
+                            className="flex items-start gap-3 rounded-md border p-3"
+                          >
+                            <Checkbox checked disabled className="mt-0.5" />
+                            <span className="space-y-1">
+                              <span className="block text-sm leading-none">
+                                {permission.name}
                               </span>
-                            </div>
-                          );
-                        })}
+                              {permission.description ? (
+                                <span className="block text-xs text-muted-foreground">
+                                  {permission.description}
+                                </span>
+                              ) : null}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No extra permissions beyond the role.
+                    </p>
+                  )}
 
                   {roleIncludedPermissions.length === 0 &&
-                  extraPermissions.length === 0 ? (
+                  grantedExtraPermissions.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       No permissions assigned.
                     </p>

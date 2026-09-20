@@ -23,10 +23,14 @@ export type User = {
   avatar?: string;
   profile?: UserProfile;
   status: string;
+  lastLogin?: Date | string | null;
   createdBy: string;
   updatedBy: string | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | string | null;
+  creator?: Pick<User, "id" | "username" | "firstName" | "middleName" | "lastName"> | null;
+  updater?: Pick<User, "id" | "username" | "firstName" | "middleName" | "lastName"> | null;
 };
 
 export interface CreateUserDTO {

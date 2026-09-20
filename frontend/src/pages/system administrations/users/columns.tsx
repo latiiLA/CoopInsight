@@ -6,10 +6,25 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DataRowActions } from "@/components/data-row-actions";
 import { DataTableFeatures } from "@/components/data-table-features";
 import { User, getUserId } from "@/types/user";
+import { hasPermission } from "../../../../utility/has-permission";
+import { formatLabel } from "./user-form-schema";
 
 const columnHelper = createColumnHelper<DataTableFeatures, User>();
 
-export function getColumns(onDelete: (user: User) => Promise<void>) {
+const canSuspendUsers = () =>
+  hasPermission(["user:suspend"]) || hasPermission(["user:update"]);
+
+type UserColumnActions = {
+  onDelete: (user: User) => Promise<void>;
+  onSuspend: (user: User) => void;
+  onUnsuspend: (user: User) => void;
+};
+
+export function getColumns({
+  onDelete,
+  onSuspend,
+  onUnsuspend,
+}: UserColumnActions) {
   return columnHelper.columns([
     columnHelper.display({
       id: "select",
@@ -124,26 +139,49 @@ export function getColumns(onDelete: (user: User) => Promise<void>) {
           </Button>
         );
       },
+      cell: ({ getValue }) => formatLabel(getValue() || ""),
     }),
     columnHelper.display({
       id: "actions",
       header: "Actions",
       enableHiding: false,
       cell: ({ row }) => {
-        const userId = getUserId(row.original);
+        const user = row.original;
+        const userId = getUserId(user);
+        const status = user.status;
+        const extraItems: Array<{
+          label: string;
+          onSelect: () => void;
+        }> = [];
+
+        if (canSuspendUsers()) {
+          if (status === "new" || status === "active") {
+            extraItems.push({
+              label: "Suspend",
+              onSelect: () => onSuspend(user),
+            });
+          }
+          if (status === "suspended") {
+            extraItems.push({
+              label: "Unsuspend",
+              onSelect: () => onUnsuspend(user),
+            });
+          }
+        }
 
         return (
           <DataRowActions
-            row={row.original}
+            row={user}
             viewPath={`/user/${userId}`}
             viewPermission={["user:view-details"]}
             editPath={`/user/${userId}/edit`}
             editPermission={["user:update"]}
             deleteLabel="Delete"
             deleteTitle="Delete User"
-            deleteDescription="Users who have logged in or taken action in CoopInsight cannot be deleted. Deactivate them instead. Unused accounts created by mistake can be removed."
+            deleteDescription="Users who have logged in or taken action in CoopInsight cannot be deleted. Suspend or deactivate them instead. Unused accounts created by mistake can be removed."
             deletePermission={["user:delete"]}
             onDelete={onDelete}
+            extraItems={extraItems}
           />
         );
       },

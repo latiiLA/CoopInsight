@@ -1,14 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, Loader2, Pencil, Shield } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { fetchPermissions } from "@/features/permission_slice";
 import { clearSelectedRole, fetchRoleById } from "@/features/role_slice";
 import { AppDispatch, RootState } from "../../../../app/store/store";
+import { getPermissionId } from "@/types/permission";
 import { getRoleId } from "@/types/role";
 import { hasPermission } from "../../../../utility/has-permission";
 import { formatLabel } from "../users/user-form-schema";
@@ -49,7 +51,9 @@ const ViewRole = () => {
   const { selectedRole, roleDetailLoading, roleDetailError } = useSelector(
     (state: RootState) => state.role,
   );
-  const { allPermissions } = useSelector((state: RootState) => state.permission);
+  const { allPermissions, permissionLoading } = useSelector(
+    (state: RootState) => state.permission,
+  );
 
   useEffect(() => {
     if (!isLoggedIn || !id) {
@@ -70,6 +74,28 @@ const ViewRole = () => {
     }
   }, [roleDetailError]);
 
+  const rolePermissionNames = selectedRole?.permissions ?? [];
+
+  const assignedPermissions = useMemo(() => {
+    const catalogByName = new Map(
+      allPermissions
+        .filter((permission) => Boolean(permission.name))
+        .map((permission) => [permission.name, permission]),
+    );
+
+    return rolePermissionNames
+      .filter(Boolean)
+      .map((name) => {
+        const match = catalogByName.get(name);
+        return {
+          id: match ? getPermissionId(match) || name : name,
+          name,
+          description: match?.description,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allPermissions, rolePermissionNames]);
+
   const canEdit = hasPermission(["role:update"]);
 
   if (roleDetailLoading || !selectedRole) {
@@ -85,11 +111,6 @@ const ViewRole = () => {
   }
 
   const roleId = getRoleId(selectedRole);
-  const rolePermissions = selectedRole.permissions ?? [];
-  const permissionLabels = rolePermissions.map((name) => {
-    const match = allPermissions.find((permission) => permission.name === name);
-    return match?.description ? `${name} — ${match.description}` : name;
-  });
 
   return (
     <div className="w-full pb-8">
@@ -143,19 +164,48 @@ const ViewRole = () => {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-base font-semibold">Permissions</h2>
+            <div>
+              <h2 className="text-base font-semibold">Permissions</h2>
+              <p className="text-sm text-muted-foreground">
+                Permissions granted by this role
+                {assignedPermissions.length
+                  ? ` (${assignedPermissions.length}).`
+                  : "."}
+              </p>
+            </div>
             <Separator />
-            {permissionLabels.length > 0 ? (
-              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {permissionLabels.map((label) => (
-                  <li key={label} className="rounded-md border p-3 text-sm">
-                    {label}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">None</p>
-            )}
+            <div className="rounded-lg border p-4">
+              {permissionLoading ? (
+                <p className="text-sm text-muted-foreground">
+                  Loading permissions...
+                </p>
+              ) : assignedPermissions.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {assignedPermissions.map((permission) => (
+                    <div
+                      key={permission.id}
+                      className="flex items-start gap-3 rounded-md border p-3 opacity-70"
+                    >
+                      <Checkbox checked disabled className="mt-0.5" />
+                      <span className="space-y-1">
+                        <span className="block text-sm leading-none">
+                          {permission.name}
+                        </span>
+                        {permission.description ? (
+                          <span className="block text-xs text-muted-foreground">
+                            {permission.description}
+                          </span>
+                        ) : null}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No permissions assigned.
+                </p>
+              )}
+            </div>
           </section>
         </div>
       </div>

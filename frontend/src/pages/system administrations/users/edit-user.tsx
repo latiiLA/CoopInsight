@@ -233,7 +233,7 @@ const EditUser = () => {
   }
 
   return (
-    <div className="w-full pb-8">
+    <div className="w-full px-4 pb-8 sm:px-6">
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
