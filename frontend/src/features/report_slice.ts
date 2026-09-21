@@ -3,6 +3,13 @@ import { RootState } from "../../app/store/store";
 import {
   DeclineReason,
   EbirrCardlessWithdrawal,
+  SuccessBrowseOutcome,
+  SuccessChannel,
+  SuccessFlow,
+  SuccessGranularity,
+  SuccessRateTrendPoint,
+  SuccessRateTrendReport,
+  SuccessTransactionDetail,
   SuccessTransactionReport,
   TerminalPerformanceReport,
   TerminalPerformanceRow,
@@ -16,6 +23,12 @@ interface ReportState {
   successRate: SuccessTransactionReport | null;
   successRateLoading: boolean;
   successRateError: string | null;
+  successRateTrend: SuccessRateTrendReport | null;
+  successRateTrendLoading: boolean;
+  successRateTrendError: string | null;
+  successBrowse: SuccessTransactionDetail[];
+  successBrowseLoading: boolean;
+  successBrowseError: string | null;
   ebirrCardless: EbirrCardlessWithdrawal[];
   ebirrCardlessLoading: boolean;
   ebirrCardlessError: string | null;
@@ -32,6 +45,44 @@ interface FetchReportDateParams {
   dateTo: string;
 }
 
+interface FetchSuccessTransactionsParams extends FetchReportDateParams {
+  channel?: SuccessChannel;
+  flow?: SuccessFlow;
+}
+
+interface FetchSuccessBrowseParams extends FetchReportDateParams {
+  channel: SuccessChannel;
+  flow: SuccessFlow;
+  outcome?: SuccessBrowseOutcome;
+  respCode?: string;
+  limit?: number;
+}
+
+interface FetchSuccessRateTrendParams extends FetchReportDateParams {
+  channel: SuccessChannel;
+  flow: SuccessFlow;
+  granularity?: SuccessGranularity;
+}
+
+const successRatePaths: Partial<
+  Record<`${SuccessChannel}-${SuccessFlow}`, string>
+> = {
+  "atm-overall": "/reports/atm-overall-success-rate",
+  "atm-acquiring": "/reports/atm-acquiring-success-rate",
+  "atm-onus": "/reports/atm-onus-success-rate",
+  "atm-offus": "/reports/atm-offus-success-rate",
+  "atm-issuing": "/reports/atm-issuing-success-rate",
+  "pos-overall": "/reports/pos-overall-success-rate",
+  "pos-acquiring": "/reports/pos-acquiring-success-rate",
+  "pos-onus": "/reports/pos-onus-success-rate",
+  "pos-offus": "/reports/pos-offus-success-rate",
+  "pos-issuing": "/reports/pos-issuing-success-rate",
+  "switch-overall": "/reports/switch-overall-success-rate",
+  "switch-onus": "/reports/switch-onus-success-rate",
+  "switch-offus": "/reports/switch-offus-success-rate",
+  "switch-issuing": "/reports/switch-issuing-success-rate",
+};
+
 interface FetchTerminalTransactionsParams extends FetchReportDateParams {
   terminalId: string;
   fleet: "atm" | "pos";
@@ -45,6 +96,12 @@ const initialState: ReportState = {
   successRate: null,
   successRateLoading: false,
   successRateError: null,
+  successRateTrend: null,
+  successRateTrendLoading: false,
+  successRateTrendError: null,
+  successBrowse: [],
+  successBrowseLoading: false,
+  successBrowseError: null,
   ebirrCardless: [],
   ebirrCardlessLoading: false,
   ebirrCardlessError: null,
@@ -76,12 +133,66 @@ function normalizeDeclineReason(reason: DeclineReason): DeclineReason {
   };
 }
 
+function normalizeFlow(flow: string | undefined): SuccessFlow {
+  if (
+    flow === "overall" ||
+    flow === "onus" ||
+    flow === "offus" ||
+    flow === "issuing" ||
+    flow === "acquiring"
+  ) {
+    return flow;
+  }
+  return "acquiring";
+}
+
+function normalizeGranularity(value: string | undefined): SuccessGranularity {
+  if (value === "day" || value === "week" || value === "month") {
+    return value;
+  }
+  return "day";
+}
+
+function normalizeTrendPoint(point: SuccessRateTrendPoint): SuccessRateTrendPoint {
+  return {
+    periodStart: toText(point.periodStart),
+    periodLabel: toText(point.periodLabel),
+    totalTransactions: toNumber(point.totalTransactions),
+    approvedCount: toNumber(point.approvedCount),
+    declinedCount: toNumber(point.declinedCount),
+    successRatePercent: toNumber(point.successRatePercent),
+    approvedAmount: toNumber(point.approvedAmount),
+    declinedAmount: toNumber(point.declinedAmount),
+    totalAmount: toNumber(point.totalAmount),
+  };
+}
+
+function normalizeTrendReport(
+  report: SuccessRateTrendReport,
+): SuccessRateTrendReport {
+  return {
+    dateFrom: report.dateFrom,
+    dateTo: report.dateTo,
+    channel:
+      report.channel === "pos"
+        ? "pos"
+        : report.channel === "switch"
+          ? "switch"
+          : "atm",
+    flow: normalizeFlow(report.flow),
+    granularity: normalizeGranularity(report.granularity),
+    points: (report.points ?? []).map(normalizeTrendPoint),
+  };
+}
+
 function normalizeReport(
   report: SuccessTransactionReport,
 ): SuccessTransactionReport {
   return {
     dateFrom: report.dateFrom,
     dateTo: report.dateTo,
+    channel: report.channel === "pos" ? "pos" : report.channel === "switch" ? "switch" : "atm",
+    flow: normalizeFlow(report.flow),
     totalTransactions: toNumber(report.totalTransactions),
     approvedCount: toNumber(report.approvedCount),
     declinedCount: toNumber(report.declinedCount),
@@ -117,14 +228,14 @@ function normalizeEbirrRow(
 
 export const fetchSuccessTransactions = createAsyncThunk<
   SuccessTransactionReport,
-  FetchReportDateParams,
+  FetchSuccessTransactionsParams,
   {
     state: RootState;
     rejectValue: string;
   }
 >(
   "report/fetchSuccessTransactions",
-  async ({ dateFrom, dateTo }, thunkAPI) => {
+  async ({ dateFrom, dateTo, channel = "atm", flow = "acquiring" }, thunkAPI) => {
     try {
       const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
 
@@ -132,11 +243,15 @@ export const fetchSuccessTransactions = createAsyncThunk<
         return thunkAPI.rejectWithValue("Authentication token not found");
       }
 
+      const path =
+        successRatePaths[`${channel}-${flow}`] ??
+        "/reports/atm-acquiring-success-rate";
+
       const response = await api.get<{
         isSuccessful: boolean;
         message: string;
         data: SuccessTransactionReport;
-      }>("/reports/success-transactions", {
+      }>(path, {
         ...withAuthHeader(token),
         params: {
           dateFrom,
@@ -153,6 +268,100 @@ export const fetchSuccessTransactions = createAsyncThunk<
       }
 
       return normalizeReport(report);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+export const fetchSuccessBrowse = createAsyncThunk<
+  SuccessTransactionDetail[],
+  FetchSuccessBrowseParams,
+  {
+    state: RootState;
+    rejectValue: string;
+  }
+>(
+  "report/fetchSuccessBrowse",
+  async (
+    { dateFrom, dateTo, channel, flow, outcome = "all", respCode, limit = 250 },
+    thunkAPI,
+  ) => {
+    try {
+      const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+      if (!token) {
+        return thunkAPI.rejectWithValue("Authentication token not found");
+      }
+
+      const response = await api.get<{
+        isSuccessful: boolean;
+        message: string;
+        data: SuccessTransactionDetail[];
+      }>("/reports/success-transactions", {
+        ...withAuthHeader(token),
+        params: {
+          dateFrom,
+          dateTo,
+          channel,
+          flow,
+          outcome,
+          respCode: respCode || undefined,
+          limit,
+        },
+      });
+
+      return (response.data.data ?? []).map((row, index) => ({
+        ...row,
+        id: row.id || `${row.refNum || "row"}-${index}`,
+        amount: Number(row.amount) || 0,
+        msgType: Number(row.msgType) || 0,
+        merchantType: Number(row.merchantType) || 0,
+      }));
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+export const fetchSuccessRateTrend = createAsyncThunk<
+  SuccessRateTrendReport,
+  FetchSuccessRateTrendParams,
+  {
+    state: RootState;
+    rejectValue: string;
+  }
+>(
+  "report/fetchSuccessRateTrend",
+  async ({ dateFrom, dateTo, channel, flow, granularity }, thunkAPI) => {
+    try {
+      const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+      if (!token) {
+        return thunkAPI.rejectWithValue("Authentication token not found");
+      }
+
+      const response = await api.get<{
+        isSuccessful: boolean;
+        message: string;
+        data: SuccessRateTrendReport;
+      }>("/reports/success-rate-trend", {
+        ...withAuthHeader(token),
+        params: {
+          dateFrom,
+          dateTo,
+          channel,
+          flow,
+          granularity: granularity || undefined,
+        },
+      });
+
+      const report = response.data.data;
+      if (!report) {
+        return thunkAPI.rejectWithValue("Failed to fetch success rate trend");
+      }
+
+      return normalizeTrendReport(report);
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error));
     }
@@ -364,6 +573,14 @@ const reportSlice = createSlice({
       state.successRate = null;
       state.successRateError = null;
     },
+    clearSuccessRateTrend: (state) => {
+      state.successRateTrend = null;
+      state.successRateTrendError = null;
+    },
+    clearSuccessBrowse: (state) => {
+      state.successBrowse = [];
+      state.successBrowseError = null;
+    },
     clearEbirrCardless: (state) => {
       state.ebirrCardless = [];
       state.ebirrCardlessError = null;
@@ -379,9 +596,20 @@ const reportSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchSuccessTransactions.pending, (state) => {
+      .addCase(fetchSuccessTransactions.pending, (state, action) => {
         state.successRateLoading = true;
         state.successRateError = null;
+        const nextChannel = action.meta.arg.channel ?? "atm";
+        const nextFlow = action.meta.arg.flow ?? "acquiring";
+        // Drop previous report immediately when switching success-rate pages
+        // so the UI cannot show the prior channel/flow numbers.
+        if (
+          !state.successRate ||
+          state.successRate.channel !== nextChannel ||
+          state.successRate.flow !== nextFlow
+        ) {
+          state.successRate = null;
+        }
       })
       .addCase(fetchSuccessTransactions.fulfilled, (state, action) => {
         state.successRateLoading = false;
@@ -391,6 +619,35 @@ const reportSlice = createSlice({
         state.successRateLoading = false;
         state.successRateError =
           action.payload || "Failed to fetch success transaction report";
+      })
+      .addCase(fetchSuccessRateTrend.pending, (state) => {
+        state.successRateTrendLoading = true;
+        state.successRateTrendError = null;
+        state.successRateTrend = null;
+      })
+      .addCase(fetchSuccessRateTrend.fulfilled, (state, action) => {
+        state.successRateTrendLoading = false;
+        state.successRateTrend = action.payload;
+      })
+      .addCase(fetchSuccessRateTrend.rejected, (state, action) => {
+        state.successRateTrendLoading = false;
+        state.successRateTrend = null;
+        state.successRateTrendError =
+          action.payload || "Failed to fetch success rate trend";
+      })
+      .addCase(fetchSuccessBrowse.pending, (state) => {
+        state.successBrowseLoading = true;
+        state.successBrowseError = null;
+      })
+      .addCase(fetchSuccessBrowse.fulfilled, (state, action) => {
+        state.successBrowseLoading = false;
+        state.successBrowse = action.payload;
+      })
+      .addCase(fetchSuccessBrowse.rejected, (state, action) => {
+        state.successBrowseLoading = false;
+        state.successBrowse = [];
+        state.successBrowseError =
+          action.payload || "Failed to fetch success transactions";
       })
       .addCase(fetchEbirrCardlessWithdrawal.pending, (state) => {
         state.ebirrCardlessLoading = true;
@@ -438,6 +695,8 @@ const reportSlice = createSlice({
 
 export const {
   clearSuccessRate,
+  clearSuccessRateTrend,
+  clearSuccessBrowse,
   clearEbirrCardless,
   clearTerminalTransactions,
   clearTerminalComparison,

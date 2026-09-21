@@ -1,3 +1,9 @@
+export type SuccessChannel = "atm" | "pos" | "switch";
+
+export type SuccessFlow = "overall" | "onus" | "offus" | "issuing" | "acquiring";
+
+export type SuccessGranularity = "day" | "week" | "month";
+
 export type DeclineReason = {
   code: string;
   label: string;
@@ -7,6 +13,8 @@ export type DeclineReason = {
 export type SuccessTransactionReport = {
   dateFrom: string;
   dateTo: string;
+  channel: SuccessChannel;
+  flow: SuccessFlow;
   totalTransactions: number;
   approvedCount: number;
   declinedCount: number;
@@ -17,10 +25,52 @@ export type SuccessTransactionReport = {
   declineReasons: DeclineReason[];
 };
 
+export type SuccessRateTrendPoint = {
+  periodStart: string;
+  periodLabel: string;
+  totalTransactions: number;
+  approvedCount: number;
+  declinedCount: number;
+  successRatePercent: number;
+  approvedAmount: number;
+  declinedAmount: number;
+  totalAmount: number;
+};
+
+export type SuccessRateTrendReport = {
+  dateFrom: string;
+  dateTo: string;
+  channel: SuccessChannel;
+  flow: SuccessFlow;
+  granularity: SuccessGranularity;
+  points: SuccessRateTrendPoint[];
+};
+
 export type SuccessRateRow = DeclineReason & {
   id: string;
   sharePercent: number;
 };
+
+export type SuccessTransactionDetail = {
+  id: string;
+  txnAt: string;
+  msgType: number;
+  terminalId: string;
+  terminalLocation: string;
+  cardMasked: string;
+  cardProduct: string;
+  respCode: string;
+  respLabel: string;
+  outcome: "approved" | "declined" | "reversed" | string;
+  amount: number;
+  refNum: string;
+  acquirer: string;
+  txnSrc: string;
+  txnDest: string;
+  merchantType: number;
+};
+
+export type SuccessBrowseOutcome = "all" | "approved" | "declined";
 
 export type EbirrCardlessWithdrawal = {
   id: string;

@@ -83,10 +83,12 @@ function ShareTooltip({
 }
 
 export function DeclineReasonsPie({
+  label = "ATM",
   rows,
   declinedCount,
   compact = false,
 }: {
+  label?: string;
   rows: SuccessRateRow[];
   declinedCount: number;
   compact?: boolean;
@@ -96,15 +98,15 @@ export function DeclineReasonsPie({
   return (
     <Card className={compact ? "h-full min-w-0 gap-4 py-4" : "gap-4 py-4"}>
       <CardHeader className="px-4">
-        <CardTitle>Acquiring declined reasons</CardTitle>
+        <CardTitle>{label} declined reasons</CardTitle>
         <CardDescription>
-          Share of acquiring declined transactions by response code
+          Share of {label} declined transactions by response code
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4">
         {slices.length === 0 ? (
           <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-            No acquiring declined transactions in this range
+            No {label} declined transactions in this range
           </div>
         ) : (
           <div

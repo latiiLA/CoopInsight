@@ -1,25 +1,24 @@
 import * as React from "react";
 import {
   Activity,
+  ArrowLeftRight,
   ChartBar,
   ChartNoAxesGantt,
   ChevronRight,
+  CreditCard,
   Home,
   Inbox,
   KeyRound,
   LayoutDashboard,
-  Percent,
-  Radio,
-  Wallet,
-  ArrowLeftRight,
-  CreditCard,
   LucideIdCard,
+  Radio,
   Scale,
   Settings,
   Shield,
   SquareArrowOutDownRight,
   Terminal,
   Users,
+  Wallet,
 } from "lucide-react";
 
 import {
@@ -56,6 +55,17 @@ import { VersionSwitcher } from "./version-switcher";
 import { NavUser } from "./nav-user";
 import { VisaIcon } from "./icons/visa-icon";
 import { MastercardIcon } from "./icons/mastercard-icon";
+import { AtmIcon } from "./icons/atm-icon";
+import { PosIcon } from "./icons/pos-icon";
+import {
+  AcquiringIcon,
+  IssuingIcon,
+  OffUsIcon,
+  OnUsIcon,
+  SuccessRateIcon,
+  SuccessRateTrendsIcon,
+  SwitchIcon,
+} from "./icons/success-rate-icons";
 import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../../app/store/store";
@@ -131,6 +141,167 @@ const data: {
 
   navMain: [
     {
+      // Icon legend — learn once, reused across channels:
+      // overall = channel identity (SwitchIcon / AtmIcon / PosIcon)
+      // on-us = OnUsIcon (bank / CoopBank)
+      // off-us = OffUsIcon (cross-bank swap)
+      // issuing = IssuingIcon (card issuing)
+      // acquiring = AcquiringIcon (inbound payments)
+      title: "Success Rates",
+      icon: SuccessRateIcon,
+      url: "#",
+      items: [
+        {
+          title: "Trends",
+          icon: SuccessRateTrendsIcon,
+          url: "success-rate-trends",
+          permissions: [
+            "report:view-success-transactions",
+            "report:view-atm-overall-success-rate",
+            "report:view-atm-acquiring-success-rate",
+            "report:view-atm-onus-success-rate",
+            "report:view-atm-offus-success-rate",
+            "report:view-atm-issuing-success-rate",
+            "report:view-pos-overall-success-rate",
+            "report:view-pos-acquiring-success-rate",
+            "report:view-pos-onus-success-rate",
+            "report:view-pos-offus-success-rate",
+            "report:view-pos-issuing-success-rate",
+            "report:view-switch-overall-success-rate",
+            "report:view-switch-onus-success-rate",
+            "report:view-switch-offus-success-rate",
+            "report:view-switch-issuing-success-rate",
+          ],
+        },
+        {
+          title: "Switch Overall",
+          icon: SwitchIcon,
+          url: "switch-overall-success-rate",
+          permissions: [
+            "report:view-switch-overall-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "Switch On-us",
+          icon: OnUsIcon,
+          url: "switch-onus-success-rate",
+          permissions: [
+            "report:view-switch-onus-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "Switch Off-us",
+          icon: OffUsIcon,
+          url: "switch-offus-success-rate",
+          permissions: [
+            "report:view-switch-offus-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "Switch Issuing",
+          icon: IssuingIcon,
+          url: "switch-issuing-success-rate",
+          permissions: [
+            "report:view-switch-issuing-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "ATM Overall",
+          icon: AtmIcon,
+          url: "atm-overall-success-rate",
+          permissions: [
+            "report:view-atm-overall-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "ATM Acquiring",
+          icon: AcquiringIcon,
+          url: "atm-acquiring-success-rate",
+          permissions: [
+            "report:view-atm-acquiring-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "ATM On-us",
+          icon: OnUsIcon,
+          url: "atm-onus-success-rate",
+          permissions: [
+            "report:view-atm-onus-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "ATM Off-us",
+          icon: OffUsIcon,
+          url: "atm-offus-success-rate",
+          permissions: [
+            "report:view-atm-offus-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "ATM Issuing",
+          icon: IssuingIcon,
+          url: "atm-issuing-success-rate",
+          permissions: [
+            "report:view-atm-issuing-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "POS Overall",
+          icon: PosIcon,
+          url: "pos-overall-success-rate",
+          permissions: [
+            "report:view-pos-overall-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "POS Acquiring",
+          icon: AcquiringIcon,
+          url: "pos-acquiring-success-rate",
+          permissions: [
+            "report:view-pos-acquiring-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "POS On-us",
+          icon: OnUsIcon,
+          url: "pos-onus-success-rate",
+          permissions: [
+            "report:view-pos-onus-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "POS Off-us",
+          icon: OffUsIcon,
+          url: "pos-offus-success-rate",
+          permissions: [
+            "report:view-pos-offus-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "POS Issuing",
+          icon: IssuingIcon,
+          url: "pos-issuing-success-rate",
+          permissions: [
+            "report:view-pos-issuing-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+      ],
+    },
+    {
       title: "Reports",
       icon: ChartBar,
       url: "#",
@@ -140,12 +311,6 @@ const data: {
           icon: SquareArrowOutDownRight,
           url: "deposit-per-terminal",
           permissions: ["report:view-deposit-per-terminal"],
-        },
-        {
-          title: "Acquiring Success Rate",
-          icon: Percent,
-          url: "success-rate",
-          permissions: ["report:view-success-transactions"],
         },
         {
           title: "Ebirr Cardless Withdrawal",

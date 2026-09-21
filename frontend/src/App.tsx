@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
 import Layout from "../app/layout";
 import Home from "./pages/Home";
@@ -7,6 +7,7 @@ import RequestAccountPage from "./pages/request-account";
 import Transaction from "./pages/transaction/Transaction";
 import DepositPerTerminal from "./pages/reports/deposit-per-terminal";
 import SuccessRate from "./pages/reports/success-rate/success-rate";
+import SuccessRateTrends from "./pages/reports/success-rate/success-rate-trends";
 import EbirrCardlessWithdrawal from "./pages/reports/ebirr-cardless-withdrawal/ebirr-cardless-withdrawal";
 import ManageUsers from "./pages/system administrations/users/manage-users";
 import CreateUser from "./pages/system administrations/users/create-user";
@@ -63,10 +64,218 @@ function App() {
             }
           />
           <Route
-            path="/success-rate"
+            path="/success-rate-trends"
             element={
-              <RequirePermission permissions={["report:view-success-transactions"]}>
-                <SuccessRate />
+              <RequirePermission
+                permissions={[
+                  "report:view-success-transactions",
+                  "report:view-atm-overall-success-rate",
+                  "report:view-atm-acquiring-success-rate",
+                  "report:view-atm-onus-success-rate",
+                  "report:view-atm-offus-success-rate",
+                  "report:view-atm-issuing-success-rate",
+                  "report:view-pos-overall-success-rate",
+                  "report:view-pos-acquiring-success-rate",
+                  "report:view-pos-onus-success-rate",
+                  "report:view-pos-offus-success-rate",
+                  "report:view-pos-issuing-success-rate",
+                  "report:view-switch-overall-success-rate",
+                  "report:view-switch-onus-success-rate",
+                  "report:view-switch-offus-success-rate",
+                  "report:view-switch-issuing-success-rate",
+                ]}
+              >
+                <SuccessRateTrends />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/switch-overall-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-switch-overall-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="switch" flow="overall" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/switch-onus-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-switch-onus-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="switch" flow="onus" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/switch-offus-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-switch-offus-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="switch" flow="offus" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/switch-issuing-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-switch-issuing-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="switch" flow="issuing" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/success-rate"
+            element={<Navigate to="/atm-overall-success-rate" replace />}
+          />
+          <Route
+            path="/atm-overall-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-atm-overall-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="atm" flow="overall" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/atm-acquiring-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-atm-acquiring-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="atm" flow="acquiring" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/atm-onus-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-atm-onus-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="atm" flow="onus" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/atm-offus-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-atm-offus-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="atm" flow="offus" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/atm-issuing-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-atm-issuing-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="atm" flow="issuing" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pos-success-rate"
+            element={<Navigate to="/pos-overall-success-rate" replace />}
+          />
+          <Route
+            path="/pos-overall-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-pos-overall-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="pos" flow="overall" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pos-acquiring-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-pos-acquiring-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="pos" flow="acquiring" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pos-onus-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-pos-onus-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="pos" flow="onus" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pos-offus-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-pos-offus-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="pos" flow="offus" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pos-issuing-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-pos-issuing-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="pos" flow="issuing" />
               </RequirePermission>
             }
           />

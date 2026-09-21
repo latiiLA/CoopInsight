@@ -104,9 +104,51 @@ export default function Home() {
   const user = authUser?.data?.user;
   const firstName = user?.firstName?.trim() || user?.username || "there";
   const todayLabel = format(new Date(), "EEEE, MMMM d, yyyy");
-  const canViewSuccessRate = hasPermission([
+  const canViewSwitchOverall = hasPermission([
+    "report:view-switch-overall-success-rate",
     "report:view-success-transactions",
   ]);
+  const canViewAtmOverall = hasPermission([
+    "report:view-atm-overall-success-rate",
+    "report:view-success-transactions",
+  ]);
+  const canViewAtmAcquiring = hasPermission([
+    "report:view-atm-acquiring-success-rate",
+    "report:view-success-transactions",
+  ]);
+  const canViewAtmOnus = hasPermission([
+    "report:view-atm-onus-success-rate",
+    "report:view-success-transactions",
+  ]);
+  const canViewAtmOffus = hasPermission([
+    "report:view-atm-offus-success-rate",
+    "report:view-success-transactions",
+  ]);
+  const canViewAtmIssuing = hasPermission([
+    "report:view-atm-issuing-success-rate",
+    "report:view-success-transactions",
+  ]);
+  const canViewPosOverall = hasPermission([
+    "report:view-pos-overall-success-rate",
+    "report:view-success-transactions",
+  ]);
+  const canViewPosAcquiring = hasPermission([
+    "report:view-pos-acquiring-success-rate",
+    "report:view-success-transactions",
+  ]);
+  const canViewPosOnus = hasPermission([
+    "report:view-pos-onus-success-rate",
+    "report:view-success-transactions",
+  ]);
+  const canViewPosOffus = hasPermission([
+    "report:view-pos-offus-success-rate",
+    "report:view-success-transactions",
+  ]);
+  const canViewPosIssuing = hasPermission([
+    "report:view-pos-issuing-success-rate",
+    "report:view-success-transactions",
+  ]);
+  const canViewHomeSuccess = canViewSwitchOverall || canViewAtmOverall;
 
   useEffect(() => {
     const today = format(startOfDay(new Date()), "MM/dd/yyyy");
@@ -118,15 +160,26 @@ export default function Home() {
       }),
     );
 
-    if (canViewSuccessRate) {
+    if (canViewSwitchOverall) {
       void dispatch(
         fetchSuccessTransactions({
           dateFrom: today,
           dateTo: today,
+          channel: "switch",
+          flow: "overall",
+        }),
+      );
+    } else if (canViewAtmOverall) {
+      void dispatch(
+        fetchSuccessTransactions({
+          dateFrom: today,
+          dateTo: today,
+          channel: "atm",
+          flow: "overall",
         }),
       );
     }
-  }, [canViewSuccessRate, dispatch, permissions]);
+  }, [canViewAtmOverall, canViewSwitchOverall, dispatch, permissions]);
 
   const declinedCount = successRate?.declinedCount ?? 0;
   const tableData: SuccessRateRow[] = (successRate?.declineReasons ?? []).map(
@@ -166,11 +219,114 @@ export default function Home() {
 
   const quickLinks = [
     {
-      title: "Acquiring Success Rate",
-      description: "Acquiring approvals, declines, and response codes",
-      to: "/success-rate",
+      title: "Switch Overall Success Rate",
+      description: "On-us, off-us, and issuing across ATM and POS",
+      to: "/switch-overall-success-rate",
       icon: Percent,
-      show: canViewSuccessRate,
+      show: hasPermission([
+        "report:view-switch-overall-success-rate",
+        "report:view-success-transactions",
+      ]),
+    },
+    {
+      title: "Switch On-us Success Rate",
+      description: "CoopBank cards on CoopBank ATM and POS terminals",
+      to: "/switch-onus-success-rate",
+      icon: Percent,
+      show: hasPermission([
+        "report:view-switch-onus-success-rate",
+        "report:view-success-transactions",
+      ]),
+    },
+    {
+      title: "Switch Off-us Success Rate",
+      description: "Other bank cards on CoopBank ATM and POS terminals",
+      to: "/switch-offus-success-rate",
+      icon: Percent,
+      show: hasPermission([
+        "report:view-switch-offus-success-rate",
+        "report:view-success-transactions",
+      ]),
+    },
+    {
+      title: "Switch Issuing Success Rate",
+      description: "CoopBank cards on other bank ATM and POS terminals",
+      to: "/switch-issuing-success-rate",
+      icon: Percent,
+      show: hasPermission([
+        "report:view-switch-issuing-success-rate",
+        "report:view-success-transactions",
+      ]),
+    },
+    {
+      title: "ATM Overall Success Rate",
+      description: "On-us, off-us, and issuing ATM authorizations",
+      to: "/atm-overall-success-rate",
+      icon: Percent,
+      show: canViewAtmOverall,
+    },
+    {
+      title: "ATM Acquiring Success Rate",
+      description: "On-us and off-us ATM authorizations",
+      to: "/atm-acquiring-success-rate",
+      icon: Percent,
+      show: canViewAtmAcquiring,
+    },
+    {
+      title: "ATM On-us Success Rate",
+      description: "CoopBank cards on CoopBank ATMs",
+      to: "/atm-onus-success-rate",
+      icon: Percent,
+      show: canViewAtmOnus,
+    },
+    {
+      title: "ATM Off-us Success Rate",
+      description: "Other bank cards on CoopBank ATMs",
+      to: "/atm-offus-success-rate",
+      icon: Percent,
+      show: canViewAtmOffus,
+    },
+    {
+      title: "ATM Issuing Success Rate",
+      description: "CoopBank cards on other bank ATMs",
+      to: "/atm-issuing-success-rate",
+      icon: Percent,
+      show: canViewAtmIssuing,
+    },
+    {
+      title: "POS Overall Success Rate",
+      description: "On-us, off-us, and issuing POS authorizations",
+      to: "/pos-overall-success-rate",
+      icon: Percent,
+      show: canViewPosOverall,
+    },
+    {
+      title: "POS Acquiring Success Rate",
+      description: "On-us and off-us POS authorizations",
+      to: "/pos-acquiring-success-rate",
+      icon: Percent,
+      show: canViewPosAcquiring,
+    },
+    {
+      title: "POS On-us Success Rate",
+      description: "CoopBank cards on CoopBank POS terminals",
+      to: "/pos-onus-success-rate",
+      icon: Percent,
+      show: canViewPosOnus,
+    },
+    {
+      title: "POS Off-us Success Rate",
+      description: "Other bank cards on CoopBank POS terminals",
+      to: "/pos-offus-success-rate",
+      icon: Percent,
+      show: canViewPosOffus,
+    },
+    {
+      title: "POS Issuing Success Rate",
+      description: "CoopBank cards on other bank POS terminals",
+      to: "/pos-issuing-success-rate",
+      icon: Percent,
+      show: canViewPosIssuing,
     },
     {
       title: "Deposit per Terminal",
@@ -227,14 +383,14 @@ export default function Home() {
             Welcome back, {firstName}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Today&apos;s ATM and deposit activity for {todayLabel}
+            Today&apos;s switch and deposit activity for {todayLabel}
           </p>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="ATM transactions"
+          label="Switch transactions"
           value={
             successRate ? formatCount(successRate.totalTransactions) : "—"
           }
@@ -244,7 +400,7 @@ export default function Home() {
               : successRateError || "Today's switch volume"
           }
           icon={Activity}
-          loading={canViewSuccessRate && successRateLoading}
+          loading={canViewHomeSuccess && successRateLoading}
         />
         <MetricCard
           label="Approved"
@@ -252,10 +408,10 @@ export default function Home() {
           hint={
             successRate
               ? `Amount ${formatAmount(successRate.approvedAmount)}`
-              : "Successful ATM responses"
+              : "Successful switch responses"
           }
           icon={CheckCircle2}
-          loading={canViewSuccessRate && successRateLoading}
+          loading={canViewHomeSuccess && successRateLoading}
         />
         <MetricCard
           label="Declined"
@@ -266,24 +422,24 @@ export default function Home() {
               : "Failed or rejected responses"
           }
           icon={CircleAlert}
-          loading={canViewSuccessRate && successRateLoading}
+          loading={canViewHomeSuccess && successRateLoading}
         />
         <MetricCard
-          label="Acquiring success rate"
+          label="Switch overall success rate"
           value={successRate ? `${successPercent.toFixed(2)}%` : "—"}
-          hint="Approved share of today's acquiring traffic"
+          hint="Approved share of today's ATM and POS traffic"
           icon={Percent}
-          loading={canViewSuccessRate && successRateLoading}
+          loading={canViewHomeSuccess && successRateLoading}
         />
       </div>
 
       {successRate ? (
         <Card className="gap-3 py-4">
           <CardHeader className="px-4">
-            <CardTitle className="text-base">Acquiring approval mix</CardTitle>
+            <CardTitle className="text-base">Switch overall approval mix</CardTitle>
             <CardDescription>
               {formatCount(successRate.approvedCount)} approved of{" "}
-              {formatCount(successRate.totalTransactions)} acquiring
+              {formatCount(successRate.totalTransactions)} switch overall
               transactions
             </CardDescription>
           </CardHeader>
@@ -305,7 +461,7 @@ export default function Home() {
       ) : null}
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-2">
-        {canViewSuccessRate ? (
+        {canViewHomeSuccess ? (
           successRateLoading && !successRate ? (
             <div className="min-w-0 space-y-4">
               <Card className="h-[28rem] py-4">
@@ -330,10 +486,12 @@ export default function Home() {
           ) : (
             <div className="min-w-0 space-y-4">
               <AcquiringOutcomePie
+                label="Switch overall"
                 approvedCount={successRate?.approvedCount ?? 0}
                 declinedCount={declinedCount}
               />
               <DeclineReasonsPie
+                label="Switch overall"
                 rows={tableData}
                 declinedCount={declinedCount}
               />
@@ -342,7 +500,7 @@ export default function Home() {
         ) : (
           <Card className="py-4">
             <CardHeader className="px-4">
-              <CardTitle>Acquiring success rate</CardTitle>
+              <CardTitle>Switch overall success rate</CardTitle>
               <CardDescription>
                 You need report access to view today&apos;s switch performance.
               </CardDescription>

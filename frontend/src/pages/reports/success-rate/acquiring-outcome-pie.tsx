@@ -42,10 +42,12 @@ function ShareTooltip({
 }
 
 export function AcquiringOutcomePie({
+  label = "ATM",
   approvedCount,
   declinedCount,
   compact = false,
 }: {
+  label?: string;
   approvedCount: number;
   declinedCount: number;
   compact?: boolean;
@@ -69,15 +71,15 @@ export function AcquiringOutcomePie({
   return (
     <Card className={compact ? "h-full min-w-0 gap-4 py-4" : "gap-4 py-4"}>
       <CardHeader className="px-4">
-        <CardTitle>Acquiring success rate</CardTitle>
+        <CardTitle>{label} success rate</CardTitle>
         <CardDescription>
-          Success and declined share of acquiring transactions
+          Success and declined share of {label} transactions
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4">
         {slices.length === 0 ? (
           <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-            No acquiring transactions in this range
+            No {label} transactions in this range
           </div>
         ) : (
           <div
@@ -130,3 +132,4 @@ export function AcquiringOutcomePie({
     </Card>
   );
 }
+
