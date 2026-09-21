@@ -60,6 +60,12 @@ var (
 	ErrInvalidReportDate                     = errors.New("dateFrom and dateTo must be MM-DD-YYYY")
 	ErrInvalidDateRange                      = errors.New("dateFrom must be on or before dateTo")
 	ErrDateRangeTooLarge                     = errors.New("date range must be 31 days or less")
+	ErrInvalidSuccessChannel                 = errors.New("channel must be atm, pos, or switch")
+	ErrInvalidSuccessFlow                    = errors.New("flow must be onus, offus, issuing, acquiring, or overall")
+	ErrInvalidSuccessOutcome                 = errors.New("outcome must be all, approved, or declined")
+	ErrInvalidSuccessGranularity             = errors.New("granularity must be day, week, or month")
+	ErrTrendRangeTooLarge                    = errors.New("trend range would produce too many buckets; narrow the dates or use a coarser granularity")
+	ErrForbidden                             = errors.New("access denied")
 	ErrInvalidTerminalID                     = errors.New("terminalId is required")
 	ErrInvalidFleet                          = errors.New("fleet must be atm or pos")
 	ErrFailedToFetchReport                   = errors.New("failed to fetch report")
@@ -84,6 +90,6 @@ var (
 	MessInvalidRequest         = "Invalid request"
 	MessInvalidRequestData     = "Invalid request data"
 	MessInvalidRequestFile     = "Invalid request data"
-	MessOracleUnavailable      = "Oracle is unavailable"
-	MessSourceMongoUnavailable = "Source Mongo is unavailable"
+	MessOracleUnavailable      = "Reporting data is temporarily unavailable"
+	MessSourceMongoUnavailable = "Source data is temporarily unavailable"
 )

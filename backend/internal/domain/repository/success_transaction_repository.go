@@ -7,5 +7,11 @@ import (
 )
 
 type SuccessTransactionRepository interface {
-	GetReport(ctx context.Context, dateFrom, dateTo string) (*model.SuccessTransactionReport, error)
+	GetReport(ctx context.Context, dateFrom, dateTo, channel, flow string) (*model.SuccessTransactionReport, error)
+	GetTrend(ctx context.Context, dateFrom, dateTo, channel, flow, granularity string) (*model.SuccessRateTrendReport, error)
+	ListTransactions(
+		ctx context.Context,
+		dateFrom, dateTo, channel, flow, outcome, respCode string,
+		limit int,
+	) ([]model.SuccessTransactionDetail, error)
 }

@@ -56,21 +56,24 @@ func (h *testHandler) GetTestData(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, common.ErrOracleUnavailable) {
 			c.JSON(http.StatusServiceUnavailable, response.Status{
-				Message: common.MessOracleUnavailable,
-				Error:   err.Error(),
+				IsSuccessful: false,
+				Message:      common.MessOracleUnavailable,
+				Error:        common.MessOracleUnavailable,
 			})
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Failed to fetch Oracle data",
-			"error":   err.Error(),
+		c.JSON(http.StatusInternalServerError, response.Status{
+			IsSuccessful: false,
+			Message:      "Failed to fetch deposit per terminal data",
+			Error:        common.MessInternalServerError,
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Oracle data fetched successfully",
-		"data":    data,
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Deposit per terminal data fetched successfully",
+		Data:         data,
 	})
 }
