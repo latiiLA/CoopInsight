@@ -76,6 +76,7 @@ var (
 	ErrMastercardDebitMonitoringUnavailable  = errors.New("mastercard debit monitoring is unavailable")
 	ErrMastercardCreditMonitoringUnavailable = errors.New("mastercard credit monitoring is unavailable")
 	ErrVisaMonitoringUnavailable             = errors.New("visa monitoring is unavailable")
+	ErrISTMonitoringUnavailable              = errors.New("IST monitoring is unavailable")
 	ErrSwitchCommandUnavailable              = errors.New("switch command is unavailable")
 	ErrInvalidSwitchCommand                  = errors.New("invalid switch command")
 	ErrSwitchCommandTimeout                  = errors.New("switch command timed out")

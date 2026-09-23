@@ -98,7 +98,9 @@ var (
 	SSHSwitchMCDebitDebugPath  string
 	SSHSwitchMCCreditDebugPath string
 	SSHSwitchVisaDebugPath     string
+	SSHSwitchISTPath           string
 	SSHSwitchTailLines         int
+	SSHSwitchISTTailLines      int
 	SSHSwitchPollSeconds       int
 	SSHSwitchInsecure          bool
 	SSHSwitchKnownHosts        string
@@ -488,7 +490,15 @@ func LoadConfig() {
 			SSHSwitchVisaDebugPath = "pdir/log/debug/visadump.debug"
 		}
 
+		SSHSwitchISTPath = strings.TrimSpace(os.Getenv("SSH_SWITCH_IST_PATH"))
+		if SSHSwitchISTPath == "" {
+			SSHSwitchISTPath = "pdir/log/debug/monitor-ist.debug"
+		}
+
 		SSHSwitchTailLines = parseIntEnv("SSH_SWITCH_TAIL_LINES", 400)
+		// IST monitor cycles are large; default a much deeper initial tail so the
+		// first complete MONITOR RESULT BEGIN..END is more likely in the buffer.
+		SSHSwitchISTTailLines = parseIntEnv("SSH_SWITCH_IST_TAIL_LINES", 20000)
 		SSHSwitchPollSeconds = parseIntEnv("SSH_SWITCH_POLL_SECONDS", 8)
 		SSHSwitchKnownHosts = strings.TrimSpace(os.Getenv("SSH_SWITCH_KNOWN_HOSTS"))
 

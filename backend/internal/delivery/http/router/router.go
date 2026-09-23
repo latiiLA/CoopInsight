@@ -27,6 +27,7 @@ type Handlers struct {
 	MastercardDebitMonitoring  handler.OnusMonitoringHandler
 	MastercardCreditMonitoring handler.OnusMonitoringHandler
 	VisaMonitoring             handler.OnusMonitoringHandler
+	ISTMonitoring              handler.ISTMonitoringHandler
 	SwitchCommand              handler.SwitchCommandHandler
 	Uncleared                  handler.UnclearedHandler
 	Cleared                    handler.ClearedHandler
@@ -170,6 +171,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 		handlers.MastercardDebitMonitoring,
 		handlers.MastercardCreditMonitoring,
 		handlers.VisaMonitoring,
+		handlers.ISTMonitoring,
 		handlers.SwitchCommand,
 	)
 

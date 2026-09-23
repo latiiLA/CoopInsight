@@ -256,6 +256,7 @@ func main() {
 	var mastercardDebitCollector *sshswitch.Collector
 	var mastercardCreditCollector *sshswitch.Collector
 	var visaCollector *sshswitch.Collector
+	var istCollector *sshswitch.ISTCollector
 	if configs.SSHSwitchEnabled {
 		onusCollector = sshswitch.NewCollector(
 			newSwitchSSHClient(configs.SSHSwitchDebugPath),
@@ -292,7 +293,14 @@ func main() {
 		visaCollector.Start(ctx)
 		defer visaCollector.Close()
 
-		logrus.Info("On-us, off-us, Mastercard, and Visa SSH monitoring collectors started")
+		istCollector = sshswitch.NewISTCollector(
+			newISTSSHClient(configs.SSHSwitchISTPath),
+			"ist",
+		)
+		istCollector.Start(ctx)
+		defer istCollector.Close()
+
+		logrus.Info("On-us, off-us, Mastercard, Visa, and IST SSH monitoring collectors started")
 	} else {
 		logrus.Info("SSH switch monitoring is disabled")
 	}
@@ -310,6 +318,9 @@ func main() {
 	)
 	visaHandler := handler.NewOnusMonitoringHandler(
 		service.NewVisaMonitoringService(visaCollector),
+	)
+	istHandler := handler.NewISTMonitoringHandler(
+		service.NewISTMonitoringService(istCollector),
 	)
 
 	var switchCommandClient *sshswitch.Client
@@ -363,6 +374,7 @@ func main() {
 		MastercardDebitMonitoring:  mastercardDebitHandler,
 		MastercardCreditMonitoring: mastercardCreditHandler,
 		VisaMonitoring:             visaHandler,
+		ISTMonitoring:              istHandler,
 		SwitchCommand:              switchCommandHandler,
 		Uncleared:                  unclearedHandler,
 		Cleared:                    clearedHandler,
@@ -392,6 +404,24 @@ func newSwitchSSHClient(debugPath string) *sshswitch.Client {
 		Password:   configs.SSHSwitchPassword,
 		DebugPath:  debugPath,
 		TailLines:  configs.SSHSwitchTailLines,
+		Insecure:   configs.SSHSwitchInsecure,
+		KnownHosts: configs.SSHSwitchKnownHosts,
+	})
+}
+
+func newISTSSHClient(debugPath string) *sshswitch.Client {
+	tail := configs.SSHSwitchISTTailLines
+	if tail <= 0 {
+		tail = 20000
+	}
+	return sshswitch.NewClient(sshswitch.ClientConfig{
+		Host:       configs.SSHSwitchHost,
+		Port:       configs.SSHSwitchPort,
+		User:       configs.SSHSwitchUser,
+		KeyPath:    configs.SSHSwitchKeyPath,
+		Password:   configs.SSHSwitchPassword,
+		DebugPath:  debugPath,
+		TailLines:  tail,
 		Insecure:   configs.SSHSwitchInsecure,
 		KnownHosts: configs.SSHSwitchKnownHosts,
 	})

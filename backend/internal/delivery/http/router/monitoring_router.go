@@ -14,6 +14,7 @@ func registerMonitoringRoutes(
 	mastercardDebitHandler handler.OnusMonitoringHandler,
 	mastercardCreditHandler handler.OnusMonitoringHandler,
 	visaHandler handler.OnusMonitoringHandler,
+	istHandler handler.ISTMonitoringHandler,
 	switchCommandHandler handler.SwitchCommandHandler,
 ) {
 	monitoring := live.Group("/monitoring")
@@ -52,5 +53,10 @@ func registerMonitoringRoutes(
 		"/visa/ws",
 		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"monitoring:view-visa"}),
 		visaHandler.Stream,
+	)
+	monitoring.GET(
+		"/ist/ws",
+		middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{"monitoring:view-ist"}),
+		istHandler.Stream,
 	)
 }
