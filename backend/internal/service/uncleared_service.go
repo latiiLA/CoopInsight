@@ -2,14 +2,11 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 )
-
-const clearingMaxDateRangeDays = 31
 
 const (
 	unclearedSourceBinETH = int64(1000000011)
@@ -111,14 +108,6 @@ func parseClearingListArgs(dateFrom, dateTo string, page, pageSize int) (string,
 		return "", "", 0, 0, err
 	}
 
-	fromTime, _ := time.Parse("01-02-2006", from)
-	toTime, _ := time.Parse("01-02-2006", to)
-	if fromTime.After(toTime) {
-		return "", "", 0, 0, common.ErrInvalidDateRange
-	}
-	if toTime.Sub(fromTime).Hours() > float64(clearingMaxDateRangeDays)*24 {
-		return "", "", 0, 0, common.ErrDateRangeTooLarge
-	}
 
 	if page < 1 {
 		page = 1
