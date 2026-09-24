@@ -91,7 +91,7 @@ var appErrors = []struct {
 
 func writeAppError(c *gin.Context, err error) {
 	status := http.StatusInternalServerError
-	message := err.Error()
+	message := "An unexpected error occurred. Please try again later."
 
 	for _, mapped := range appErrors {
 		if errors.Is(err, mapped.err) {

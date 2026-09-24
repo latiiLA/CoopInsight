@@ -55,7 +55,7 @@ var (
 
 	ErrUnauthorized                          = errors.New("unauthorized")
 	ErrInternalServer                        = errors.New("internal server error")
-	ErrOracleUnavailable                     = errors.New("oracle is unavailable")
+	ErrOracleUnavailable                     = errors.New("internal server error")
 	ErrSourceMongoUnavailable                = errors.New("source mongo is unavailable")
 	ErrInvalidReportDate                     = errors.New("dateFrom and dateTo must be MM-DD-YYYY")
 	ErrInvalidDateRange                      = errors.New("dateFrom must be on or before dateTo")

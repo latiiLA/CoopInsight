@@ -58,7 +58,7 @@ func (h *testHandler) GetTestData(c *gin.Context) {
 			c.JSON(http.StatusServiceUnavailable, response.Status{
 				IsSuccessful: false,
 				Message:      common.MessOracleUnavailable,
-				Error:        common.MessOracleUnavailable,
+				Error:        err.Error(),
 			})
 			return
 		}
@@ -66,7 +66,7 @@ func (h *testHandler) GetTestData(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response.Status{
 			IsSuccessful: false,
 			Message:      "Failed to fetch deposit per terminal data",
-			Error:        common.MessInternalServerError,
+			Error:        err.Error(),
 		})
 		return
 	}
