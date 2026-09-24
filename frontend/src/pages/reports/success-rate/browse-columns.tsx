@@ -29,6 +29,9 @@ export const browseColumns = columnHelper.columns([
       </Button>
     ),
   }),
+  columnHelper.accessor("txnTime", {
+    header: "Time",
+  }),
   columnHelper.accessor("terminalId", {
     header: "Terminal",
   }),

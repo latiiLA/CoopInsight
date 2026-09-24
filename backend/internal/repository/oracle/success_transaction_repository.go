@@ -27,18 +27,17 @@ const (
 	// Switch: ATM rows stay 210-only; POS rows allow 110 and 210.
 	msgTypesSwitch = `((t.MERCHANT_TYPE = 6011 AND t.MSGTYPE = 210) OR (t.MERCHANT_TYPE <> 6011 AND t.MSGTYPE IN (110, 210)))`
 
-
-	routingATMOnus = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'`
-	routingATMOffus = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')`
-	routingATMIssuing = `TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'`
+	routingATMOnus      = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'`
+	routingATMOffus     = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')`
+	routingATMIssuing   = `TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'`
 	routingATMAcquiring = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('CBOBCORTEX', '8888888888', '04', '05')`
-	routingATMOverall = `((TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('CBOBCORTEX', '8888888888', '04', '05')) OR (TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'))`
+	routingATMOverall   = `((TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('CBOBCORTEX', '8888888888', '04', '05')) OR (TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'))`
 
-	routingPOSOnus = `TRIM(t.TXNDEST) = 'CBOBCORTEX' AND TRIM(t.TXNSRC) = '` + coopPOSTxnSrcBIN + `'`
-	routingPOSOffus = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')`
-	routingPOSIssuing = `TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX' AND TRIM(t.TXNSRC) <> '` + coopPOSTxnSrcBIN + `'`
+	routingPOSOnus      = `TRIM(t.TXNDEST) = 'CBOBCORTEX' AND TRIM(t.TXNSRC) = '` + coopPOSTxnSrcBIN + `'`
+	routingPOSOffus     = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')`
+	routingPOSIssuing   = `TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX' AND TRIM(t.TXNSRC) <> '` + coopPOSTxnSrcBIN + `'`
 	routingPOSAcquiring = `((` + routingPOSOnus + `) OR (` + routingPOSOffus + `))`
-	routingPOSOverall = `((` + routingPOSOnus + `) OR (` + routingPOSOffus + `) OR (` + routingPOSIssuing + `))`
+	routingPOSOverall   = `((` + routingPOSOnus + `) OR (` + routingPOSOffus + `) OR (` + routingPOSIssuing + `))`
 )
 
 func msgTypeFilterFor(channel string) string {
@@ -91,7 +90,6 @@ func routingFilterFor(channel, flow string) string {
 		}
 	}
 }
-
 
 // Success requires an approved respcode and no matching 410/420/430 on the same REFNUM.
 const trulyApprovedExpr = `t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NULL`
@@ -359,9 +357,9 @@ func (r *successTransactionRepository) GetTrend(
 	points := make([]model.SuccessRateTrendPoint, 0)
 	for rows.Next() {
 		var (
-			periodStart                                               string
-			total, approved, declined                                 sql.NullFloat64
-			rate, approvedAmount, declinedAmount, totalAmount         sql.NullFloat64
+			periodStart                                       string
+			total, approved, declined                         sql.NullFloat64
+			rate, approvedAmount, declinedAmount, totalAmount sql.NullFloat64
 		)
 		if err := rows.Scan(
 			&periodStart,
@@ -454,11 +452,13 @@ WITH rev AS (
 	WHERE MSGTYPE IN (410, 420, 430)
 		AND REFNUM IS NOT NULL
 		AND LOCAL_DATE >= TO_DATE(:date_from, 'MM-DD-YYYY')
-		AND LOCAL_DATE < TO_DATE(:date_to, 'MM-DD-YYYY') + 2
+		AND LOCAL_DATE < TO_DATE(:date_to, 'MM-DD-YYYY') + 1
 )
 SELECT /*+ USE_HASH(t rev) */
 	NVL(TRIM(t.REFNUM), '') AS refnum,
 	TO_CHAR(t.LOCAL_DATE, 'YYYY-MM-DD') AS txn_at,
+	TO_CHAR(
+	TO_DATE(LPAD(TO_CHAR(t.LOCAL_TIME), 6, '0'), 'HH24MISS'), 'HH24:MI:SS') AS txn_time,
 	t.MSGTYPE AS msg_type,
 	NVL(TRIM(t.TERMID), '') AS terminal_id,
 	NVL(TRIM(t.TERMLOC), '') AS terminal_location,
@@ -481,8 +481,9 @@ WHERE ` + msgTypeFilterFor(channel) + `
 	AND ` + routingFilterFor(channel, flow) + `
 	AND ` + outcomeFilter + `
 	AND ` + respFilter + `
-	AND t.LOCAL_DATE BETWEEN TO_DATE(:date_from, 'MM-DD-YYYY') AND TO_DATE(:date_to, 'MM-DD-YYYY')
-ORDER BY t.LOCAL_DATE DESC, t.REFNUM DESC
+	AND t.LOCAL_DATE >= TO_DATE(:date_from, 'MM-DD-YYYY')
+	AND t.LOCAL_DATE < TO_DATE(:date_to, 'MM-DD-YYYY') + 1
+ORDER BY t.LOCAL_DATE DESC, t.LOCAL_TIME DESC, t.REFNUM DESC
 FETCH FIRST ` + strconv.Itoa(limit) + ` ROWS ONLY
 `
 
@@ -503,14 +504,15 @@ FETCH FIRST ` + strconv.Itoa(limit) + ` ROWS ONLY
 	out := make([]model.SuccessTransactionDetail, 0, limit)
 	for rows.Next() {
 		var (
-			refNum, txnAt, termID, termLoc, product, resp, outcomeVal string
-			acquirer, txnSrc, txnDest                                 string
-			msgType, merchantType                                     sql.NullFloat64
-			amount                                                    sql.NullFloat64
+			refNum, txnAt, txnTime, termID, termLoc, product, resp, outcomeVal string
+			acquirer, txnSrc, txnDest                                          string
+			msgType, merchantType                                              sql.NullFloat64
+			amount                                                             sql.NullFloat64
 		)
 		if err := rows.Scan(
 			&refNum,
 			&txnAt,
+			&txnTime,
 			&msgType,
 			&termID,
 			&termLoc,
@@ -534,6 +536,7 @@ FETCH FIRST ` + strconv.Itoa(limit) + ` ROWS ONLY
 		out = append(out, model.SuccessTransactionDetail{
 			ID:               id,
 			TxnAt:            txnAt,
+			TxnTime:          txnTime,
 			MsgType:          nullInt(msgType),
 			TerminalID:       termID,
 			TerminalLocation: termLoc,
@@ -589,6 +592,7 @@ func respCodeLabel(code, outcome string) string {
 	}
 	return "Others"
 }
+
 type flowMetricResult struct {
 	TotalTransactions  int64
 	ApprovedCount      int64

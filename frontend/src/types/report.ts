@@ -54,6 +54,7 @@ export type SuccessRateRow = DeclineReason & {
 export type SuccessTransactionDetail = {
   id: string;
   txnAt: string;
+  txnTime: string,
   msgType: number;
   terminalId: string;
   terminalLocation: string;

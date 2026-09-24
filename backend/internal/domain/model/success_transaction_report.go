@@ -47,20 +47,21 @@ type SuccessRateTrendReport struct {
 
 // SuccessTransactionDetail is one shclog authorization row for browse/drill-down.
 type SuccessTransactionDetail struct {
-	ID                string  `json:"id"`
-	TxnAt             string  `json:"txnAt"`
-	MsgType           int64   `json:"msgType"`
-	TerminalID        string  `json:"terminalId"`
-	TerminalLocation  string  `json:"terminalLocation"`
-	CardMasked        string  `json:"cardMasked"`
-	CardProduct       string  `json:"cardProduct"`
-	RespCode          string  `json:"respCode"`
-	RespLabel         string  `json:"respLabel"`
-	Outcome           string  `json:"outcome"` // approved | declined | reversed
-	Amount            float64 `json:"amount"`
-	RefNum            string  `json:"refNum"`
-	Acquirer          string  `json:"acquirer"`
-	TxnSrc            string  `json:"txnSrc"`
-	TxnDest           string  `json:"txnDest"`
-	MerchantType      int64   `json:"merchantType"`
+	ID               string  `json:"id"`
+	TxnAt            string  `json:"txnAt"`
+	TxnTime          string  `json:"txnTime"`
+	MsgType          int64   `json:"msgType"`
+	TerminalID       string  `json:"terminalId"`
+	TerminalLocation string  `json:"terminalLocation"`
+	CardMasked       string  `json:"cardMasked"`
+	CardProduct      string  `json:"cardProduct"`
+	RespCode         string  `json:"respCode"`
+	RespLabel        string  `json:"respLabel"`
+	Outcome          string  `json:"outcome"` // approved | declined | reversed
+	Amount           float64 `json:"amount"`
+	RefNum           string  `json:"refNum"`
+	Acquirer         string  `json:"acquirer"`
+	TxnSrc           string  `json:"txnSrc"`
+	TxnDest          string  `json:"txnDest"`
+	MerchantType     int64   `json:"merchantType"`
 }
