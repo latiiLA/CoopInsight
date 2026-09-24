@@ -27,16 +27,6 @@ const (
 	RoleStatusDeleted = "deleted"
 )
 
-type CreateRoleDTO struct {
-	Name        string   `json:"name" binding:"required,min=3,max=50,alphanum"`
-	Permissions []string `json:"permissions" binding:"required,min=1,dive,required"`
-}
-
-type UpdateRoleDTO struct {
-	Name        string   `json:"name" binding:"required,min=3,max=50,alphanum"`
-	Permissions []string `json:"permissions" binding:"required,min=1,dive,required"`
-}
-
 type RoleRepository interface {
 	Create(ctx context.Context, role *Role) error
 	FindByID(ctx context.Context, role_id primitive.ObjectID) (*Role, error)
