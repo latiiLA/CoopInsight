@@ -12,6 +12,8 @@ import unclearedReducer from "@/features/uncleared_slice";
 import clearedReducer from "@/features/cleared_slice";
 import unsettledReducer from "@/features/unsettled_slice";
 import settledReducer from "@/features/settled_slice";
+import cardReducer from "@/features/card_slice";
+import cardActivityReducer from "@/features/card_activity_slice";
 
 export const store = configureStore({
   reducer: {
@@ -28,6 +30,8 @@ export const store = configureStore({
       cleared: clearedReducer,
       unsettled: unsettledReducer,
       settled: settledReducer,
+      card: cardReducer,
+      cardActivity: cardActivityReducer
   },
 })
 

@@ -33,6 +33,7 @@ type Handlers struct {
 	Cleared                    handler.ClearedHandler
 	Unsettled                  handler.UnsettledHandler
 	Settled                    handler.SettledHandler
+	Card                       handler.CardHandler
 }
 
 func SetupRouter(handlers Handlers) *gin.Engine {
@@ -173,6 +174,11 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 		handlers.VisaMonitoring,
 		handlers.ISTMonitoring,
 		handlers.SwitchCommand,
+	)
+
+	registerCardRoutes(
+		oracleProtected,
+		handlers.Card,
 	)
 
 	return router

@@ -28,7 +28,7 @@ import OffusMonitoring from "./pages/monitoring/offus/offus-monitoring";
 import MastercardDebitMonitoring from "./pages/monitoring/mastercard-debit/mastercard-debit-monitoring";
 import MastercardCreditMonitoring from "./pages/monitoring/mastercard-credit/mastercard-credit-monitoring";
 import VisaMonitoring from "./pages/monitoring/visa/visa-monitoring";
-import IstMonitoring from "./pages/monitoring/ist/ist-monitoring";
+import IstMonitoring, { AtmFleetCard } from "./pages/monitoring/ist/ist-monitoring";
 import AtmTerminals from "./pages/dashboards/atm-terminals/atm-terminals";
 import AtmDashboard from "./pages/dashboards/atm-terminals/atm-dashboard";
 import PosTerminals from "./pages/dashboards/pos-terminals/pos-terminals";
@@ -43,6 +43,8 @@ import Unsettled from "./pages/settlement/unsettled";
 import Settled from "./pages/settlement/settled";
 import NotFound from "./pages/not-found";
 import { RequirePermission } from "./components/require-permission";
+import CardPerStatus from "./pages/card/card-per-status";
+import CardActivityDashboard from "./pages/card/card-activity-dashboard";
 
 function App() {
   return (
@@ -336,6 +338,14 @@ function App() {
               </RequirePermission>
             }
           />
+          {/* <Route
+            path="/ist-monitoring"
+            element={
+              <RequirePermission permissions={["monitoring:view-ist"]}>
+                <AtmFleetCard {} />
+              </RequirePermission>
+            }
+          /> */}
           <Route
             path="/atm-dashboard"
             element={
@@ -590,6 +600,27 @@ function App() {
                   title="Settled Mastercard"
                   description="Mastercard POS purchases that have been cleared and settled."
                 />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/cards-per-status"
+            element={
+              <RequirePermission
+                permissions={["card:view-number-of-cards-per-status"]}
+              >
+                <CardPerStatus
+                  title="Card count per status"
+                  description="Shows total cards issued per their current status."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/card-activity"
+            element={
+              <RequirePermission permissions={["card:view-activity-dashboard"]}>
+                <CardActivityDashboard />
               </RequirePermission>
             }
           />

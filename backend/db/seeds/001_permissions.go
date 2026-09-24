@@ -89,6 +89,9 @@ var Catalog = []permissionSeed{
 	{Name: "settlement:view-settled-visa", Resource: "settlement", Action: "view-settled-visa", Description: "View settled VISA settlement items"},
 	{Name: "settlement:view-settled-mastercard", Resource: "settlement", Action: "view-settled-mastercard", Description: "View settled Mastercard (MDS) settlement items"},
 
+	{Name: "card:view-number-of-cards-per-status", Resource: "card", Action: "view-number-of-cards-per-status", Description: "View total card counter per their statuses"},
+	{Name: "card:view-activity-dashboard", Resource: "card", Action: "view-activity-dashboard", Description: "View daily card requested, printed, and activated activity dashboard"},
+
 	{Name: "activity:view", Resource: "activity", Action: "view", Description: "View activity log"},
 }
 

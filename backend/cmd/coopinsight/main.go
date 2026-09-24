@@ -205,6 +205,7 @@ func main() {
 	var clearedHandler handler.ClearedHandler
 	var unsettledHandler handler.UnsettledHandler
 	var settledHandler handler.SettledHandler
+	var cardHandler handler.CardHandler
 	if oracleDB != nil {
 		testHandler = handler.NewTestHandler(
 			service.NewTestService(oracle.NewTestRepository(oracleDB)),
@@ -234,6 +235,9 @@ func main() {
 		settledHandler = handler.NewSettledHandler(
 			service.NewSettledService(oracle.NewSettledRepository(oracleDB)),
 		)
+		cardHandler = handler.NewCardHandler(
+			service.NewCardService(oracle.NewCardRepository(oracleDB)),
+		)
 	} else {
 		testHandler = handler.NewTestHandler(service.NewTestService(nil))
 		successTransactionHandler = handler.NewSuccessTransactionHandler(
@@ -249,6 +253,7 @@ func main() {
 		clearedHandler = handler.NewClearedHandler(service.NewClearedService(nil))
 		unsettledHandler = handler.NewUnsettledHandler(service.NewUnsettledService(nil))
 		settledHandler = handler.NewSettledHandler(service.NewSettledService(nil))
+		cardHandler = handler.NewCardHandler(service.NewCardService(nil))
 	}
 
 	var onusCollector *sshswitch.Collector
@@ -380,6 +385,7 @@ func main() {
 		Cleared:                    clearedHandler,
 		Unsettled:                  unsettledHandler,
 		Settled:                    settledHandler,
+		Card:                       cardHandler,
 	})
 
 	// --------------------------------------------------

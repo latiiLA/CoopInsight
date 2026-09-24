@@ -6,6 +6,7 @@ import {
   ChartNoAxesGantt,
   ChevronRight,
   CreditCard,
+  CreditCardIcon,
   Home,
   Inbox,
   KeyRound,
@@ -72,6 +73,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../app/store/store";
 import { hasPermission } from "../../utility/has-permission";
 import { avatarSrc } from "@/lib/avatars";
+import { MdCreditCard, MdOutlineCreditCard } from "react-icons/md";
 
 // ------------------------------------
 // Types
@@ -327,6 +329,18 @@ const data: {
       url: "#",
       items: [
         {
+          title: "IST switch health",
+          icon: ServerCog,
+          url: "ist-monitoring",
+          permissions: ["monitoring:view-ist"],
+        },
+        {
+          title: "ATM monitoring",
+          icon: AtmIcon,
+          url: "atm-monitoring",
+          permissions: ["monitoring:view-atm"],
+        },
+        {
           title: "Onus monitoring",
           icon: Radio,
           url: "onus-monitoring",
@@ -355,12 +369,6 @@ const data: {
           icon: VisaIcon,
           url: "visa-monitoring",
           permissions: ["monitoring:view-visa"],
-        },
-        {
-          title: "IST switch health",
-          icon: ServerCog,
-          url: "ist-monitoring",
-          permissions: ["monitoring:view-ist"],
         },
       ],
     },
@@ -404,6 +412,25 @@ const data: {
           url: "pos-comparison",
           icon: ChartBar,
           permissions: ["terminal:view-pos-transaction"],
+        },
+      ],
+    },
+    {
+      title: "Cards",
+      icon: CreditCardIcon,
+      url: "#",
+      items: [
+        {
+          title: "Number of Cards Per Status",
+          icon: MdCreditCard,
+          url: "cards-per-status",
+          permissions: ["card:view-number-of-cards-per-status"],
+        },
+        {
+          title: "Card Activity Dashboard",
+          icon: Activity,
+          url: "card-activity",
+          permissions: ["card:view-activity-dashboard"],
         },
       ],
     },
@@ -614,7 +641,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     .filter((item) => item.items.length > 0);
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar variant="sidebar" collapsible="icon" {...props}>
       <SidebarHeader>
         <VersionSwitcher
           versions={data.versions}
