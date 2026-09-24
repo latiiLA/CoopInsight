@@ -384,9 +384,9 @@ export default function IstMonitoring() {
             />
           </div>
 
-          <AtmFleetCard rows={atmRows} cycleTime={snapshot.time} />
-
           <BinServicesSection bins={snapshot.bins ?? []} />
+
+          <AtmFleetCard rows={atmRows} cycleTime={snapshot.time} />
 
           <div className="grid gap-3 lg:grid-cols-3">
             <Card className="lg:col-span-2">
@@ -697,7 +697,7 @@ function MiniStat({
   );
 }
 
-function AtmFleetCard({
+export function AtmFleetCard({
   rows,
   cycleTime,
 }: {
