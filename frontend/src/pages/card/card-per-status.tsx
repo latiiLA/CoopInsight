@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DateRange } from "react-day-picker";
+import type { DateRange } from "react-day-picker";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 
@@ -70,8 +70,16 @@ export default function CardPerStatus({
   const [healthFilter, setHealthFilter] = useState<CardHealth | null>(null);
 
   // An unset range means the report is unfiltered, which is every card on
-  // record rather than a default window.
-  const hasDateRange = Boolean(dateRange?.from && dateRange?.to);
+  // record rather than a default window. Collapsing to a concrete pair here
+  // narrows both ends for the caption, which a hasDateRange boolean cannot do
+  // on its own.
+  const activeRange = useMemo(() => {
+    const from = dateRange?.from;
+    const to = dateRange?.to;
+    return from && to ? { from, to } : undefined;
+  }, [dateRange]);
+
+  const hasDateRange = activeRange !== undefined;
 
   const visibleRows = useMemo(
     () =>
@@ -243,10 +251,10 @@ export default function CardPerStatus({
       )}
 
       <p className="text-xs text-muted-foreground">
-        {hasDateRange ? (
+        {activeRange ? (
           <>
-            Showing cards dated {format(dateRange.from as Date, "MMM d, yyyy")} to{" "}
-            {format(dateRange.to as Date, "MMM d, yyyy")}.
+            Showing cards dated {format(activeRange.from, "MMM d, yyyy")} to{" "}
+            {format(activeRange.to, "MMM d, yyyy")}.
           </>
         ) : (
           <>
