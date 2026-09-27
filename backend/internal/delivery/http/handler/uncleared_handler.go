@@ -15,6 +15,7 @@ type UnclearedHandler interface {
 	ListETH(c *gin.Context)
 	ListVisa(c *gin.Context)
 	ListMastercard(c *gin.Context)
+	ListVisaCybersource(c *gin.Context)
 }
 
 type unclearedHandler struct {
@@ -31,6 +32,10 @@ func (h *unclearedHandler) ListETH(c *gin.Context) {
 
 func (h *unclearedHandler) ListVisa(c *gin.Context) {
 	h.list(c, h.service.ListVisa)
+}
+
+func (h *unclearedHandler) ListVisaCybersource(c *gin.Context) {
+	h.list(c, h.service.ListVisaCybersource)
 }
 
 func (h *unclearedHandler) ListMastercard(c *gin.Context) {

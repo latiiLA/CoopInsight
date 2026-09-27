@@ -11,20 +11,11 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 )
 
-// Shared scheme BIN constants (uncleared + unsettled + cleared + settled ETH).
-const (
-	sourceBinETH = int64(1000000011)
-	destBinETH   = int64(1000000010)
-)
-
-// Keep alias used by older references in this package.
-const unclearedSelectColumns = clearingSelectColumns
-
 const unclearedBaseWhere = `
 WHERE t.ISS_ACQ = 'ACQ'
 	AND t.POS_ATM = 'POS'
-	AND t.MSGTYPE = 210
-	AND t.TR_RESPCODE = '0'
+	AND t.MSGTYPE = :msg_type
+	AND t.TR_RESPCODE IN ('0', '00')
 	AND (t.TR_POSTED = 0 OR t.TR_POSTED IS NULL)
 	AND t.TR_SETTLE = '0'
 	AND t.TR_CONV_DATE >= TO_DATE(:date_from, 'MM-DD-YYYY')
@@ -49,15 +40,20 @@ func NewUnclearedRepository(db *sql.DB) repository.UnclearedRepository {
 
 func (r *unclearedRepository) List(
 	ctx context.Context,
+	msgType int64,
 	dateFrom, dateTo string,
 	sourceBin, destBin int64,
 	page, pageSize int,
 ) ([]model.UnclearedTransaction, bool, error) {
+	fmt.Printf("Executing SQL:\n%s\nWith Args: msgType=%d, sourceBin=%d, destBin=%d, dateFrom=%s, dateTo=%s, offset=%d, fetch=%d\n",
+		unclearedBinQuery, msgType, sourceBin, destBin, dateFrom, dateTo, (page-1)*pageSize, pageSize+1,
+	)
+
 	page, pageSize = normalizeClearingPage(page, pageSize)
 	rows, err := r.db.QueryContext(
 		ctx,
 		unclearedBinQuery,
-		clearingListArgs(sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
+		clearingListArgs(msgType, sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
 	)
 	if err != nil {
 		return nil, false, wrapError(common.ErrFailedToFetchReport, err)
@@ -80,6 +76,7 @@ func scanUnclearedRows(rows *sql.Rows) ([]model.UnclearedTransaction, error) {
 		var (
 			id        sql.NullFloat64
 			date      sql.NullString
+			txnDate   sql.NullString
 			timeVal   sql.NullString
 			msgType   sql.NullFloat64
 			procCode  sql.NullFloat64
@@ -95,11 +92,13 @@ func scanUnclearedRows(rows *sql.Rows) ([]model.UnclearedTransaction, error) {
 			txnDest   sql.NullString
 			issAcq    sql.NullString
 			posAtm    sql.NullString
+			txnId     sql.NullString
 		)
 
 		if err := rows.Scan(
 			&id,
 			&date,
+			&txnDate,
 			&timeVal,
 			&msgType,
 			&procCode,
@@ -115,6 +114,7 @@ func scanUnclearedRows(rows *sql.Rows) ([]model.UnclearedTransaction, error) {
 			&txnDest,
 			&issAcq,
 			&posAtm,
+			&txnId,
 		); err != nil {
 			return nil, wrapError(common.ErrFailedToFetchReport, err)
 		}
@@ -122,6 +122,7 @@ func scanUnclearedRows(rows *sql.Rows) ([]model.UnclearedTransaction, error) {
 		results = append(results, model.UnclearedTransaction{
 			ID:             int64(id.Float64),
 			Date:           strings.TrimSpace(date.String),
+			TxnDate:        strings.TrimSpace(txnDate.String),
 			Time:           formatClearingTime(timeVal.String),
 			MsgType:        int64(msgType.Float64),
 			ProcCode:       int64(procCode.Float64),
@@ -137,6 +138,7 @@ func scanUnclearedRows(rows *sql.Rows) ([]model.UnclearedTransaction, error) {
 			TxnDest:        strings.TrimSpace(txnDest.String),
 			IssuerAcquirer: strings.TrimSpace(issAcq.String),
 			PosAtm:         strings.TrimSpace(posAtm.String),
+			TxnID:          strings.TrimSpace(txnId.String),
 		})
 	}
 

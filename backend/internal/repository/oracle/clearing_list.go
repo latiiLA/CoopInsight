@@ -32,7 +32,8 @@ ORDER BY t.TR_CONV_DATE DESC, t.TR_TIME DESC, t.TR_TRACE DESC
 
 const clearingSelectColumns = `
 	NVL(t.TRANS_LOG_ID, t.ID) AS id,
-	TO_CHAR(t.TR_CONV_DATE, 'YYYY-MM-DD') AS tr_date,
+	TO_CHAR(t.TR_CONV_DATE, 'YYYY-MM-DD') AS tr_conv_date,
+	TO_CHAR(t.TR_DATE, 'YYYY-MM-DD') AS tr_date,
 	LPAD(TO_CHAR(NVL(t.TR_TIME, 0)), 6, '0') AS tr_time,
 	NVL(t.MSGTYPE, 0) AS msgtype,
 	NVL(t.PROC_CODE, 0) AS proc_code,
@@ -47,7 +48,8 @@ const clearingSelectColumns = `
 	t.TR_TXNSRC AS txn_source,
 	t.TR_TXNDEST AS txn_dest,
 	t.ISS_ACQ AS issuer_acquirer,
-	t.POS_ATM AS pos_atm
+	t.POS_ATM AS pos_atm,
+	TO_CHAR(t.TR_TRANS_ID) AS txn_id
 `
 
 func normalizeClearingPage(page, pageSize int) (int, int) {
@@ -69,6 +71,7 @@ FETCH NEXT :fetch_limit ROWS ONLY
 `
 
 func clearingListArgs(
+	msgType int64,
 	sourceBin, destBin int64,
 	dateFrom, dateTo string,
 	page, pageSize int,
@@ -78,6 +81,7 @@ func clearingListArgs(
 	// Fetch one extra row to detect hasMore without a COUNT(*).
 	fetchLimit := pageSize + 1
 	return []any{
+		sql.Named("msg_type", msgType),
 		sql.Named("source_bin", sourceBin),
 		sql.Named("dest_bin", destBin),
 		sql.Named("date_from", dateFrom),

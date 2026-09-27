@@ -11,6 +11,7 @@ func registerReportRoutes(
 	successTransactionHandler handler.SuccessTransactionHandler,
 	ebirrCardlessHandler handler.EbirrCardlessWithdrawalHandler,
 	terminalTransactionHandler handler.TerminalTransactionHandler,
+	transactionMixHandler handler.TransactionMixHandler,
 ) {
 	reports := protected.Group("/reports")
 
@@ -231,6 +232,14 @@ func registerReportRoutes(
 			[]string{"terminal:view-atm-transaction"},
 		),
 		terminalTransactionHandler.GetAtmComparison,
+	)
+	reports.GET(
+		"/transaction-mix",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:view-transaction-mix"},
+		),
+		transactionMixHandler.GetMix,
 	)
 	reports.GET(
 		"/pos-terminal-comparison",

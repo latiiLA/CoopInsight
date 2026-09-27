@@ -34,7 +34,7 @@ func (s *unsettledService) ListETH(
 	dateFrom, dateTo string,
 	page, pageSize int,
 ) (ClearingPageResult[model.UnsettledTransaction], error) {
-	return s.list(ctx, dateFrom, dateTo, unsettledSourceBinETH, unsettledDestBinETH, page, pageSize)
+	return s.list(ctx, 210, dateFrom, dateTo, unsettledSourceBinETH, unsettledDestBinETH, page, pageSize)
 }
 
 func (s *unsettledService) ListVisa(
@@ -42,7 +42,7 @@ func (s *unsettledService) ListVisa(
 	dateFrom, dateTo string,
 	page, pageSize int,
 ) (ClearingPageResult[model.UnsettledTransaction], error) {
-	return s.list(ctx, dateFrom, dateTo, unsettledVisaBin, unsettledVisaBin, page, pageSize)
+	return s.list(ctx, 210, dateFrom, dateTo, unsettledVisaBin, unsettledVisaBin, page, pageSize)
 }
 
 func (s *unsettledService) ListMastercard(
@@ -50,11 +50,12 @@ func (s *unsettledService) ListMastercard(
 	dateFrom, dateTo string,
 	page, pageSize int,
 ) (ClearingPageResult[model.UnsettledTransaction], error) {
-	return s.list(ctx, dateFrom, dateTo, unsettledMDSBin, unsettledMDSBin, page, pageSize)
+	return s.list(ctx, 210, dateFrom, dateTo, unsettledMDSBin, unsettledMDSBin, page, pageSize)
 }
 
 func (s *unsettledService) list(
 	ctx context.Context,
+	msgtype int64,
 	dateFrom, dateTo string,
 	sourceBin, destBin int64,
 	page, pageSize int,
@@ -75,7 +76,7 @@ func (s *unsettledService) list(
 	}
 	empty.Page, empty.PageSize = page, pageSize
 
-	rows, hasMore, err := s.repository.List(ctx, from, to, sourceBin, destBin, page, pageSize)
+	rows, hasMore, err := s.repository.List(ctx, msgtype, from, to, sourceBin, destBin, page, pageSize)
 	if err != nil {
 		return empty, err
 	}

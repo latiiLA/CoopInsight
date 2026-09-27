@@ -7,5 +7,5 @@ import (
 )
 
 type UnsettledRepository interface {
-	List(ctx context.Context, dateFrom, dateTo string, sourceBin, destBin int64, page, pageSize int) ([]model.UnsettledTransaction, bool, error)
+	List(ctx context.Context, msgType int64, dateFrom, dateTo string, sourceBin, destBin int64, page, pageSize int) ([]model.UnsettledTransaction, bool, error)
 }

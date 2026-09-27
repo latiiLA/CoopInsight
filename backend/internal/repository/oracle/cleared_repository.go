@@ -38,6 +38,7 @@ func NewClearedRepository(db *sql.DB) repository.ClearedRepository {
 
 func (r *clearedRepository) List(
 	ctx context.Context,
+	msgType int64,
 	dateFrom, dateTo string,
 	sourceBin, destBin int64,
 	page, pageSize int,
@@ -46,7 +47,7 @@ func (r *clearedRepository) List(
 	rows, err := r.db.QueryContext(
 		ctx,
 		clearedBinQuery,
-		clearingListArgs(sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
+		clearingListArgs(msgType, sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
 	)
 	if err != nil {
 		return nil, false, wrapError(common.ErrFailedToFetchReport, err)

@@ -119,6 +119,35 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermissions []st
 	}
 }
 
+// HasPermission reports whether the authenticated caller holds the named
+// permission.
+//
+// Use this for field-level gating, such as omitting a cardholder name from a
+// response, where AuthorizeRolesOrPermissions cannot express the rule because
+// that middleware can only allow or reject a whole request.
+//
+// There is deliberately no role bypass here, unlike AuthorizeRolesOrPermissions:
+// narrowing a response is a restriction, and SUPERADMIN already holds every
+// seeded permission so it passes on the permission check anyway.
+func HasPermission(c *gin.Context, permission string) bool {
+	claimsValue, exists := c.Get("claims")
+	if !exists {
+		return false
+	}
+
+	claims, ok := toClaimsMap(claimsValue)
+	if !ok {
+		return false
+	}
+
+	permissions, exists := claims["permissions"]
+	if !exists {
+		return false
+	}
+
+	return containsPermission(extractPermissions(permissions), permission)
+}
+
 func extractPermissions(value interface{}) []string {
 	switch permissions := value.(type) {
 	case []string:

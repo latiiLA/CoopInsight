@@ -47,4 +47,16 @@ func registerCardRoutes(
 		),
 		cardHandler.CardBranchTrend,
 	)
+
+	// Card-level records behind the activity counts. Deliberately a different
+	// permission from the dashboard: the counts are aggregates, these are
+	// individual cards.
+	clearing.GET(
+		"/details",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"card:view-card-details"},
+		),
+		cardHandler.CardDetails,
+	)
 }

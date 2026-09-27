@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
@@ -28,77 +27,7 @@ func oracleDate(t time.Time) string {
 	return fmt.Sprintf("%02d-%02d-%04d", int(t.Month()), t.Day(), t.Year())
 }
 
-func (r *cardRepository) CountCardPerStatus(
-	ctx context.Context,
-	dateFrom *time.Time,
-	dateTo *time.Time,
-) ([]model.Card, error) {
-	query := `
-		SELECT
-			c.STATCODE AS CARD_STATUS,
-			s.DESCR AS STATUS_DESCRIPTION,
-			COUNT(*) AS CARD_COUNT
-		FROM cortex.crddet c
-		LEFT JOIN cortex.crdstatus s
-			ON TRIM(c.STATCODE) = TRIM(s.STATCODE)
-	`
-
-	args := make([]any, 0, 2)
-	conditions := make([]string, 0, 2)
-
-	if dateFrom != nil {
-		conditions = append(conditions, "c.DATE_CREATED >= TO_DATE(:1, 'MM-DD-YYYY')")
-		args = append(args, oracleDate(*dateFrom))
-	}
-
-	if dateTo != nil {
-		conditions = append(conditions, "c.DATE_CREATED < TO_DATE(:2, 'MM-DD-YYYY') + 1")
-		args = append(args, oracleDate(*dateTo))
-	}
-
-	if len(conditions) > 0 {
-		query += "\nWHERE " + strings.Join(conditions, "\n  AND ")
-	}
-
-	query += `
-		GROUP BY
-			c.STATCODE,
-			s.DESCR
-		ORDER BY
-			c.STATCODE
-	`
-
-	rows, err := r.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var cards []model.Card
-
-	for rows.Next() {
-		var card model.Card
-
-		if err := rows.Scan(
-			&card.CardStatus,
-			&card.StatusDescription,
-			&card.CardCount,
-		); err != nil {
-			return nil, err
-		}
-
-		cards = append(cards, card)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return cards, nil
-}
-
-// CardActivity returns per-day counts of cards created, issued, and activated
-// within [dateFrom, dateTo]. Created comes from CRDDET.DATE_CREATED, while
+// CardActivity returns per-day counts of cards created, issued, and activated// within [dateFrom, dateTo]. Created comes from CRDDET.DATE_CREATED, while
 // issued and activated come from CRDDET_X.DATELSTISSUED and
 // CRDDET_X.DATE_ACTIVATION respectively. Only days that have at least one
 // event are returned; the service layer fills the gaps.

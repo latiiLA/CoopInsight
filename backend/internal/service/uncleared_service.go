@@ -9,10 +9,12 @@ import (
 )
 
 const (
-	unclearedSourceBinETH = int64(1000000011)
-	unclearedDestBinETH   = int64(1000000010)
-	unclearedVisaBin      = int64(4)
-	unclearedMDSBin       = int64(5)
+	unclearedSourceBinETH             = int64(1000000011)
+	unclearedDestBinETH               = int64(1000000010)
+	unclearedVisaBin                  = int64(4)
+	unclearedMDSBin                   = int64(5)
+	unclearedVisaCybersourceSourceBin = int64(408158)
+	unclearedVisaCybersourceBin       = int64(9444444444)
 )
 
 type ClearingPageResult[T any] struct {
@@ -26,6 +28,7 @@ type UnclearedService interface {
 	ListETH(ctx context.Context, dateFrom, dateTo string, page, pageSize int) (ClearingPageResult[model.UnclearedTransaction], error)
 	ListVisa(ctx context.Context, dateFrom, dateTo string, page, pageSize int) (ClearingPageResult[model.UnclearedTransaction], error)
 	ListMastercard(ctx context.Context, dateFrom, dateTo string, page, pageSize int) (ClearingPageResult[model.UnclearedTransaction], error)
+	ListVisaCybersource(ctx context.Context, dateFrom, dateTo string, page, pageSize int) (ClearingPageResult[model.UnclearedTransaction], error)
 }
 
 type unclearedService struct {
@@ -41,7 +44,7 @@ func (s *unclearedService) ListETH(
 	dateFrom, dateTo string,
 	page, pageSize int,
 ) (ClearingPageResult[model.UnclearedTransaction], error) {
-	return s.list(ctx, dateFrom, dateTo, unclearedSourceBinETH, unclearedDestBinETH, page, pageSize)
+	return s.list(ctx, 210, dateFrom, dateTo, unclearedSourceBinETH, unclearedDestBinETH, page, pageSize)
 }
 
 func (s *unclearedService) ListVisa(
@@ -49,7 +52,15 @@ func (s *unclearedService) ListVisa(
 	dateFrom, dateTo string,
 	page, pageSize int,
 ) (ClearingPageResult[model.UnclearedTransaction], error) {
-	return s.list(ctx, dateFrom, dateTo, unclearedVisaBin, unclearedVisaBin, page, pageSize)
+	return s.list(ctx, 210, dateFrom, dateTo, unclearedVisaBin, unclearedVisaBin, page, pageSize)
+}
+
+func (s *unclearedService) ListVisaCybersource(
+	ctx context.Context,
+	dateFrom, dateTo string,
+	page, pageSize int,
+) (ClearingPageResult[model.UnclearedTransaction], error) {
+	return s.list(ctx, 230, dateFrom, dateTo, unclearedVisaCybersourceSourceBin, unclearedVisaCybersourceBin, page, pageSize)
 }
 
 func (s *unclearedService) ListMastercard(
@@ -57,11 +68,12 @@ func (s *unclearedService) ListMastercard(
 	dateFrom, dateTo string,
 	page, pageSize int,
 ) (ClearingPageResult[model.UnclearedTransaction], error) {
-	return s.list(ctx, dateFrom, dateTo, unclearedMDSBin, unclearedMDSBin, page, pageSize)
+	return s.list(ctx, 210, dateFrom, dateTo, unclearedMDSBin, unclearedMDSBin, page, pageSize)
 }
 
 func (s *unclearedService) list(
 	ctx context.Context,
+	msgType int64,
 	dateFrom, dateTo string,
 	sourceBin, destBin int64,
 	page, pageSize int,
@@ -82,7 +94,7 @@ func (s *unclearedService) list(
 	}
 	empty.Page, empty.PageSize = page, pageSize
 
-	rows, hasMore, err := s.repository.List(ctx, from, to, sourceBin, destBin, page, pageSize)
+	rows, hasMore, err := s.repository.List(ctx, msgType, from, to, sourceBin, destBin, page, pageSize)
 	if err != nil {
 		return empty, err
 	}
@@ -107,7 +119,6 @@ func parseClearingListArgs(dateFrom, dateTo string, page, pageSize int) (string,
 	if err != nil {
 		return "", "", 0, 0, err
 	}
-
 
 	if page < 1 {
 		page = 1

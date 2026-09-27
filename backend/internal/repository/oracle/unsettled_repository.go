@@ -15,7 +15,7 @@ SELECT` + clearingSelectColumns + `
 FROM clearing.trans_log t
 WHERE t.ISS_ACQ = 'ACQ'
 	AND t.POS_ATM = 'POS'
-	AND t.MSGTYPE = 210
+	AND t.MSGTYPE = :msgType
 	AND t.TR_RESPCODE = '0'
 	AND t.TR_POSTED = 1
 	AND t.TR_SETTLE = '0'
@@ -35,6 +35,7 @@ func NewUnsettledRepository(db *sql.DB) repository.UnsettledRepository {
 
 func (r *unsettledRepository) List(
 	ctx context.Context,
+	msgType int64,
 	dateFrom, dateTo string,
 	sourceBin, destBin int64,
 	page, pageSize int,
@@ -43,7 +44,7 @@ func (r *unsettledRepository) List(
 	rows, err := r.db.QueryContext(
 		ctx,
 		unsettledBinQuery,
-		clearingListArgs(sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
+		clearingListArgs(msgType, sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
 	)
 	if err != nil {
 		return nil, false, wrapError(common.ErrFailedToFetchReport, err)

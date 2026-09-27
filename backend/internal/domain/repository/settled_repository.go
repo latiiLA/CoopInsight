@@ -7,5 +7,5 @@ import (
 )
 
 type SettledRepository interface {
-	List(ctx context.Context, dateFrom, dateTo string, sourceBin, destBin int64, page, pageSize int) ([]model.SettledTransaction, bool, error)
+	List(ctx context.Context, msgType int64, dateFrom, dateTo string, sourceBin, destBin int64, page, pageSize int) ([]model.SettledTransaction, bool, error)
 }
