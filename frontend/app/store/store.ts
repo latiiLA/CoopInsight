@@ -1,4 +1,4 @@
-import { configureStore } from '@reduxjs/toolkit'
+import { configureStore } from "@reduxjs/toolkit";
 import userReducer from "../.././src/features/user_slice";
 import depositPerTerminalReducer from "../.././src/features/terminal_slice";
 import permissionReducer from "@/features/permission_slice";
@@ -14,28 +14,32 @@ import unsettledReducer from "@/features/unsettled_slice";
 import settledReducer from "@/features/settled_slice";
 import cardReducer from "@/features/card_slice";
 import cardActivityReducer from "@/features/card_activity_slice";
+import cardDetailReducer from "@/features/card_detail_slice";
+import visaSettlementReducer from "@/features/visa_settlement_slice";
 
 export const store = configureStore({
   reducer: {
-      user: userReducer,
-      depositPerTerminal: depositPerTerminalReducer,
-      permission: permissionReducer,
-      role: roleReducer,
-      report: reportReducer,
-      atmTerminal: atmTerminalReducer,
-      posTerminal: posTerminalReducer,
-      accountRequest: accountRequestReducer,
-      activityLog: activityLogReducer,
-      uncleared: unclearedReducer,
-      cleared: clearedReducer,
-      unsettled: unsettledReducer,
-      settled: settledReducer,
-      card: cardReducer,
-      cardActivity: cardActivityReducer
+    user: userReducer,
+    depositPerTerminal: depositPerTerminalReducer,
+    permission: permissionReducer,
+    role: roleReducer,
+    report: reportReducer,
+    atmTerminal: atmTerminalReducer,
+    posTerminal: posTerminalReducer,
+    accountRequest: accountRequestReducer,
+    activityLog: activityLogReducer,
+    uncleared: unclearedReducer,
+    cleared: clearedReducer,
+    unsettled: unsettledReducer,
+    settled: settledReducer,
+    card: cardReducer,
+    cardActivity: cardActivityReducer,
+    cardDetail: cardDetailReducer,
+    visaSettlement: visaSettlementReducer,
   },
-})
+});
 
 // Infer the `RootState` and `AppDispatch` types from the store itself
-export type RootState = ReturnType<typeof store.getState>
+export type RootState = ReturnType<typeof store.getState>;
 // Inferred type: {posts: PostsState, comments: CommentsState, users: UsersState}
-export type AppDispatch = typeof store.dispatch
+export type AppDispatch = typeof store.dispatch;

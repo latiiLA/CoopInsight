@@ -177,7 +177,24 @@ const cardActivitySlice = createSlice({
   reducers: {
     clearCardActivity: () => ({ ...initialState }),
     selectBranch: (state, action: PayloadAction<number | null>) => {
-      state.selectedBranchId = action.payload;
+      const next = action.payload;
+
+      // Clearing the selection always drops the trend it belonged to.
+      if (next === null) {
+        state.selectedBranchId = null;
+        state.branchTrend = null;
+        return;
+      }
+
+      // Re-selecting the branch that is already selected must keep the loaded
+      // trend. The fetch effect keys off selectedBranchId, so an unchanged ID
+      // never re-fires it and clearing here would blank the chart with no
+      // request to refill it.
+      if (state.selectedBranchId === next) {
+        return;
+      }
+
+      state.selectedBranchId = next;
       state.branchTrend = null;
     },
   },
@@ -224,11 +241,10 @@ const cardActivitySlice = createSlice({
       .addCase(fetchCardBranchTrend.fulfilled, (state, action) => {
         state.branchTrendLoading = false;
         state.branchTrendError = null;
-        // Ignore a late response for a branch that is no longer selected.
-        if (
-          state.selectedBranchId === null ||
-          state.selectedBranchId === action.payload.branchId
-        ) {
+        // Adopt the response only if its branch is still the selected one.
+        // A null selection means the trend was cleared, so a late response
+        // must not repopulate it.
+        if (state.selectedBranchId === action.payload.branchId) {
           state.branchTrend = action.payload.report;
         }
       })

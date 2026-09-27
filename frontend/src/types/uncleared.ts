@@ -1,6 +1,7 @@
 export type UnclearedTransaction = {
   id: number;
-  date: string;
+  convDate: string;
+  txnDate: string;
   time: string;
   msgType: number;
   procCode: number;
@@ -16,4 +17,5 @@ export type UnclearedTransaction = {
   txnDest: string;
   issuerAcquirer: string;
   posAtm: string;
+  txnId: string;
 };

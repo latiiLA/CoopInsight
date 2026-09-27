@@ -1,4 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import axios from "axios";
+
 import { RootState } from "../../app/store/store";
 import {
   DeclineReason,
@@ -15,6 +17,11 @@ import {
   TerminalPerformanceRow,
   TerminalTransaction,
 } from "@/types/report";
+import {
+  TransactionMixReport,
+  TransactionMixSegment,
+  TransactionMixSlice,
+} from "@/types/transaction-mix";
 import getErrorMessage from "../../utility/error-message";
 import { getTokenFromAuth, withAuthHeader } from "../../utility/auth-token";
 import api from "@/lib/api";
@@ -23,9 +30,27 @@ interface ReportState {
   successRate: SuccessTransactionReport | null;
   successRateLoading: boolean;
   successRateError: string | null;
+  /**
+   * requestId of the most recently dispatched report request.
+   *
+   * The report query takes tens of seconds, so a superseded request is often
+   * still running when a newer one is issued. Without this the slower stale
+   * response lands last and overwrites fresher data, which makes the totals on
+   * screen change after they were first drawn.
+   */
+  successRateRequestId: string | null;
   successRateTrend: SuccessRateTrendReport | null;
   successRateTrendLoading: boolean;
   successRateTrendError: string | null;
+  /**
+   * requestId of the most recently dispatched trend request.
+   *
+   * The trend query is heavy, so a superseded request can still be in flight
+   * when a newer one is issued. Without this, the slower stale response lands
+   * last and overwrites fresher data, which makes the totals on screen change
+   * after they were first drawn.
+   */
+  successRateTrendRequestId: string | null;
   successBrowse: SuccessTransactionDetail[];
   successBrowseLoading: boolean;
   successBrowseError: string | null;
@@ -38,6 +63,17 @@ interface ReportState {
   terminalComparison: TerminalPerformanceReport | null;
   terminalComparisonLoading: boolean;
   terminalComparisonError: string | null;
+  transactionMix: TransactionMixReport | null;
+  transactionMixLoading: boolean;
+  transactionMixError: string | null;
+  /**
+   * requestId of the most recently dispatched mix request.
+   *
+   * The mix aggregate reads every row in the range, so a superseded request is
+   * regularly still running when newer filters are applied. Without this the
+   * slower stale response lands last and replaces fresher percentages.
+   */
+  transactionMixRequestId: string | null;
 }
 
 interface FetchReportDateParams {
@@ -92,13 +128,19 @@ interface FetchTerminalComparisonParams extends FetchReportDateParams {
   fleet: "atm" | "pos";
 }
 
+interface FetchTransactionMixParams extends FetchReportDateParams {
+  channel?: SuccessChannel;
+}
+
 const initialState: ReportState = {
   successRate: null,
   successRateLoading: false,
   successRateError: null,
+  successRateRequestId: null,
   successRateTrend: null,
   successRateTrendLoading: false,
   successRateTrendError: null,
+  successRateTrendRequestId: null,
   successBrowse: [],
   successBrowseLoading: false,
   successBrowseError: null,
@@ -111,6 +153,10 @@ const initialState: ReportState = {
   terminalComparison: null,
   terminalComparisonLoading: false,
   terminalComparisonError: null,
+  transactionMix: null,
+  transactionMixLoading: false,
+  transactionMixError: null,
+  transactionMixRequestId: null,
 };
 
 function toNumber(value: unknown): number {
@@ -257,6 +303,10 @@ export const fetchSuccessTransactions = createAsyncThunk<
           dateFrom,
           dateTo,
         },
+        // Lets a superseded request be cancelled when the filters change again,
+        // so a slow response cannot come back to overwrite fresher data.
+        signal: thunkAPI.signal,
+        timeout: 180_000,
       });
 
       const report = response.data.data;
@@ -269,6 +319,15 @@ export const fetchSuccessTransactions = createAsyncThunk<
 
       return normalizeReport(report);
     } catch (error) {
+      // Rethrow on cancellation so the action is marked aborted and the reducer
+      // can ignore it. Swallowing it marks a superseded request as a genuine
+      // failure and surfaces a spurious error toast.
+      if (
+        thunkAPI.signal.aborted ||
+        (axios.isAxiosError(error) && error.code === "ERR_CANCELED")
+      ) {
+        throw error;
+      }
       return thunkAPI.rejectWithValue(getErrorMessage(error));
     }
   },
@@ -354,6 +413,10 @@ export const fetchSuccessRateTrend = createAsyncThunk<
           flow,
           granularity: granularity || undefined,
         },
+        // Lets a superseded request be cancelled when the filters change again,
+        // so a slow response cannot come back to overwrite fresher data.
+        signal: thunkAPI.signal,
+        timeout: 180_000,
       });
 
       const report = response.data.data;
@@ -363,6 +426,15 @@ export const fetchSuccessRateTrend = createAsyncThunk<
 
       return normalizeTrendReport(report);
     } catch (error) {
+      // Rethrow on cancellation so the action is marked aborted and the reducer
+      // can ignore it. Swallowing it here would mark a superseded request as a
+      // genuine failure and clear fresher data.
+      if (
+        thunkAPI.signal.aborted ||
+        (axios.isAxiosError(error) && error.code === "ERR_CANCELED")
+      ) {
+        throw error;
+      }
       return thunkAPI.rejectWithValue(getErrorMessage(error));
     }
   },
@@ -565,6 +637,108 @@ export const fetchTerminalComparison = createAsyncThunk<
   },
 );
 
+function normalizeMixSlice(
+  slice: TransactionMixSlice,
+): TransactionMixSlice {
+  return {
+    key: toText(slice.key),
+    label: toText(slice.label),
+    count: toNumber(slice.count),
+    countPercent: toNumber(slice.countPercent),
+    amount: toNumber(slice.amount),
+    amountPercent: toNumber(slice.amountPercent),
+  };
+}
+
+function normalizeMixSegment(
+  segment: TransactionMixSegment,
+): TransactionMixSegment {
+  return {
+    ...normalizeMixSlice(segment),
+    reversalCount: toNumber(segment.reversalCount),
+    reversalPercent: toNumber(segment.reversalPercent),
+  };
+}
+
+function normalizeTransactionMix(
+  report: TransactionMixReport,
+): TransactionMixReport {
+  return {
+    dateFrom: toText(report.dateFrom),
+    dateTo: toText(report.dateTo),
+    channel:
+      report.channel === "pos"
+        ? "pos"
+        : report.channel === "switch"
+          ? "switch"
+          : "atm",
+    totalCount: toNumber(report.totalCount),
+    totalAmount: toNumber(report.totalAmount),
+    authorisationCount: toNumber(report.authorisationCount),
+    reversalCount: toNumber(report.reversalCount),
+    reversalPercent: toNumber(report.reversalPercent),
+    approvedCount: toNumber(report.approvedCount),
+    byScheme: (report.byScheme ?? []).map(normalizeMixSegment),
+    byRouting: (report.byRouting ?? []).map(normalizeMixSegment),
+    byType: (report.byType ?? []).map(normalizeMixSlice),
+  };
+}
+
+export const fetchTransactionMix = createAsyncThunk<
+  TransactionMixReport,
+  FetchTransactionMixParams,
+  {
+    state: RootState;
+    rejectValue: string;
+  }
+>(
+  "report/fetchTransactionMix",
+  async ({ dateFrom, dateTo, channel = "switch" }, thunkAPI) => {
+    try {
+      const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+      if (!token) {
+        return thunkAPI.rejectWithValue("Authentication token not found");
+      }
+
+      const response = await api.get<{
+        isSuccessful: boolean;
+        message: string;
+        data: TransactionMixReport;
+      }>("/reports/transaction-mix", {
+        ...withAuthHeader(token),
+        params: {
+          dateFrom,
+          dateTo,
+          channel,
+        },
+        // Lets a superseded request be cancelled when the filters change again,
+        // so a slow response cannot come back to overwrite fresher data.
+        signal: thunkAPI.signal,
+        timeout: 180_000,
+      });
+
+      const report = response.data.data;
+      if (!report) {
+        return thunkAPI.rejectWithValue("Failed to fetch transaction mix report");
+      }
+
+      return normalizeTransactionMix(report);
+    } catch (error) {
+      // Rethrow on cancellation so the action is marked aborted and the reducer
+      // can ignore it. Swallowing it here would mark a superseded request as a
+      // genuine failure and clear fresher data.
+      if (
+        thunkAPI.signal.aborted ||
+        (axios.isAxiosError(error) && error.code === "ERR_CANCELED")
+      ) {
+        throw error;
+      }
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
 const reportSlice = createSlice({
   name: "report",
   initialState,
@@ -593,43 +767,60 @@ const reportSlice = createSlice({
       state.terminalComparison = null;
       state.terminalComparisonError = null;
     },
+    clearTransactionMix: (state) => {
+      state.transactionMix = null;
+      state.transactionMixError = null;
+    },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchSuccessTransactions.pending, (state, action) => {
         state.successRateLoading = true;
         state.successRateError = null;
-        const nextChannel = action.meta.arg.channel ?? "atm";
-        const nextFlow = action.meta.arg.flow ?? "acquiring";
-        // Drop previous report immediately when switching success-rate pages
-        // so the UI cannot show the prior channel/flow numbers.
-        if (
-          !state.successRate ||
-          state.successRate.channel !== nextChannel ||
-          state.successRate.flow !== nextFlow
-        ) {
-          state.successRate = null;
-        }
+        // Claim ownership of the slot. A response from any earlier request is
+        // stale from this point on and is discarded when it arrives.
+        state.successRateRequestId = action.meta.requestId;
+        // Always drop the previous report. It used to be kept when only the
+        // date range changed, which left the old range's totals on screen
+        // under the newly selected dates.
+        state.successRate = null;
       })
       .addCase(fetchSuccessTransactions.fulfilled, (state, action) => {
+        if (state.successRateRequestId !== action.meta.requestId) {
+          return;
+        }
         state.successRateLoading = false;
         state.successRate = action.payload;
       })
       .addCase(fetchSuccessTransactions.rejected, (state, action) => {
+        if (action.meta.aborted) return;
+        if (state.successRateRequestId !== action.meta.requestId) {
+          return;
+        }
         state.successRateLoading = false;
         state.successRateError =
           action.payload || "Failed to fetch success transaction report";
       })
-      .addCase(fetchSuccessRateTrend.pending, (state) => {
+      .addCase(fetchSuccessRateTrend.pending, (state, action) => {
         state.successRateTrendLoading = true;
         state.successRateTrendError = null;
+        // Claim ownership of the slot. A response from any earlier request is
+        // stale from this point on and is discarded when it arrives.
+        state.successRateTrendRequestId = action.meta.requestId;
         state.successRateTrend = null;
       })
       .addCase(fetchSuccessRateTrend.fulfilled, (state, action) => {
+        if (state.successRateTrendRequestId !== action.meta.requestId) {
+          return;
+        }
         state.successRateTrendLoading = false;
         state.successRateTrend = action.payload;
       })
       .addCase(fetchSuccessRateTrend.rejected, (state, action) => {
+        if (action.meta.aborted) return;
+        if (state.successRateTrendRequestId !== action.meta.requestId) {
+          return;
+        }
         state.successRateTrendLoading = false;
         state.successRateTrend = null;
         state.successRateTrendError =
@@ -689,6 +880,31 @@ const reportSlice = createSlice({
         state.terminalComparison = null;
         state.terminalComparisonError =
           action.payload || "Failed to fetch terminal comparison";
+      })
+      .addCase(fetchTransactionMix.pending, (state, action) => {
+        state.transactionMixLoading = true;
+        state.transactionMixError = null;
+        // Claim ownership of the slot. A response from any earlier request is
+        // stale from this point on and is discarded when it arrives.
+        state.transactionMixRequestId = action.meta.requestId;
+        state.transactionMix = null;
+      })
+      .addCase(fetchTransactionMix.fulfilled, (state, action) => {
+        if (state.transactionMixRequestId !== action.meta.requestId) {
+          return;
+        }
+        state.transactionMixLoading = false;
+        state.transactionMix = action.payload;
+      })
+      .addCase(fetchTransactionMix.rejected, (state, action) => {
+        if (action.meta.aborted) return;
+        if (state.transactionMixRequestId !== action.meta.requestId) {
+          return;
+        }
+        state.transactionMixLoading = false;
+        state.transactionMix = null;
+        state.transactionMixError =
+          action.payload || "Failed to fetch transaction mix report";
       });
   },
 });
@@ -700,6 +916,7 @@ export const {
   clearEbirrCardless,
   clearTerminalTransactions,
   clearTerminalComparison,
+  clearTransactionMix,
 } = reportSlice.actions;
 
 export default reportSlice.reducer;
