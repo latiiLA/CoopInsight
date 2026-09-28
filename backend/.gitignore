@@ -9,6 +9,8 @@ migrate
 credentials/
 cmd/explorer
 
+air.*
+
 # SSL certificates
 ssl
 ssl/*.key

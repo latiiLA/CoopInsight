@@ -360,6 +360,153 @@ func (r *visaSettlementRepository) ListBatchSummaries(ctx context.Context, limit
 	return results, nil
 }
 
+// FindSettledTransactionIDs returns all transaction IDs that have been settled
+// within the given date range. This is used to exclude settled transactions
+// from the unsettled view.
+func (r *visaSettlementRepository) FindSettledTransactionIDs(ctx context.Context, startDate, endDate time.Time) ([]string, error) {
+	start := time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
+	end := time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 23, 59, 59, 999999999, time.UTC)
+
+	filter := bson.M{
+		"transaction_date": bson.M{
+			"$gte": start,
+			"$lte": end,
+		},
+		"transaction_id": bson.M{"$exists": true, "$ne": ""},
+	}
+
+	// Use projection to only fetch transaction_id field
+	opts := options.Find().
+		SetProjection(bson.M{"transaction_id": 1}).
+		SetSort(bson.D{{Key: "transaction_id", Value: 1}})
+
+	cursor, err := r.txCollection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, fmt.Errorf("find settled transaction IDs: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var results []struct {
+		TransactionID string `bson:"transaction_id"`
+	}
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, fmt.Errorf("decode settled transaction IDs: %w", err)
+	}
+
+	ids := make([]string, 0, len(results))
+	for _, r := range results {
+		if r.TransactionID != "" {
+			ids = append(ids, r.TransactionID)
+		}
+	}
+
+	return ids, nil
+}
+
+// FindAllSettledTransactionIDs returns all settled transaction IDs without
+// any date filter. This is used for exclusion checks where the settlement
+// file's transaction_date may not align with Oracle's TR_CONV_DATE.
+func (r *visaSettlementRepository) FindAllSettledTransactionIDs(ctx context.Context) ([]string, error) {
+	filter := bson.M{
+		"transaction_id": bson.M{"$exists": true, "$ne": ""},
+	}
+
+	opts := options.Find().
+		SetProjection(bson.M{"transaction_id": 1}).
+		SetSort(bson.D{{Key: "transaction_id", Value: 1}})
+
+	cursor, err := r.txCollection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, fmt.Errorf("find all settled transaction IDs: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var results []struct {
+		TransactionID string `bson:"transaction_id"`
+	}
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, fmt.Errorf("decode all settled transaction IDs: %w", err)
+	}
+
+	ids := make([]string, 0, len(results))
+	for _, r := range results {
+		if r.TransactionID != "" {
+			ids = append(ids, r.TransactionID)
+		}
+	}
+
+	return ids, nil
+}
+
+// FindSettledTransactionIDsByIDs returns the subset of the given transaction
+// IDs that exist in the settlement collection.
+func (r *visaSettlementRepository) FindSettledTransactionIDsByIDs(ctx context.Context, transactionIDs []string) ([]string, error) {
+	if len(transactionIDs) == 0 {
+		return []string{}, nil
+	}
+
+	filter := bson.M{
+		"transaction_id": bson.M{"$in": transactionIDs},
+	}
+
+	opts := options.Find().
+		SetProjection(bson.M{"transaction_id": 1}).
+		SetSort(bson.D{{Key: "transaction_id", Value: 1}})
+
+	cursor, err := r.txCollection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, fmt.Errorf("find settled transaction IDs by IDs: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var results []struct {
+		TransactionID string `bson:"transaction_id"`
+	}
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, fmt.Errorf("decode settled transaction IDs by IDs: %w", err)
+	}
+
+	ids := make([]string, 0, len(results))
+	for _, r := range results {
+		if r.TransactionID != "" {
+			ids = append(ids, r.TransactionID)
+		}
+	}
+
+	return ids, nil
+}
+
+// FindSettledTransactionsByIDs returns settlement records matching the given
+// transaction IDs, including their transaction dates. This is used to match
+// uncleared transactions against settlement records on both transaction ID
+// and transaction date.
+func (r *visaSettlementRepository) FindSettledTransactionsByIDs(ctx context.Context, transactionIDs []string) ([]model.VisaSettlementTransaction, error) {
+	if len(transactionIDs) == 0 {
+		return []model.VisaSettlementTransaction{}, nil
+	}
+
+	filter := bson.M{
+		"transaction_id": bson.M{"$in": transactionIDs},
+	}
+
+	opts := options.Find().
+		SetProjection(bson.M{"transaction_id": 1, "transaction_date": 1}).
+		SetSort(bson.D{{Key: "transaction_id", Value: 1}})
+
+	cursor, err := r.txCollection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, fmt.Errorf("find settled transactions by IDs: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var results []model.VisaSettlementTransaction
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, fmt.Errorf("decode settled transactions by IDs: %w", err)
+	}
+
+	return results, nil
+}
+
 // EnsureIndexes creates essential indexes on the MongoDB collections for optimal query speed.
 func (r *visaSettlementRepository) EnsureIndexes(ctx context.Context) error {
 	txIndexes := []mongo.IndexModel{

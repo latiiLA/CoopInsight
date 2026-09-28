@@ -77,6 +77,7 @@ var Catalog = []permissionSeed{
 	{Name: "clearing:view-uncleared-eth", Resource: "clearing", Action: "view-uncleared-eth", Description: "View uncleared ETH (domestic) clearing items"},
 	{Name: "clearing:view-uncleared-visa", Resource: "clearing", Action: "view-uncleared-visa", Description: "View uncleared VISA clearing items"},
 	{Name: "clearing:view-uncleared-visa-cybersource", Resource: "clearing", Action: "view-uncleared-visa-cybersource", Description: "View uncleared VISA Cybersource clearing items"},
+	{Name: "settlement:view-unsettled-visa-cybersource", Resource: "settlement", Action: "view-unsettled-visa-cybersource", Description: "View unsettled VISA Cybersource settlement items"},
 	{Name: "clearing:view-uncleared-mastercard", Resource: "clearing", Action: "view-uncleared-mastercard", Description: "View uncleared Mastercard (MDS) clearing items"},
 
 	{Name: "clearing:view-cleared-eth", Resource: "clearing", Action: "view-cleared-eth", Description: "View cleared ETH (domestic) clearing items"},
@@ -89,7 +90,7 @@ var Catalog = []permissionSeed{
 
 	{Name: "settlement:view-settled-eth", Resource: "settlement", Action: "view-settled-eth", Description: "View settled ETH (domestic) settlement items"},
 	{Name: "settlement:view-settled-visa", Resource: "settlement", Action: "view-settled-visa", Description: "View settled VISA settlement items"},
-	{Name: "settlement:view-visa-cybersource", Resource: "settlement", Action: "view-visa-cybersource", Description: "Process Visa CyberSource settlement files and browse the parsed records"},
+	{Name: "settlement:view-settled-visa", Resource: "settlement", Action: "view-settled-visa", Description: "View settled VISA settlement items"},
 	{Name: "settlement:view-settled-mastercard", Resource: "settlement", Action: "view-settled-mastercard", Description: "View settled Mastercard (MDS) settlement items"},
 
 	{Name: "card:view-number-of-cards-per-status", Resource: "card", Action: "view-number-of-cards-per-status", Description: "View total card counter per their statuses"},

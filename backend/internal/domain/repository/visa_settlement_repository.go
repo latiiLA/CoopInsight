@@ -33,4 +33,21 @@ type VisaSettlementRepository interface {
 	FindByAccountNumber(ctx context.Context, accountNumber string) ([]model.VisaSettlementTransaction, error)
 	FindBatchSummaryByID(ctx context.Context, batchID string) (*model.SettlementBatchSummary, error)
 	ListBatchSummaries(ctx context.Context, limit int64) ([]model.SettlementBatchSummary, error)
+	// FindSettledTransactionIDs returns the set of transaction IDs that have
+	// been settled, within the given date range. This is used to exclude
+	// settled transactions from the unsettled view.
+	FindSettledTransactionIDs(ctx context.Context, startDate, endDate time.Time) ([]string, error)
+	// FindAllSettledTransactionIDs returns all settled transaction IDs without
+	// any date filter. This is used for exclusion checks where the settlement
+	// file's transaction_date may not align with Oracle's TR_CONV_DATE.
+	FindAllSettledTransactionIDs(ctx context.Context) ([]string, error)
+	// FindSettledTransactionIDsByIDs returns the subset of the given transaction
+	// IDs that exist in the settlement collection. This is used to check
+	// whether specific uncleared transactions have been settled.
+	FindSettledTransactionIDsByIDs(ctx context.Context, transactionIDs []string) ([]string, error)
+	// FindSettledTransactionsByIDs returns settlement records matching the given
+	// transaction IDs, including their transaction dates. This is used to match
+	// uncleared transactions against settlement records on both transaction ID
+	// and transaction date.
+	FindSettledTransactionsByIDs(ctx context.Context, transactionIDs []string) ([]model.VisaSettlementTransaction, error)
 }

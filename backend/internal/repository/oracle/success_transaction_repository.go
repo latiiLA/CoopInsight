@@ -91,10 +91,22 @@ func routingFilterFor(channel, flow string) string {
 	}
 }
 
-// Success requires an approved respcode and no matching 410/420/430 on the same REFNUM.
-const trulyApprovedExpr = `t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NULL`
+// Offus routing: another switch is the destination, so declines from the
+// issuer's switch (respcode 5, 8) are not our switch's fault.
+const offusRoutingExpr = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')`
 
-const approvedThenReversedExpr = `t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NOT NULL`
+// Success requires an approved respcode and no matching 410/420/430 on the same REFNUM.
+// Respcode 5 (Unable to process) and 8 (Issuer timeout) are approved when offus,
+// because the decline originates from the issuer's switch, not ours.
+func trulyApprovedExpr() string {
+	return `(t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NULL)` +
+		` OR (t.respcode IN ('5','8') AND rev.refnum IS NULL AND (` + offusRoutingExpr + `))`
+}
+
+func approvedThenReversedExpr() string {
+	return `(t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NOT NULL)` +
+		` OR (t.respcode IN ('5','8') AND rev.refnum IS NOT NULL AND (` + offusRoutingExpr + `))`
+}
 
 func successTransactionQuery(msgTypeFilter, merchantTypeFilter, routingFilter string) string {
 	// Materialize the reversal REFNUM set and force a hash join. Without this, Oracle
@@ -111,10 +123,10 @@ WITH rev AS (
 )
 SELECT /*+ USE_HASH(t rev) */
 	COUNT(*) AS total_number_of_transaction,
-	COUNT(CASE WHEN ` + trulyApprovedExpr + ` THEN 1 END) AS number_of_approved_txn,
+	COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END) AS number_of_approved_txn,
 	COUNT(CASE WHEN t.respcode = '4' THEN 1 END) AS do_not_honor,
-	COUNT(CASE WHEN t.respcode = '5' THEN 1 END) AS unable_to_process,
-	COUNT(CASE WHEN t.respcode = '8' THEN 1 END) AS issuer_timeout_8,
+	COUNT(CASE WHEN t.respcode = '5' AND NOT (` + offusRoutingExpr + `) THEN 1 END) AS unable_to_process,
+	COUNT(CASE WHEN t.respcode = '8' AND NOT (` + offusRoutingExpr + `) THEN 1 END) AS issuer_timeout_8,
 	COUNT(CASE WHEN t.respcode = '9' THEN 1 END) AS issuer_timeout_9,
 	COUNT(CASE WHEN t.respcode = '10' THEN 1 END) AS unable_to_reverse,
 	COUNT(CASE WHEN t.respcode = '14' THEN 1 END) AS invalid_card,
@@ -153,20 +165,20 @@ SELECT /*+ USE_HASH(t rev) */
 	COUNT(CASE WHEN t.respcode = '39' THEN 1 END) AS no_credit_account,
 	COUNT(CASE WHEN t.respcode = '811' THEN 1 END) AS system_security_error,
 	COUNT(CASE WHEN t.respcode NOT IN (` + classifiedRespCodes + `) THEN 1 END) AS others,
-	COUNT(CASE WHEN ` + approvedThenReversedExpr + ` THEN 1 END) AS reversed_after_approve,
-	COUNT(*) - COUNT(CASE WHEN ` + trulyApprovedExpr + ` THEN 1 END) AS number_of_declined_txn,
+	COUNT(CASE WHEN ` + approvedThenReversedExpr() + ` THEN 1 END) AS reversed_after_approve,
+	COUNT(*) - COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END) AS number_of_declined_txn,
 	NVL(
 		ROUND(
 			(
-				COUNT(CASE WHEN ` + trulyApprovedExpr + ` THEN 1 END)
+				COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END)
 				/ NULLIF(COUNT(*), 0)
 			) * 100,
 			2
 		),
 		0
 	) AS percent_success_rate,
-	NVL(SUM(CASE WHEN ` + trulyApprovedExpr + ` THEN t.amount ELSE 0 END), 0) AS total_approved_amount,
-	NVL(SUM(t.amount), 0) - NVL(SUM(CASE WHEN ` + trulyApprovedExpr + ` THEN t.amount ELSE 0 END), 0) AS total_declined_amount,
+	NVL(SUM(CASE WHEN ` + trulyApprovedExpr() + ` THEN t.amount ELSE 0 END), 0) AS total_approved_amount,
+	NVL(SUM(t.amount), 0) - NVL(SUM(CASE WHEN ` + trulyApprovedExpr() + ` THEN t.amount ELSE 0 END), 0) AS total_declined_amount,
 	NVL(SUM(t.amount), 0) AS total_transaction_amount
 FROM oasis.shclog t
 LEFT JOIN rev ON rev.refnum = TRIM(t.REFNUM)
@@ -289,20 +301,20 @@ WITH rev AS (
 SELECT /*+ USE_HASH(t rev) */
 	TO_CHAR(` + periodExpr + `, 'YYYY-MM-DD') AS period_start,
 	COUNT(*) AS total_number_of_transaction,
-	COUNT(CASE WHEN ` + trulyApprovedExpr + ` THEN 1 END) AS number_of_approved_txn,
-	COUNT(*) - COUNT(CASE WHEN ` + trulyApprovedExpr + ` THEN 1 END) AS number_of_declined_txn,
+	COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END) AS number_of_approved_txn,
+	COUNT(*) - COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END) AS number_of_declined_txn,
 	NVL(
 		ROUND(
 			(
-				COUNT(CASE WHEN ` + trulyApprovedExpr + ` THEN 1 END)
+				COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END)
 				/ NULLIF(COUNT(*), 0)
 			) * 100,
 			2
 		),
 		0
 	) AS percent_success_rate,
-	NVL(SUM(CASE WHEN ` + trulyApprovedExpr + ` THEN t.amount ELSE 0 END), 0) AS total_approved_amount,
-	NVL(SUM(t.amount), 0) - NVL(SUM(CASE WHEN ` + trulyApprovedExpr + ` THEN t.amount ELSE 0 END), 0) AS total_declined_amount,
+	NVL(SUM(CASE WHEN ` + trulyApprovedExpr() + ` THEN t.amount ELSE 0 END), 0) AS total_approved_amount,
+	NVL(SUM(t.amount), 0) - NVL(SUM(CASE WHEN ` + trulyApprovedExpr() + ` THEN t.amount ELSE 0 END), 0) AS total_declined_amount,
 	NVL(SUM(t.amount), 0) AS total_transaction_amount
 FROM oasis.shclog t
 LEFT JOIN rev ON rev.refnum = TRIM(t.REFNUM)
@@ -428,9 +440,9 @@ func (r *successTransactionRepository) ListTransactions(
 	case "", "all":
 		outcomeFilter = "1=1"
 	case "approved":
-		outcomeFilter = trulyApprovedExpr
+		outcomeFilter = trulyApprovedExpr()
 	case "declined":
-		outcomeFilter = `NOT (` + trulyApprovedExpr + `)`
+		outcomeFilter = `NOT (` + trulyApprovedExpr() + `)`
 	}
 
 	respFilter := "1=1"
@@ -438,7 +450,7 @@ func (r *successTransactionRepository) ListTransactions(
 	case "":
 		respFilter = "1=1"
 	case "reversed":
-		respFilter = approvedThenReversedExpr
+		respFilter = approvedThenReversedExpr()
 	case "other":
 		respFilter = `t.respcode NOT IN (` + classifiedRespCodes + `)`
 	default:
@@ -465,8 +477,8 @@ SELECT /*+ USE_HASH(t rev) */
 	NVL(TRIM(t.CARDPRODUCT), '') AS card_product,
 	NVL(TRIM(TO_CHAR(t.respcode)), '') AS resp_code,
 	CASE
-		WHEN ` + trulyApprovedExpr + ` THEN 'approved'
-		WHEN ` + approvedThenReversedExpr + ` THEN 'reversed'
+		WHEN ` + trulyApprovedExpr() + ` THEN 'approved'
+		WHEN ` + approvedThenReversedExpr() + ` THEN 'reversed'
 		ELSE 'declined'
 	END AS outcome,
 	NVL(t.amount, 0) AS amount,
@@ -562,6 +574,9 @@ FETCH FIRST ` + strconv.Itoa(limit) + ` ROWS ONLY
 func respCodeLabel(code, outcome string) string {
 	if outcome == "reversed" || code == "reversed" {
 		return "Reversed after approve"
+	}
+	if outcome == "approved" && (code == "5" || code == "8") {
+		return "Approved"
 	}
 	labels := map[string]string{
 		"0": "Approved", "2": "Approved", "11": "Approved", "12": "Approved", "13": "Approved",

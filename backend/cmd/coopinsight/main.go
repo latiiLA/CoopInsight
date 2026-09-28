@@ -243,7 +243,7 @@ func main() {
 			service.NewClearedService(oracle.NewClearedRepository(oracleDB)),
 		)
 		unsettledHandler = handler.NewUnsettledHandler(
-			service.NewUnsettledService(oracle.NewUnsettledRepository(oracleDB)),
+			service.NewUnsettledService(oracle.NewUnsettledRepository(oracleDB), visaSettlementRepo, oracle.NewUnclearedRepository(oracleDB)),
 		)
 		settledHandler = handler.NewSettledHandler(
 			service.NewSettledService(oracle.NewSettledRepository(oracleDB)),
@@ -267,7 +267,7 @@ func main() {
 		)
 		unclearedHandler = handler.NewUnclearedHandler(service.NewUnclearedService(nil))
 		clearedHandler = handler.NewClearedHandler(service.NewClearedService(nil))
-		unsettledHandler = handler.NewUnsettledHandler(service.NewUnsettledService(nil))
+		unsettledHandler = handler.NewUnsettledHandler(service.NewUnsettledService(nil, nil, nil))
 		settledHandler = handler.NewSettledHandler(service.NewSettledService(nil))
 		cardHandler = handler.NewCardHandler(service.NewCardService(nil))
 		transactionMixHandler = handler.NewTransactionMixHandler(
