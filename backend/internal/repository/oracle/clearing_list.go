@@ -30,6 +30,38 @@ const clearingOrderBy = `
 ORDER BY t.TR_CONV_DATE DESC, t.TR_TIME DESC, t.TR_TRACE DESC
 `
 
+// clearingOrderBySub is used when the FROM clause is a subquery (e.g. Cybersource
+// dedup) and the table alias t is not available. References the subquery's output
+// column aliases instead.
+const clearingOrderBySub = `
+ORDER BY tr_conv_date DESC, tr_time DESC, stan DESC
+`
+
+// clearingSelectColumnsSub is the outer SELECT column list for queries that wrap
+// clearingSelectColumns in a subquery. It references the subquery's output aliases
+// instead of t.* columns.
+const clearingSelectColumnsSub = `
+	sub.id,
+	sub.tr_conv_date,
+	sub.tr_date,
+	sub.tr_time,
+	sub.msgtype,
+	sub.proc_code,
+	sub.rrn,
+	sub.stan,
+	sub.resp_code,
+	sub.amount,
+	sub.currency,
+	sub.terminal_id,
+	sub.merchant,
+	sub.card_product,
+	sub.txn_source,
+	sub.txn_dest,
+	sub.issuer_acquirer,
+	sub.pos_atm,
+	sub.txn_id
+`
+
 const clearingSelectColumns = `
 	NVL(t.TRANS_LOG_ID, t.ID) AS id,
 	TO_CHAR(t.TR_CONV_DATE, 'YYYY-MM-DD') AS tr_conv_date,
@@ -81,7 +113,7 @@ func clearingListArgs(
 	// Fetch one extra row to detect hasMore without a COUNT(*).
 	fetchLimit := pageSize + 1
 	return []any{
-		sql.Named("msg_type", msgType),
+		sql.Named("msgType", msgType),
 		sql.Named("source_bin", sourceBin),
 		sql.Named("dest_bin", destBin),
 		sql.Named("date_from", dateFrom),

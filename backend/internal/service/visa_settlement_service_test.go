@@ -85,6 +85,18 @@ func (s *stubSettlementRepo) ListBatchSummaries(context.Context, int64) ([]model
 	return nil, nil
 }
 func (s *stubSettlementRepo) EnsureIndexes(context.Context) error { return nil }
+func (s *stubSettlementRepo) FindAllSettledTransactionIDs(context.Context) ([]string, error) {
+	return nil, nil
+}
+func (s *stubSettlementRepo) FindSettledTransactionIDs(context.Context, time.Time, time.Time) ([]string, error) {
+	return nil, nil
+}
+func (s *stubSettlementRepo) FindSettledTransactionIDsByIDs(context.Context, []string) ([]string, error) {
+	return nil, nil
+}
+func (s *stubSettlementRepo) FindSettledTransactionsByIDs(context.Context, []string) ([]model.VisaSettlementTransaction, error) {
+	return nil, nil
+}
 
 // settlementFile builds a two record advice file, which is the minimum that
 // exercises both an insert and a re-upload.

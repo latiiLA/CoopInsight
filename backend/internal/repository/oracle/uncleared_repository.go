@@ -14,7 +14,7 @@ import (
 const unclearedBaseWhere = `
 WHERE t.ISS_ACQ = 'ACQ'
 	AND t.POS_ATM = 'POS'
-	AND t.MSGTYPE = :msg_type
+	AND t.MSGTYPE = :msgType
 	AND t.TR_RESPCODE IN ('0', '00')
 	AND (t.TR_POSTED = 0 OR t.TR_POSTED IS NULL)
 	AND t.TR_SETTLE = '0'
@@ -29,6 +29,24 @@ FROM clearing.trans_log t
 	AND t.TR_SOURCE_BIN = :source_bin
 	AND t.TR_DEST_BIN = :dest_bin
 ` + clearingOrderBy + clearingPageClause
+
+// unclearedCybersourceQuery deduplicates by TR_ARF, keeping the first transaction
+// (by date/time/trace) for each RRN.
+const unclearedCybersourceQuery = `
+SELECT` + clearingSelectColumnsSub + `
+FROM (
+	SELECT` + clearingSelectColumns + `,
+		ROW_NUMBER() OVER (
+			PARTITION BY t.TR_ARF
+			ORDER BY t.TR_CONV_DATE DESC, t.TR_TIME DESC, t.TR_TRACE DESC
+		) AS rn
+	FROM clearing.trans_log t
+	` + unclearedBaseWhere + `
+		AND t.TR_SOURCE_BIN = :source_bin
+		AND t.TR_DEST_BIN = :dest_bin
+) sub
+WHERE sub.rn = 2
+` + clearingOrderBySub + clearingPageClause
 
 type unclearedRepository struct {
 	db *sql.DB
@@ -45,16 +63,41 @@ func (r *unclearedRepository) List(
 	sourceBin, destBin int64,
 	page, pageSize int,
 ) ([]model.UnclearedTransaction, bool, error) {
-	fmt.Printf("Executing SQL:\n%s\nWith Args: msgType=%d, sourceBin=%d, destBin=%d, dateFrom=%s, dateTo=%s, offset=%d, fetch=%d\n",
-		unclearedBinQuery, msgType, sourceBin, destBin, dateFrom, dateTo, (page-1)*pageSize, pageSize+1,
-	)
+	return r.ListExcludingSettled(ctx, msgType, dateFrom, dateTo, sourceBin, destBin, page, pageSize, nil)
+}
 
+func (r *unclearedRepository) ListExcludingSettled(
+	ctx context.Context,
+	msgType int64,
+	dateFrom, dateTo string,
+	sourceBin, destBin int64,
+	page, pageSize int,
+	settledIDs []string,
+) ([]model.UnclearedTransaction, bool, error) {
 	page, pageSize = normalizeClearingPage(page, pageSize)
-	rows, err := r.db.QueryContext(
-		ctx,
-		unclearedBinQuery,
-		clearingListArgs(msgType, sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
-	)
+
+	// Use Cybersource-specific query for Visa Cybersource to exclude duplicates
+	var query string
+	if sourceBin == 408158 {
+		query = unclearedCybersourceQuery
+	} else {
+		query = unclearedBinQuery
+	}
+	args := clearingListArgs(msgType, sourceBin, destBin, dateFrom, dateTo, page, pageSize)
+
+	// If there are settled IDs to exclude, add a NOT IN clause
+	if len(settledIDs) > 0 {
+		// Build NOT IN clause with individual parameters
+		placeholders := make([]string, len(settledIDs))
+		for i, id := range settledIDs {
+			placeholders[i] = fmt.Sprintf(":settled_id_%d", i)
+			args = append(args, sql.Named(fmt.Sprintf("settled_id_%d", i), id))
+		}
+		notInClause := fmt.Sprintf("AND t.TR_ARF NOT IN (%s)", strings.Join(placeholders, ", "))
+		query = strings.Replace(query, "ORDER BY", notInClause+" ORDER BY", 1)
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, false, wrapError(common.ErrFailedToFetchReport, err)
 	}

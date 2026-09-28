@@ -52,6 +52,18 @@ func (s *searchRepo) ListBatchSummaries(context.Context, int64) ([]model.Settlem
 	return nil, nil
 }
 func (s *searchRepo) EnsureIndexes(context.Context) error { return nil }
+func (s *searchRepo) FindAllSettledTransactionIDs(context.Context) ([]string, error) {
+	return nil, nil
+}
+func (s *searchRepo) FindSettledTransactionIDs(context.Context, time.Time, time.Time) ([]string, error) {
+	return nil, nil
+}
+func (s *searchRepo) FindSettledTransactionIDsByIDs(context.Context, []string) ([]string, error) {
+	return nil, nil
+}
+func (s *searchRepo) FindSettledTransactionsByIDs(context.Context, []string) ([]model.VisaSettlementTransaction, error) {
+	return nil, nil
+}
 
 func TestSearchByTransactionIDPassesTheQueryThrough(t *testing.T) {
 	repo := &searchRepo{}

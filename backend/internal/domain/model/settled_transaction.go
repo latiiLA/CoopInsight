@@ -3,6 +3,7 @@ package model
 type SettledTransaction struct {
 	ID             int64   `json:"id"`
 	Date           string  `json:"date"`
+	TxnDate        string  `json:"txnDate"`
 	Time           string  `json:"time"`
 	MsgType        int64   `json:"msgType"`
 	ProcCode       int64   `json:"procCode"`
@@ -18,4 +19,5 @@ type SettledTransaction struct {
 	TxnDest        string  `json:"txnDest"`
 	IssuerAcquirer string  `json:"issuerAcquirer"`
 	PosAtm         string  `json:"posAtm"`
+	TxnID          string  `json:"txnId"`
 }

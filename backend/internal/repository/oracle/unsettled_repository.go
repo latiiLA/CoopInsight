@@ -3,6 +3,7 @@ package oracle
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
@@ -40,12 +41,33 @@ func (r *unsettledRepository) List(
 	sourceBin, destBin int64,
 	page, pageSize int,
 ) ([]model.UnsettledTransaction, bool, error) {
+	return r.ListExcludingSettled(ctx, msgType, dateFrom, dateTo, sourceBin, destBin, page, pageSize, nil)
+}
+
+func (r *unsettledRepository) ListExcludingSettled(
+	ctx context.Context,
+	msgType int64,
+	dateFrom, dateTo string,
+	sourceBin, destBin int64,
+	page, pageSize int,
+	settledIDs []string,
+) ([]model.UnsettledTransaction, bool, error) {
 	page, pageSize = normalizeClearingPage(page, pageSize)
-	rows, err := r.db.QueryContext(
-		ctx,
-		unsettledBinQuery,
-		clearingListArgs(msgType, sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
-	)
+
+	query := unsettledBinQuery
+	args := clearingListArgs(msgType, sourceBin, destBin, dateFrom, dateTo, page, pageSize)
+
+	if len(settledIDs) > 0 {
+		placeholders := make([]string, len(settledIDs))
+		for i, id := range settledIDs {
+			placeholders[i] = fmt.Sprintf(":settled_id_%d", i)
+			args = append(args, sql.Named(fmt.Sprintf("settled_id_%d", i), id))
+		}
+		notInClause := fmt.Sprintf("AND t.TR_ARF NOT IN (%s)", strings.Join(placeholders, ", "))
+		query = strings.Replace(query, "ORDER BY", notInClause+" ORDER BY", 1)
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, false, wrapError(common.ErrFailedToFetchReport, err)
 	}
@@ -67,6 +89,7 @@ func scanUnsettledRows(rows *sql.Rows) ([]model.UnsettledTransaction, error) {
 		var (
 			id        sql.NullFloat64
 			date      sql.NullString
+			txnDate   sql.NullString
 			timeVal   sql.NullString
 			msgType   sql.NullFloat64
 			procCode  sql.NullFloat64
@@ -82,11 +105,13 @@ func scanUnsettledRows(rows *sql.Rows) ([]model.UnsettledTransaction, error) {
 			txnDest   sql.NullString
 			issAcq    sql.NullString
 			posAtm    sql.NullString
+			txnId     sql.NullString
 		)
 
 		if err := rows.Scan(
 			&id,
 			&date,
+			&txnDate,
 			&timeVal,
 			&msgType,
 			&procCode,
@@ -102,6 +127,7 @@ func scanUnsettledRows(rows *sql.Rows) ([]model.UnsettledTransaction, error) {
 			&txnDest,
 			&issAcq,
 			&posAtm,
+			&txnId,
 		); err != nil {
 			return nil, wrapError(common.ErrFailedToFetchReport, err)
 		}
@@ -109,6 +135,7 @@ func scanUnsettledRows(rows *sql.Rows) ([]model.UnsettledTransaction, error) {
 		results = append(results, model.UnsettledTransaction{
 			ID:             int64(id.Float64),
 			Date:           strings.TrimSpace(date.String),
+			TxnDate:        strings.TrimSpace(txnDate.String),
 			Time:           formatClearingTime(timeVal.String),
 			MsgType:        int64(msgType.Float64),
 			ProcCode:       int64(procCode.Float64),
@@ -124,6 +151,7 @@ func scanUnsettledRows(rows *sql.Rows) ([]model.UnsettledTransaction, error) {
 			TxnDest:        strings.TrimSpace(txnDest.String),
 			IssuerAcquirer: strings.TrimSpace(issAcq.String),
 			PosAtm:         strings.TrimSpace(posAtm.String),
+			TxnID:          strings.TrimSpace(txnId.String),
 		})
 	}
 
