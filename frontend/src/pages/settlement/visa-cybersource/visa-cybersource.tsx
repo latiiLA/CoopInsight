@@ -196,7 +196,7 @@ export default function VisaCyberSource() {
     <div className="container mx-auto">
       <div className="py-1">
         <h3 className="text-lg font-semibold tracking-tight">
-          Visa CyberSource Settlement
+          Visa Settlement
         </h3>
         <p className="text-sm text-muted-foreground">
           Process a Visa clearing and settlement advice file, then review the

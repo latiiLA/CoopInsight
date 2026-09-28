@@ -502,6 +502,12 @@ const data: {
           permissions: ["settlement:view-unsettled-visa"],
         },
         {
+          title: "Unsettled VISA Cybersource",
+          url: "unsettled-visa-cybersource",
+          icon: VisaIcon,
+          permissions: ["settlement:view-unsettled-visa-cybersource"],
+        },
+        {
           title: "Unsettled Mastercard",
           url: "unsettled-mastercard",
           icon: MastercardIcon,
@@ -515,7 +521,7 @@ const data: {
         },
         {
           title: "Settled VISA",
-          url: "settled-visa",
+          url: "visa-settlement",
           icon: VisaIcon,
           permissions: ["settlement:view-settled-visa"],
         },
@@ -524,12 +530,6 @@ const data: {
           url: "settled-mastercard",
           icon: MastercardIcon,
           permissions: ["settlement:view-settled-mastercard"],
-        },
-        {
-          title: "Visa CyberSource File",
-          url: "visa-cybersource-settlement",
-          icon: FileUp,
-          permissions: ["settlement:view-visa-cybersource"],
         },
       ],
     },

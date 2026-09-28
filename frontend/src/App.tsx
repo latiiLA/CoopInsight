@@ -485,16 +485,16 @@ function App() {
             }
           />
           <Route
-            path="/uncleared-visa-cybersource"
+            path="/unsettled-visa-cybersource"
             element={
               <RequirePermission
-                permissions={["clearing:view-uncleared-visa-cybersource"]}
+                permissions={["settlement:view-unsettled-visa-cybersource"]}
               >
-                <Uncleared
+                <Unsettled
                   key="VISA Cybersource"
                   product="VISACBS"
-                  title="Uncleared VISA Cybersource"
-                  description="Approved Visa transactions that still need clearing."
+                  title="Unsettled VISA Cybersource"
+                  description="Approved Visa Cybersource transactions that still need settlement."
                 />
               </RequirePermission>
             }
@@ -614,10 +614,10 @@ function App() {
             }
           />
           <Route
-            path="/visa-cybersource-settlement"
+            path="/visa-settlement"
             element={
               <RequirePermission
-                permissions={["settlement:view-visa-cybersource"]}
+                permissions={["settlement:view-settled-visa"]}
               >
                 <VisaCyberSource />
               </RequirePermission>

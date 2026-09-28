@@ -1,6 +1,7 @@
 export type UnsettledTransaction = {
   id: number;
   date: string;
+  txnDate: string;
   time: string;
   msgType: number;
   procCode: number;
