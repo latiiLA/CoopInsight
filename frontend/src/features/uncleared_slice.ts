@@ -11,12 +11,13 @@ import {
   CLEARING_PAGE_SIZE,
 } from "./clearing_constants";
 
-export type UnclearedProduct = "ETB" | "VISA" | "MDS";
+export type UnclearedProduct = "ETB" | "VISA" | "MDS" | "VISACBS";
 
 const unclearedProductPath: Record<UnclearedProduct, string> = {
   ETB: "eth",
   VISA: "visa",
   MDS: "mastercard",
+  VISACBS:  "visacybersource"
 };
 
 export { CLEARING_MAX_AUTO_PAGES, CLEARING_PAGE_SIZE } from "./clearing_constants";

@@ -13,9 +13,16 @@ import {
   CheckCircle2,
   CreditCard,
   Download,
+  MousePointerClick,
   TrendingUp,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { DateRange } from "react-day-picker";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -33,6 +40,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 import { DatePickerWithRange } from "@/components/date-picker";
+import { MetricCard } from "@/components/metric-card";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,12 +50,28 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   clearCardActivity,
   fetchCardActivity,
 } from "@/features/card_activity_slice";
+import { CardMetric } from "@/types/card-detail";
+import { hasPermission } from "../../../utility/has-permission";
 import { AppDispatch, RootState } from "../../../app/store/store";
 import CardBranchSection from "./card-branch-section";
+import { CardDetailSheet } from "./card-detail-sheet";
+import { DrillValue } from "./card-detail-drill";
+
+/** Permission that opens the card detail list at all. */
+const CARD_DETAIL_PERMISSION = "card:view-card-details";
+
+type DetailRequest = {
+  metric: CardMetric;
+  dateFrom: string;
+  dateTo: string;
+  branchId?: number;
+  scopeLabel?: string;
+};
 
 type RangePreset = "today" | "7d" | "30d" | "90d" | "12m" | "ytd" | "custom";
 
@@ -62,7 +86,7 @@ const PRESETS: { id: Exclude<RangePreset, "custom">; label: string }[] = [
 
 const SERIES = [
   { key: "created", label: "Requested", color: "var(--chart-1)" },
-  { key: "issued", label: "Printed", color: "var(--chart-2)" },
+  { key: "issued", label: "Issued", color: "var(--chart-2)" },
   { key: "activated", label: "Activated", color: "oklch(0.62 0.18 150)" },
 ] as const;
 
@@ -118,39 +142,18 @@ function ActivityTooltip({
   );
 }
 
-function MetricCard({
-  label,
+/**
+ * A single count inside the daily breakdown. Clicking the number drills into
+ * that metric for that day, which is more precise than the row-level handler.
+ */
+function DrillCell({
   value,
-  hint,
-  icon: Icon,
-  loading,
+  onClick,
 }: {
-  label: string;
-  value: string;
-  hint: string;
-  icon: ComponentType<{ className?: string }>;
-  loading: boolean;
+  value: number;
+  onClick?: () => void;
 }) {
-  return (
-    <Card className="gap-3 py-4">
-      <CardHeader className="px-4">
-        <div className="flex items-start justify-between gap-3">
-          <CardDescription>{label}</CardDescription>
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Icon className="size-4" />
-          </div>
-        </div>
-        {loading ? (
-          <Skeleton className="h-8 w-20" />
-        ) : (
-          <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
-        )}
-      </CardHeader>
-      <CardContent className="px-4 text-sm text-muted-foreground">
-        {loading ? <Skeleton className="h-4 w-28" /> : hint}
-      </CardContent>
-    </Card>
-  );
+  return <DrillValue value={value} onClick={onClick} format={formatCount} />;
 }
 
 export default function CardActivityDashboard() {
@@ -162,6 +165,94 @@ export default function CardActivityDashboard() {
   const [preset, setPreset] = useState<RangePreset>("30d");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() =>
     rangeForPreset("30d"),
+  );
+
+  // Null means the detail sheet is closed; otherwise it holds the filters for
+  // the drill-down the user just triggered.
+  const [detail, setDetail] = useState<DetailRequest | null>(null);
+
+  const canViewDetails = useMemo(
+    () => hasPermission([CARD_DETAIL_PERMISSION]),
+    [],
+  );
+
+  const openDetails = useCallback((request: DetailRequest) => {
+    setDetail(request);
+  }, []);
+
+  const closeDetails = useCallback((open: boolean) => {
+    if (!open) {
+      setDetail(null);
+    }
+  }, []);
+
+  // The dashboard range formatted the way the API expects it (MM/dd/yyyy).
+  const rangeFrom = dateRange?.from ? format(dateRange.from, "MM/dd/yyyy") : undefined;
+  const rangeTo = dateRange?.to ? format(dateRange.to, "MM/dd/yyyy") : undefined;
+
+  // Recharts only populates activeTooltipIndex while the tooltip is active, so a
+  // bare chart onClick frequently receives nothing. Tracking the index on
+  // mousemove, which is also what drives the tooltip, and consuming it on click
+  // makes the drill-down dependable. A click is always preceded by a mousemove
+  // over the plot area.
+  const hoverIndexRef = useRef<number | null>(null);
+
+  const resolveHoverIndex = (
+    state: { activeTooltipIndex?: number | string } | undefined,
+  ): number | null => {
+    const raw = state?.activeTooltipIndex;
+    if (typeof raw === "number") {
+      return Number.isInteger(raw) ? raw : null;
+    }
+    if (typeof raw === "string" && raw.trim() !== "") {
+      const parsed = Number(raw);
+      return Number.isInteger(parsed) ? parsed : null;
+    }
+    return null;
+  };
+
+  const handleChartMove = (state: { activeTooltipIndex?: number | string }) => {
+    hoverIndexRef.current = resolveHoverIndex(state);
+  };
+
+  const handleChartLeave = () => {
+    hoverIndexRef.current = null;
+  };
+
+  const handleChartClick = (state: { activeTooltipIndex?: number | string }) => {
+    // The click payload wins when present, otherwise fall back to the tracked
+    // hover position. The ref is deliberately not cleared here: two clicks in a
+    // row produce no mousemove between them, so clearing it would make every
+    // second click at the same spot do nothing.
+    const index = resolveHoverIndex(state) ?? hoverIndexRef.current;
+
+    if (index === null) return;
+    const row = chartRows[index];
+    if (row) {
+      openDayDetails("created", row.date);
+    }
+  };
+
+  const openRangeDetails = useCallback(
+    (metric: CardMetric) => {
+      if (!rangeFrom || !rangeTo) return;
+      openDetails({ metric, dateFrom: rangeFrom, dateTo: rangeTo });
+    },
+    [openDetails, rangeFrom, rangeTo],
+  );
+
+  const openDayDetails = useCallback(
+    (metric: CardMetric, day: string) => {
+      // The API takes MM/dd/yyyy; the report rows are yyyy-MM-dd.
+      const from = format(parseISO(day), "MM/dd/yyyy");
+      openDetails({
+        metric,
+        dateFrom: from,
+        dateTo: from,
+        scopeLabel: format(parseISO(day), "MMM d, yyyy"),
+      });
+    },
+    [openDetails],
   );
 
   const load = useCallback(
@@ -259,7 +350,7 @@ export default function CardActivityDashboard() {
     (report?.daily ?? []).map((day) => ({
       Date: day.date,
       Requested: day.created,
-      Printed: day.issued,
+      Issued: day.issued,
       Activated: day.activated,
     }));
 
@@ -310,9 +401,19 @@ export default function CardActivityDashboard() {
         <div>
           <h1 className="text-2xl font-semibold">Card Activity Dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            Organization-wide requested, printed, and activated activity, plus
+            Organization-wide requested, issued, and activated activity, plus
             branch rankings and per-branch progress over time.
           </p>
+          {canViewDetails ? (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MousePointerClick className="size-3.5 shrink-0 text-primary" />
+              <span>
+                Tip: click a metric card, a number in Daily breakdown, a point on
+                the chart, or a branch count to open the individual cards behind
+                it.
+              </span>
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -370,9 +471,11 @@ export default function CardActivityDashboard() {
           }
           icon={CreditCard}
           loading={loading}
+          onClick={canViewDetails ? () => openRangeDetails("created") : undefined}
+          drillHint={canViewDetails ? "View cards" : undefined}
         />
         <MetricCard
-          label="Cards printed"
+          label="Cards issued"
           value={formatCount(totals?.issued ?? 0)}
           hint={
             dailyAverage
@@ -381,6 +484,8 @@ export default function CardActivityDashboard() {
           }
           icon={Activity}
           loading={loading}
+          onClick={canViewDetails ? () => openRangeDetails("issued") : undefined}
+          drillHint={canViewDetails ? "View cards" : undefined}
         />
         <MetricCard
           label="Cards activated"
@@ -392,6 +497,8 @@ export default function CardActivityDashboard() {
           }
           icon={CheckCircle2}
           loading={loading}
+          onClick={canViewDetails ? () => openRangeDetails("activated") : undefined}
+          drillHint={canViewDetails ? "View cards" : undefined}
         />
         <MetricCard
           label="Busiest day"
@@ -407,6 +514,12 @@ export default function CardActivityDashboard() {
           }
           icon={TrendingUp}
           loading={loading}
+          onClick={
+            canViewDetails && peak
+              ? () => openDayDetails("created", peak.date)
+              : undefined
+          }
+          drillHint={canViewDetails && peak ? "View that day" : undefined}
         />
       </div>
 
@@ -414,7 +527,7 @@ export default function CardActivityDashboard() {
         <CardHeader className="px-4">
           <CardTitle>Daily card activity</CardTitle>
           <CardDescription>
-            Requested, printed, and activated counts per day
+            Requested, issued, and activated counts per day
             {report ? ` · ${report.from} to ${report.to}` : ""}
           </CardDescription>
         </CardHeader>
@@ -431,6 +544,10 @@ export default function CardActivityDashboard() {
                 <ComposedChart
                   data={chartRows}
                   margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+                  className={cn(canViewDetails && "cursor-pointer")}
+                  onMouseMove={canViewDetails ? handleChartMove : undefined}
+                  onMouseLeave={canViewDetails ? handleChartLeave : undefined}
+                  onClick={canViewDetails ? handleChartClick : undefined}
                 >
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis
@@ -483,25 +600,57 @@ export default function CardActivityDashboard() {
                   <tr>
                     <th className="py-2 pr-3 font-medium">Date</th>
                     <th className="py-2 pr-3 text-right font-medium">Requested</th>
-                    <th className="py-2 pr-3 text-right font-medium">Printed</th>
+                    <th className="py-2 pr-3 text-right font-medium">Issued</th>
                     <th className="py-2 pr-3 text-right font-medium">Activated</th>
                     <th className="py-2 text-right font-medium">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[...chartRows].reverse().map((row) => (
-                    <tr key={row.date} className="border-b last:border-0">
+                    <tr
+                      key={row.date}
+                      className={cn(
+                        "border-b last:border-0",
+                        canViewDetails && "cursor-pointer hover:bg-muted/50",
+                      )}
+                      onClick={
+                        canViewDetails
+                          ? () => openDayDetails("created", row.date)
+                          : undefined
+                      }
+                    >
                       <td className="py-2 pr-3">
                         {format(parseISO(row.date), "MMM d, yyyy")}
                       </td>
                       <td className="py-2 pr-3 text-right tabular-nums">
-                        {formatCount(row.created)}
+                        <DrillCell
+                          value={row.created}
+                          onClick={
+                            canViewDetails
+                              ? () => openDayDetails("created", row.date)
+                              : undefined
+                          }
+                        />
                       </td>
                       <td className="py-2 pr-3 text-right tabular-nums">
-                        {formatCount(row.issued)}
+                        <DrillCell
+                          value={row.issued}
+                          onClick={
+                            canViewDetails
+                              ? () => openDayDetails("issued", row.date)
+                              : undefined
+                          }
+                        />
                       </td>
                       <td className="py-2 pr-3 text-right tabular-nums">
-                        {formatCount(row.activated)}
+                        <DrillCell
+                          value={row.activated}
+                          onClick={
+                            canViewDetails
+                              ? () => openDayDetails("activated", row.date)
+                              : undefined
+                          }
+                        />
                       </td>
                       <td className="py-2 text-right font-medium tabular-nums">
                         {formatCount(row.created + row.issued + row.activated)}
@@ -558,10 +707,18 @@ export default function CardActivityDashboard() {
       ) : null}
 
       <CardBranchSection
-        dateFrom={
-          dateRange?.from ? format(dateRange.from, "MM/dd/yyyy") : undefined
-        }
-        dateTo={dateRange?.to ? format(dateRange.to, "MM/dd/yyyy") : undefined}
+        dateFrom={rangeFrom}
+        dateTo={rangeTo}
+      />
+
+      <CardDetailSheet
+        open={detail !== null}
+        onOpenChange={closeDetails}
+        metric={detail?.metric ?? "created"}
+        dateFrom={detail?.dateFrom ?? rangeFrom ?? ""}
+        dateTo={detail?.dateTo ?? rangeTo ?? ""}
+        branchId={detail?.branchId}
+        scopeLabel={detail?.scopeLabel}
       />
     </div>
   );

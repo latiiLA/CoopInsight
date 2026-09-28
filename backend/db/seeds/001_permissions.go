@@ -59,6 +59,7 @@ var Catalog = []permissionSeed{
 	{Name: "report:view-switch-issuing-success-rate", Resource: "report", Action: "view-switch-issuing-success-rate", Description: "View switch issuing success rate (ATM and POS)"},
 	{Name: "report:browse-success-transactions", Resource: "report", Action: "browse-success-transactions", Description: "Browse individual transactions from success-rate reports"},
 	{Name: "report:view-ebirr-cardless-withdrawal", Resource: "report", Action: "view-ebirr-cardless-withdrawal", Description: "View Ebirr cardless withdrawal report"},
+	{Name: "report:view-transaction-mix", Resource: "report", Action: "view-transaction-mix", Description: "View the switch transaction mix report (scheme, routing, and message type breakdown with percentages)"},
 
 	{Name: "monitoring:view-onus", Resource: "monitoring", Action: "view-onus", Description: "View on-us live monitoring"},
 	{Name: "monitoring:view-offus", Resource: "monitoring", Action: "view-offus", Description: "View off-us live monitoring"},
@@ -75,6 +76,8 @@ var Catalog = []permissionSeed{
 
 	{Name: "clearing:view-uncleared-eth", Resource: "clearing", Action: "view-uncleared-eth", Description: "View uncleared ETH (domestic) clearing items"},
 	{Name: "clearing:view-uncleared-visa", Resource: "clearing", Action: "view-uncleared-visa", Description: "View uncleared VISA clearing items"},
+	{Name: "clearing:view-uncleared-visa-cybersource", Resource: "clearing", Action: "view-uncleared-visa-cybersource", Description: "View uncleared VISA Cybersource clearing items"},
+	{Name: "settlement:view-unsettled-visa-cybersource", Resource: "settlement", Action: "view-unsettled-visa-cybersource", Description: "View unsettled VISA Cybersource settlement items"},
 	{Name: "clearing:view-uncleared-mastercard", Resource: "clearing", Action: "view-uncleared-mastercard", Description: "View uncleared Mastercard (MDS) clearing items"},
 
 	{Name: "clearing:view-cleared-eth", Resource: "clearing", Action: "view-cleared-eth", Description: "View cleared ETH (domestic) clearing items"},
@@ -87,10 +90,13 @@ var Catalog = []permissionSeed{
 
 	{Name: "settlement:view-settled-eth", Resource: "settlement", Action: "view-settled-eth", Description: "View settled ETH (domestic) settlement items"},
 	{Name: "settlement:view-settled-visa", Resource: "settlement", Action: "view-settled-visa", Description: "View settled VISA settlement items"},
+	{Name: "settlement:view-settled-visa", Resource: "settlement", Action: "view-settled-visa", Description: "View settled VISA settlement items"},
 	{Name: "settlement:view-settled-mastercard", Resource: "settlement", Action: "view-settled-mastercard", Description: "View settled Mastercard (MDS) settlement items"},
 
 	{Name: "card:view-number-of-cards-per-status", Resource: "card", Action: "view-number-of-cards-per-status", Description: "View total card counter per their statuses"},
-	{Name: "card:view-activity-dashboard", Resource: "card", Action: "view-activity-dashboard", Description: "View daily card requested, printed, and activated activity dashboard"},
+	{Name: "card:view-activity-dashboard", Resource: "card", Action: "view-activity-dashboard", Description: "View daily card requested, issued, and activated activity dashboard"},
+	{Name: "card:view-card-details", Resource: "card", Action: "view-card-details", Description: "View individual card records behind the card activity counts"},
+	{Name: "card:view-cardholder-name", Resource: "card", Action: "view-cardholder-name", Description: "Include the cardholder name in card detail records"},
 
 	{Name: "activity:view", Resource: "activity", Action: "view", Description: "View activity log"},
 }

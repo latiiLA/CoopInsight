@@ -1,13 +1,23 @@
 import {
   differenceInCalendarDays,
+  differenceInMonths,
+  endOfMonth,
   endOfYear,
   format,
   startOfDay,
+  startOfMonth,
   startOfYear,
   subDays,
   subMonths,
 } from "date-fns";
-import { Download } from "lucide-react";
+import {
+  Activity,
+  Ban,
+  CalendarDays,
+  CalendarRange,
+  CheckCircle2,
+  Download,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DateRange } from "react-day-picker";
 import { useDispatch, useSelector } from "react-redux";
@@ -25,7 +35,9 @@ import {
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
+import { toApiDate, toApiEchoDate } from "@/lib/report-range";
 import { DatePickerWithRange } from "@/components/date-picker";
+import { MetricCard } from "@/components/metric-card";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -126,6 +138,18 @@ function formatAmount(value: number) {
   });
 }
 
+/**
+ * Averages keep one decimal place. Rounding to a whole number would report a
+ * figure of zero for anything under half a transaction per day, which reads as
+ * "no activity" rather than "a small number".
+ */
+function formatAverage(value: number) {
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+}
+
 function RateTooltip({
   active,
   payload,
@@ -222,31 +246,48 @@ export default function SuccessRateTrends() {
     return autoGranularity(dateRange.from, dateRange.to);
   }, [dateRange]);
 
+  // Returns the raw dispatch promise so the caller can abort it; attaching a
+  // .then() in here would return a plain Promise and lose .abort().
   const loadTrend = useCallback(
-    async (range: DateRange, nextChannel: SuccessChannel, nextFlow: SuccessFlow) => {
-      if (!range.from || !range.to) return;
-
-      const result = await dispatch(
+    (
+      range: DateRange,
+      nextChannel: SuccessChannel,
+      nextFlow: SuccessFlow,
+    ) =>
+      dispatch(
         fetchSuccessRateTrend({
-          dateFrom: format(range.from, "MM/dd/yyyy"),
-          dateTo: format(range.to, "MM/dd/yyyy"),
+          dateFrom: toApiDate(range.from as Date),
+          dateTo: toApiDate(range.to as Date),
           channel: nextChannel,
           flow: nextFlow,
-          granularity: autoGranularity(range.from, range.to),
+          granularity: autoGranularity(range.from as Date, range.to as Date),
         }),
-      );
-
-      if (fetchSuccessRateTrend.rejected.match(result)) {
-        toast.error(result.payload || "Failed to fetch success rate trend");
-      }
-    },
+      ),
     [dispatch],
   );
 
   useEffect(() => {
     if (!dateRange?.from || !dateRange?.to) return;
     if (!canViewCombo(channel, flow, permissions)) return;
-    void loadTrend(dateRange, channel, flow);
+
+    const promise = loadTrend(dateRange, channel, flow);
+
+    promise.then((result) => {
+      // An aborted request was superseded by newer filters, so its error is not
+      // worth surfacing.
+      if (
+        fetchSuccessRateTrend.rejected.match(result) &&
+        !result.meta.aborted
+      ) {
+        toast.error(result.payload || "Failed to fetch success rate trend");
+      }
+    });
+
+    // Changing any filter aborts the request still in flight, so a slow
+    // response can never land on top of the newer one.
+    return () => {
+      promise.abort();
+    };
   }, [channel, dateRange, flow, loadTrend, permissions]);
 
   const handlePreset = (id: Exclude<TrendPreset, "custom">) => {
@@ -270,11 +311,81 @@ export default function SuccessRateTrends() {
     [successRateTrend],
   );
 
+  // The range exactly as it will appear in the response, so the report can be
+  // matched back to the filters that produced it.
+  const rangeEchoFrom = dateRange?.from ? toApiEchoDate(dateRange.from) : undefined;
+  const rangeEchoTo = dateRange?.to ? toApiEchoDate(dateRange.to) : undefined;
+
   const showLoading = successRateTrendLoading;
-  const reportMatches =
+
+  // The report echoes the filters it was produced from, so all of them are
+  // checked. Comparing only channel and flow let a response for a different
+  // date range be rendered under the current range's heading, which is how a
+  // stale total ends up being read as the answer for the range on screen.
+  const reportMatches = Boolean(
     successRateTrend &&
-    successRateTrend.channel === channel &&
-    successRateTrend.flow === flow;
+      successRateTrend.channel === channel &&
+      successRateTrend.flow === flow &&
+      successRateTrend.granularity === granularity &&
+      successRateTrend.dateFrom === rangeEchoFrom &&
+      successRateTrend.dateTo === rangeEchoTo,
+  );
+
+  /**
+   * Approved and declined averages per calendar day and per calendar month.
+   *
+   * Derived from the trend points rather than a second request, because the
+   * points already carry every bucket's counts and their sum is the range total
+   * regardless of how the range was bucketed.
+   *
+   * Days and months are counted across the whole selected range, including days
+   * with no traffic, so a quiet day lowers the average instead of being skipped.
+   * That is the conventional reading of "average per day" and the hint under
+   * each tile states the divisor so the figure can be sanity checked.
+   *
+   * Months counts distinct calendar months the range touches, so 15 Jan to 3 Mar
+   * is three months rather than one.
+   */
+  const averages = useMemo(() => {
+    const points = successRateTrend?.points ?? [];
+    if (!dateRange?.from || !dateRange?.to || points.length === 0) {
+      return null;
+    }
+
+    const days = differenceInCalendarDays(dateRange.to, dateRange.from) + 1;
+    const months =
+      differenceInMonths(
+        endOfMonth(dateRange.to),
+        startOfMonth(dateRange.from),
+      ) + 1;
+
+    let total = 0;
+    let approved = 0;
+    let declined = 0;
+    for (const point of points) {
+      total += point.totalTransactions;
+      approved += point.approvedCount;
+      declined += point.declinedCount;
+    }
+
+    return {
+      days,
+      months,
+      total,
+      approved,
+      declined,
+      totalPerDay: days > 0 ? total / days : 0,
+      approvedPerDay: days > 0 ? approved / days : 0,
+      declinedPerDay: days > 0 ? declined / days : 0,
+      totalPerMonth: months > 0 ? total / months : 0,
+      approvedPerMonth: months > 0 ? approved / months : 0,
+      declinedPerMonth: months > 0 ? declined / months : 0,
+    };
+  }, [successRateTrend, dateRange]);
+
+  // Averages are only meaningful once the report on screen is the one for the
+  // current channel and flow, otherwise a stale report would label the tiles.
+  const showAverages = !showLoading && reportMatches && averages !== null;
 
   const exportBaseName = `success-rate-trend-${channel}-${flow}-${granularity}`;
 
@@ -437,6 +548,97 @@ export default function SuccessRateTrends() {
 
         <div className="pb-2 text-xs text-muted-foreground">
           Bucket: <span className="font-medium text-foreground">{granularity}</span>
+        </div>
+      </div>
+
+      {/* Grouped by period rather than by metric: the eye reads "per day" and
+          "per month" as two questions, and each group is a complete
+          total/approved/declined breakdown of the same denominator. */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <CalendarDays className="size-4" />
+          Daily average
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <MetricCard
+            label="Total / day"
+            value={showAverages ? formatAverage(averages.totalPerDay) : "—"}
+            hint={
+              showAverages
+                ? `${formatCount(averages.total)} over ${averages.days} day${averages.days === 1 ? "" : "s"}`
+                : "No transactions in this range"
+            }
+            icon={Activity}
+            loading={showLoading || !reportMatches}
+          />
+          <MetricCard
+            label="Approved / day"
+            value={showAverages ? formatAverage(averages.approvedPerDay) : "—"}
+            hint={
+              showAverages
+                ? `${formatCount(averages.approved)} over ${averages.days} day${averages.days === 1 ? "" : "s"}`
+                : "No transactions in this range"
+            }
+            icon={CheckCircle2}
+            loading={showLoading || !reportMatches}
+          />
+          <MetricCard
+            label="Declined / day"
+            value={showAverages ? formatAverage(averages.declinedPerDay) : "—"}
+            hint={
+              showAverages
+                ? `${formatCount(averages.declined)} over ${averages.days} day${averages.days === 1 ? "" : "s"}`
+                : "No transactions in this range"
+            }
+            icon={Ban}
+            loading={showLoading || !reportMatches}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <CalendarRange className="size-4" />
+          Monthly average
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <MetricCard
+            label="Total / month"
+            value={showAverages ? formatAverage(averages.totalPerMonth) : "—"}
+            hint={
+              showAverages
+                ? `${formatCount(averages.total)} over ${averages.months} month${averages.months === 1 ? "" : "s"}`
+                : "No transactions in this range"
+            }
+            icon={Activity}
+            loading={showLoading || !reportMatches}
+          />
+          <MetricCard
+            label="Approved / month"
+            value={
+              showAverages ? formatAverage(averages.approvedPerMonth) : "—"
+            }
+            hint={
+              showAverages
+                ? `${formatCount(averages.approved)} over ${averages.months} month${averages.months === 1 ? "" : "s"}`
+                : "No transactions in this range"
+            }
+            icon={CheckCircle2}
+            loading={showLoading || !reportMatches}
+          />
+          <MetricCard
+            label="Declined / month"
+            value={
+              showAverages ? formatAverage(averages.declinedPerMonth) : "—"
+            }
+            hint={
+              showAverages
+                ? `${formatCount(averages.declined)} over ${averages.months} month${averages.months === 1 ? "" : "s"}`
+                : "No transactions in this range"
+            }
+            icon={Ban}
+            loading={showLoading || !reportMatches}
+          />
         </div>
       </div>
 

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchSuccessTransactions } from "@/features/report_slice";
+import { toApiDate, toApiEchoDate } from "@/lib/report-range";
 import {
   SuccessBrowseOutcome,
   SuccessChannel,
@@ -102,6 +103,22 @@ function ChartSkeleton({ title }: { title: string }) {
       <CardContent className="px-4">
         <Skeleton className="h-64 w-full" />
         <p className="sr-only">Loading {title}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Stand-in for a chart with no data, so the page never implies it is loading. */
+function EmptyChart({ title }: { title: string }) {
+  return (
+    <Card className="h-[28rem] py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4">
+        <p className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+          No transactions for the selected dates.
+        </p>
       </CardContent>
     </Card>
   );
@@ -267,49 +284,96 @@ export default function SuccessRate({
     outcome: "all",
   });
 
-  // Only show numbers that belong to this page (avoids flashing the previous report).
-  const report =
-    successRate &&
-    successRate.channel === channel &&
-    successRate.flow === flow
-      ? successRate
-      : null;
-  const showLoading = successRateLoading || !report;
+  // Only show numbers that belong to this page AND to the dates currently
+  // selected. Comparing channel and flow alone let a report for a different
+  // range stay on screen after the date picker changed, so its totals were read
+  // as the answer for the newly picked range.
+  //
+  // The API echoes the range it used, normalised to MM-DD-YYYY, so the
+  // comparison uses the echo format rather than what was sent.
+  const report = useMemo(() => {
+    if (!successRate) return null;
+    if (successRate.channel !== channel || successRate.flow !== flow) {
+      return null;
+    }
+    if (!dateRange?.from || !dateRange?.to) return null;
+    if (
+      successRate.dateFrom !== toApiEchoDate(dateRange.from) ||
+      successRate.dateTo !== toApiEchoDate(dateRange.to)
+    ) {
+      return null;
+    }
+    return successRate;
+  }, [successRate, channel, flow, dateRange]);
+
+  const showLoading = successRateLoading;
 
   const openBrowse = useCallback((next: BrowseState) => {
     setBrowseFilter(next);
     setBrowseOpen(true);
   }, []);
 
-  const handleDateChange = useCallback(
-    async (date: DateRange | undefined) => {
+  // Returns the raw dispatch promise so the caller can abort it.
+  const loadReport = useCallback(
+    (date: DateRange | undefined) => {
       if (!date?.from || !date?.to) {
-        return;
+        return null;
       }
 
-      setDateRange(date);
-
-      const result = await dispatch(
+      return dispatch(
         fetchSuccessTransactions({
-          dateFrom: format(date.from, "MM/dd/yyyy"),
-          dateTo: format(date.to, "MM/dd/yyyy"),
+          dateFrom: toApiDate(date.from),
+          dateTo: toApiDate(date.to),
           channel,
           flow,
         }),
       );
-
-      if (fetchSuccessTransactions.rejected.match(result)) {
-        toast.error(
-          result.payload || "Failed to fetch success transaction report",
-        );
-      }
     },
     [channel, dispatch, flow],
   );
 
+  const handleDateChange = useCallback((date: DateRange | undefined) => {
+    if (!date?.from || !date?.to) {
+      return;
+    }
+    setDateRange(date);
+  }, []);
+
+  // Opening a different channel/flow starts a fresh report for today. Without
+  // this the picker kept the previous page's dates while the request went out
+  // for today, so the picker and the loaded report disagreed.
   useEffect(() => {
-    void handleDateChange(todayRange);
-  }, [handleDateChange, todayRange]);
+    setDateRange(todayRange);
+  }, [channel, flow, todayRange]);
+
+  // Single fetch path, driven by dateRange. Keeping the picker, the request and
+  // the response guard on one value is what stops them disagreeing.
+  useEffect(() => {
+    if (!dateRange?.from || !dateRange?.to) {
+      return;
+    }
+
+    const promise = loadReport(dateRange);
+
+    promise?.then((result) => {
+      // An aborted request was superseded by newer filters, so its error is not
+      // worth surfacing.
+      if (
+        fetchSuccessTransactions.rejected.match(result) &&
+        !result.meta.aborted
+      ) {
+        toast.error(
+          result.payload || "Failed to fetch success transaction report",
+        );
+      }
+    });
+
+    // Abort whatever is in flight when the range changes or the page unmounts,
+    // so a slow response cannot land on top of a newer one.
+    return () => {
+      promise?.abort();
+    };
+  }, [dateRange, loadReport]);
 
   const declinedCount = report?.declinedCount ?? 0;
   const tableData: SuccessRateRow[] = (report?.declineReasons ?? []).map(
@@ -398,8 +462,10 @@ export default function SuccessRate({
           value={report ? `${report.successRatePercent.toFixed(2)}%` : "—"}
           hint={
             report
-              ? `${report.dateFrom} – ${report.dateTo}`
-              : "Loading today's report"
+              ? `${report.dateFrom} - ${report.dateTo}`
+              : showLoading
+                ? "Loading today's report"
+                : "No report for the selected dates"
           }
           loading={showLoading}
         />
@@ -410,6 +476,15 @@ export default function SuccessRate({
           <>
             <ChartSkeleton title={`${copy.label} outcome`} />
             <ChartSkeleton title={`${copy.label} decline reasons`} />
+          </>
+        ) : !report ? (
+          /* Reached when a response does not match the selected filters, for
+             example after the range changed again while a request was still in
+             flight. Showing an empty state rather than a skeleton, so the page
+             never appears to be loading forever. */
+          <>
+            <EmptyChart title={`${copy.label} outcome`} />
+            <EmptyChart title={`${copy.label} decline reasons`} />
           </>
         ) : (
           <>

@@ -34,6 +34,8 @@ type Handlers struct {
 	Unsettled                  handler.UnsettledHandler
 	Settled                    handler.SettledHandler
 	Card                       handler.CardHandler
+	TransactionMix             handler.TransactionMixHandler
+	VisaSettlement             handler.VisaSettlementHandler
 }
 
 func SetupRouter(handlers Handlers) *gin.Engine {
@@ -45,6 +47,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+	router.Use(middleware.SecurityHeaders())
 
 	allowed := configs.AllowedOrigins
 
@@ -81,12 +84,9 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	router.ForwardedByClientIP = true
 
 	// --------------------------------------------------
-	// Static files
+	// Health check (root + /api for vite/nginx proxies that only forward /api)
 	// --------------------------------------------------
 
-	router.Static("/uploads", configs.FileUploadPath)
-
-	// Health check (root + /api for vite/nginx proxies that only forward /api)
 	healthHandler := func(c *gin.Context) {
 		oracleStatus := "disabled"
 		if configs.OracleEnabled {
@@ -125,6 +125,14 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	registerAuthRoutes(api, handlers.User)
 
 	// --------------------------------------------------
+	// Authenticated uploads (avatars) — no anonymous Static mount
+	// --------------------------------------------------
+
+	uploads := router.Group("/uploads")
+	uploads.Use(middleware.JwtAuthMiddleware())
+	uploads.GET("/*filepath", handler.ServeUpload)
+
+	// --------------------------------------------------
 	// Protected routes - default timeout
 	// --------------------------------------------------
 
@@ -159,6 +167,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 		handlers.SuccessTransaction,
 		handlers.EbirrCardlessWithdrawal,
 		handlers.TerminalTransaction,
+		handlers.TransactionMix,
 	)
 	registerClearingRoutes(oracleProtected, handlers.Uncleared, handlers.Cleared)
 	registerSettlementRoutes(oracleProtected, handlers.Unsettled, handlers.Settled)
@@ -179,6 +188,11 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	registerCardRoutes(
 		oracleProtected,
 		handlers.Card,
+	)
+
+	registerVisaSettlementRoutes(
+		protected,
+		handlers.VisaSettlement,
 	)
 
 	return router

@@ -49,6 +49,12 @@ export const unsettledColumns = columnHelper.columns([
       </Button>
     ),
   }),
+  columnHelper.accessor("txnDate", {
+    header: "Txn Date",
+  }),
+  columnHelper.accessor("txnId", {
+    header: "Txn ID",
+  }),
   columnHelper.accessor("time", {
     header: "Time",
   }),

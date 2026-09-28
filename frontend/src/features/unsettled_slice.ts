@@ -8,12 +8,13 @@ import { getTokenFromAuth, withAuthHeader } from "../../utility/auth-token";
 import getErrorMessage from "../../utility/error-message";
 import { CLEARING_MAX_AUTO_PAGES, CLEARING_PAGE_SIZE } from "./clearing_constants";
 
-export type UnsettledProduct = "ETB" | "VISA" | "MDS";
+export type UnsettledProduct = "ETB" | "VISA" | "MDS" | "VISACBS";
 
 const unsettledProductPath: Record<UnsettledProduct, string> = {
   ETB: "eth",
   VISA: "visa",
   MDS: "mastercard",
+  VISACBS: "visacybersource",
 };
 
 type ClearingPagePayload = {

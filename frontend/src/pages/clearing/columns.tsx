@@ -38,13 +38,24 @@ export const unclearedColumns = columnHelper.columns([
     enableSorting: false,
     enableHiding: false,
   }),
-  columnHelper.accessor("date", {
+  columnHelper.accessor("convDate", {
     header: ({ column }) => (
       <Button
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        Date
+        Conv Date
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+  }),
+  columnHelper.accessor("txnDate", {
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Txn Date
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
@@ -52,14 +63,17 @@ export const unclearedColumns = columnHelper.columns([
   columnHelper.accessor("time", {
     header: "Time",
   }),
-  columnHelper.accessor("msgType", {
-    header: "Type",
-  }),
+  // columnHelper.accessor("msgType", {
+  //   header: "Type",
+  // }),
   columnHelper.accessor("rrn", {
     header: "Reference no.",
   }),
   columnHelper.accessor("stan", {
-    header: "Trace no.",
+    header: "Trace",
+  }),
+  columnHelper.accessor("txnId", {
+    header: "Txn ID",
   }),
   columnHelper.accessor("respCode", {
     header: "Response",
@@ -90,6 +104,6 @@ export const unclearedColumns = columnHelper.columns([
     header: "Card product",
   }),
   columnHelper.accessor("procCode", {
-    header: "Processing code",
+    header: "Proc. code",
   }),
 ]);

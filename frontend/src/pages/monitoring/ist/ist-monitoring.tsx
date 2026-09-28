@@ -65,19 +65,22 @@ function writeCachedSnapshot(snapshot: ISTSnapshot) {
   }
 }
 
-function monitoringSocketUrl(token: string) {
+function monitoringSocketUrl() {
   const apiBase = config.API_URL.replace(/\/$/, "");
   const path = SOCKET_PATH;
 
   if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
     const url = new URL(`${apiBase}${path}`);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-    url.searchParams.set("token", token);
     return url.toString();
   }
 
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}${apiBase}${path}?token=${encodeURIComponent(token)}`;
+  return `${protocol}//${window.location.host}${apiBase}${path}`;
+}
+
+function monitoringSocketProtocols(token: string) {
+  return [`jwt.${token}`];
 }
 
 function alertKey(alert: ISTAlert) {
@@ -187,7 +190,7 @@ export default function IstMonitoring() {
     const connect = () => {
       if (stopped) return;
 
-      socket = new WebSocket(monitoringSocketUrl(token));
+      socket = new WebSocket(monitoringSocketUrl(), monitoringSocketProtocols(token));
 
       socket.onmessage = (message) => {
         let frame: ISTFrame;

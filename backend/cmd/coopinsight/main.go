@@ -155,6 +155,18 @@ func main() {
 	activityLogRepository := mongodb.NewActivityLogRepository(db)
 	activityLogService := service.NewActivityLogService(activityLogRepository)
 	activityLogHandler := handler.NewActivityLogHandler(activityLogService)
+	visaSettlementRepo := mongodb.NewVisaSettlementRepository(db)
+
+	// The unique index on transaction_id is what stops a re-uploaded file
+	// creating a second copy of every record, so it has to exist before the
+	// first upload rather than being created lazily.
+	if err := visaSettlementRepo.EnsureIndexes(ctx); err != nil {
+		logrus.WithError(err).Warn("Could not create Visa settlement indexes; duplicate uploads may not be rejected")
+	}
+
+	visaSettlementHandler := handler.NewVisaSettlementHandler(
+		service.NewVisaSettlementService(visaSettlementRepo),
+	)
 
 	userService := service.NewUserService(
 		userRepository,
@@ -206,6 +218,7 @@ func main() {
 	var unsettledHandler handler.UnsettledHandler
 	var settledHandler handler.SettledHandler
 	var cardHandler handler.CardHandler
+	var transactionMixHandler handler.TransactionMixHandler
 	if oracleDB != nil {
 		testHandler = handler.NewTestHandler(
 			service.NewTestService(oracle.NewTestRepository(oracleDB)),
@@ -230,13 +243,16 @@ func main() {
 			service.NewClearedService(oracle.NewClearedRepository(oracleDB)),
 		)
 		unsettledHandler = handler.NewUnsettledHandler(
-			service.NewUnsettledService(oracle.NewUnsettledRepository(oracleDB)),
+			service.NewUnsettledService(oracle.NewUnsettledRepository(oracleDB), visaSettlementRepo, oracle.NewUnclearedRepository(oracleDB)),
 		)
 		settledHandler = handler.NewSettledHandler(
 			service.NewSettledService(oracle.NewSettledRepository(oracleDB)),
 		)
 		cardHandler = handler.NewCardHandler(
 			service.NewCardService(oracle.NewCardRepository(oracleDB)),
+		)
+		transactionMixHandler = handler.NewTransactionMixHandler(
+			service.NewTransactionMixService(oracle.NewTransactionMixRepository(oracleDB)),
 		)
 	} else {
 		testHandler = handler.NewTestHandler(service.NewTestService(nil))
@@ -251,9 +267,12 @@ func main() {
 		)
 		unclearedHandler = handler.NewUnclearedHandler(service.NewUnclearedService(nil))
 		clearedHandler = handler.NewClearedHandler(service.NewClearedService(nil))
-		unsettledHandler = handler.NewUnsettledHandler(service.NewUnsettledService(nil))
+		unsettledHandler = handler.NewUnsettledHandler(service.NewUnsettledService(nil, nil, nil))
 		settledHandler = handler.NewSettledHandler(service.NewSettledService(nil))
 		cardHandler = handler.NewCardHandler(service.NewCardService(nil))
+		transactionMixHandler = handler.NewTransactionMixHandler(
+			service.NewTransactionMixService(nil),
+		)
 	}
 
 	var onusCollector *sshswitch.Collector
@@ -386,6 +405,8 @@ func main() {
 		Unsettled:                  unsettledHandler,
 		Settled:                    settledHandler,
 		Card:                       cardHandler,
+		TransactionMix:             transactionMixHandler,
+		VisaSettlement:             visaSettlementHandler,
 	})
 
 	// --------------------------------------------------

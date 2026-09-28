@@ -485,7 +485,7 @@ func waitUntil(ctx context.Context, buf *safeBuffer, cfg waitUntilConfig) error 
 			if elapsed >= cfg.maxWait {
 				return nil
 			}
-			if elapsed < cfg.minWait && !(cfg.skipMinWaitOnPrompt && looksLikePrompt(buf.String())) {
+			if elapsed < cfg.minWait && (!cfg.skipMinWaitOnPrompt || !looksLikePrompt(buf.String())) {
 				continue
 			}
 			quietEnough := time.Since(lastChange) >= cfg.quiet

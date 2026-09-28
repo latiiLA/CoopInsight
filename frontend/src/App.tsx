@@ -9,6 +9,8 @@ import DepositPerTerminal from "./pages/reports/deposit-per-terminal";
 import SuccessRate from "./pages/reports/success-rate/success-rate";
 import SuccessRateTrends from "./pages/reports/success-rate/success-rate-trends";
 import EbirrCardlessWithdrawal from "./pages/reports/ebirr-cardless-withdrawal/ebirr-cardless-withdrawal";
+import TransactionMix from "./pages/reports/transaction-mix/transaction-mix";
+import VisaCyberSource from "./pages/settlement/visa-cybersource/visa-cybersource";
 import ManageUsers from "./pages/system administrations/users/manage-users";
 import CreateUser from "./pages/system administrations/users/create-user";
 import ManageAccountRequests from "./pages/system administrations/users/manage-account-requests";
@@ -28,7 +30,9 @@ import OffusMonitoring from "./pages/monitoring/offus/offus-monitoring";
 import MastercardDebitMonitoring from "./pages/monitoring/mastercard-debit/mastercard-debit-monitoring";
 import MastercardCreditMonitoring from "./pages/monitoring/mastercard-credit/mastercard-credit-monitoring";
 import VisaMonitoring from "./pages/monitoring/visa/visa-monitoring";
-import IstMonitoring, { AtmFleetCard } from "./pages/monitoring/ist/ist-monitoring";
+import IstMonitoring, {
+  AtmFleetCard,
+} from "./pages/monitoring/ist/ist-monitoring";
 import AtmTerminals from "./pages/dashboards/atm-terminals/atm-terminals";
 import AtmDashboard from "./pages/dashboards/atm-terminals/atm-dashboard";
 import PosTerminals from "./pages/dashboards/pos-terminals/pos-terminals";
@@ -61,7 +65,9 @@ function App() {
           <Route
             path="/deposit-per-terminal"
             element={
-              <RequirePermission permissions={["report:view-deposit-per-terminal"]}>
+              <RequirePermission
+                permissions={["report:view-deposit-per-terminal"]}
+              >
                 <DepositPerTerminal />
               </RequirePermission>
             }
@@ -285,8 +291,18 @@ function App() {
           <Route
             path="/ebirr-cardless-withdrawal"
             element={
-              <RequirePermission permissions={["report:view-ebirr-cardless-withdrawal"]}>
+              <RequirePermission
+                permissions={["report:view-ebirr-cardless-withdrawal"]}
+              >
                 <EbirrCardlessWithdrawal />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/transaction-mix"
+            element={
+              <RequirePermission permissions={["report:view-transaction-mix"]}>
+                <TransactionMix />
               </RequirePermission>
             }
           />
@@ -309,7 +325,9 @@ function App() {
           <Route
             path="/mastercard-debit-monitoring"
             element={
-              <RequirePermission permissions={["monitoring:view-mastercard-debit"]}>
+              <RequirePermission
+                permissions={["monitoring:view-mastercard-debit"]}
+              >
                 <MastercardDebitMonitoring />
               </RequirePermission>
             }
@@ -317,7 +335,9 @@ function App() {
           <Route
             path="/mastercard-credit-monitoring"
             element={
-              <RequirePermission permissions={["monitoring:view-mastercard-credit"]}>
+              <RequirePermission
+                permissions={["monitoring:view-mastercard-credit"]}
+              >
                 <MastercardCreditMonitoring />
               </RequirePermission>
             }
@@ -365,7 +385,9 @@ function App() {
           <Route
             path="/atm-terminals/:terminalId/transactions"
             element={
-              <RequirePermission permissions={["terminal:view-atm-transaction"]}>
+              <RequirePermission
+                permissions={["terminal:view-atm-transaction"]}
+              >
                 <TerminalTransactions fleet="atm" />
               </RequirePermission>
             }
@@ -373,7 +395,9 @@ function App() {
           <Route
             path="/atm-transactions"
             element={
-              <RequirePermission permissions={["terminal:view-atm-transaction"]}>
+              <RequirePermission
+                permissions={["terminal:view-atm-transaction"]}
+              >
                 <TerminalTransactions fleet="atm" />
               </RequirePermission>
             }
@@ -381,7 +405,9 @@ function App() {
           <Route
             path="/atm-comparison"
             element={
-              <RequirePermission permissions={["terminal:view-atm-transaction"]}>
+              <RequirePermission
+                permissions={["terminal:view-atm-transaction"]}
+              >
                 <TerminalComparison fleet="atm" />
               </RequirePermission>
             }
@@ -405,7 +431,9 @@ function App() {
           <Route
             path="/pos-terminals/:terminalId/transactions"
             element={
-              <RequirePermission permissions={["terminal:view-pos-transaction"]}>
+              <RequirePermission
+                permissions={["terminal:view-pos-transaction"]}
+              >
                 <TerminalTransactions fleet="pos" />
               </RequirePermission>
             }
@@ -413,7 +441,9 @@ function App() {
           <Route
             path="/pos-transactions"
             element={
-              <RequirePermission permissions={["terminal:view-pos-transaction"]}>
+              <RequirePermission
+                permissions={["terminal:view-pos-transaction"]}
+              >
                 <TerminalTransactions fleet="pos" />
               </RequirePermission>
             }
@@ -421,7 +451,9 @@ function App() {
           <Route
             path="/pos-comparison"
             element={
-              <RequirePermission permissions={["terminal:view-pos-transaction"]}>
+              <RequirePermission
+                permissions={["terminal:view-pos-transaction"]}
+              >
                 <TerminalComparison fleet="pos" />
               </RequirePermission>
             }
@@ -448,6 +480,21 @@ function App() {
                   product="VISA"
                   title="Uncleared VISA"
                   description="Approved Visa POS purchases that still need clearing."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/unsettled-visa-cybersource"
+            element={
+              <RequirePermission
+                permissions={["settlement:view-unsettled-visa-cybersource"]}
+              >
+                <Unsettled
+                  key="VISA Cybersource"
+                  product="VISACBS"
+                  title="Unsettled VISA Cybersource"
+                  description="Approved Visa Cybersource transactions that still need settlement."
                 />
               </RequirePermission>
             }
@@ -524,7 +571,9 @@ function App() {
           <Route
             path="/unsettled-eth"
             element={
-              <RequirePermission permissions={["settlement:view-unsettled-eth"]}>
+              <RequirePermission
+                permissions={["settlement:view-unsettled-eth"]}
+              >
                 <Unsettled
                   key="unsettled-ETB"
                   product="ETB"
@@ -537,7 +586,9 @@ function App() {
           <Route
             path="/unsettled-visa"
             element={
-              <RequirePermission permissions={["settlement:view-unsettled-visa"]}>
+              <RequirePermission
+                permissions={["settlement:view-unsettled-visa"]}
+              >
                 <Unsettled
                   key="unsettled-VISA"
                   product="VISA"
@@ -559,6 +610,16 @@ function App() {
                   title="Unsettled Mastercard"
                   description="Mastercard POS purchases that have been cleared but are not yet settled."
                 />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/visa-settlement"
+            element={
+              <RequirePermission
+                permissions={["settlement:view-settled-visa"]}
+              >
+                <VisaCyberSource />
               </RequirePermission>
             }
           />

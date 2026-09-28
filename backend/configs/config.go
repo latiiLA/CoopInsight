@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"bytes"
 	"log"
 	"os"
 	"strconv"
@@ -69,6 +70,13 @@ var (
 	LDAPBaseDN       string
 	LDAPBindUser     string
 	LDAPBindPassword string
+	// LDAPTLSMode: empty/"none" = plain ldap://host:port;
+	// "starttls" = ldap + StartTLS; "ldaps" = ldaps://host:port
+	LDAPTLSMode string
+	// LDAPTLSInsecureSkipVerify skips LDAP server cert verification (corp AD private CA).
+	// Prefer LDAP_CA_FILE when a CA PEM is available.
+	LDAPTLSInsecureSkipVerify bool
+	LDAPCAFile                string
 
 	// ssl
 	CertFile string
@@ -119,7 +127,7 @@ var (
 )
 
 func LoadConfig() {
-	err := godotenv.Load()
+	err := loadDotEnv()
 	if err != nil {
 		log.Println("No .env file found or couldn't load it, relying on environment variables", err)
 	}
@@ -351,6 +359,26 @@ func LoadConfig() {
 		log.Fatalf("LDAP bind password is required but not set")
 	}
 
+	LDAPTLSMode = strings.ToLower(strings.TrimSpace(os.Getenv("LDAP_TLS_MODE")))
+	switch LDAPTLSMode {
+	case "", "none", "starttls", "ldaps":
+		// ok
+	default:
+		log.Fatalf("LDAP_TLS_MODE must be one of: none, starttls, ldaps (got %q)", LDAPTLSMode)
+	}
+	if LDAPTLSMode == "" || LDAPTLSMode == "none" {
+		log.Println("LDAP_TLS_MODE is unset/none: using plaintext LDAP. Prefer starttls or ldaps in production.")
+	}
+
+	_, LDAPTLSInsecureSkipVerify = parseBoolEnv("LDAP_TLS_INSECURE_SKIP_VERIFY")
+	LDAPCAFile = strings.TrimSpace(os.Getenv("LDAP_CA_FILE"))
+	if LDAPTLSInsecureSkipVerify {
+		log.Println("LDAP_TLS_INSECURE_SKIP_VERIFY=true: LDAP TLS certificate verification is disabled")
+	}
+	if LDAPCAFile != "" && LDAPTLSInsecureSkipVerify {
+		log.Println("LDAP_CA_FILE is set but LDAP_TLS_INSECURE_SKIP_VERIFY=true; CA file ignored while skip-verify is on")
+	}
+
 	// Read allowed origins from environment and split into slice
 	originsEnv := os.Getenv("ALLOWED_ORIGINS")
 	if originsEnv != "" {
@@ -570,6 +598,29 @@ func LoadConfig() {
 	} else {
 		log.Print("MAS SSH is disabled")
 	}
+}
+
+
+// loadDotEnv loads .env with the same semantics as godotenv.Load, but strips a
+// leading UTF-8 BOM (EF BB BF) that some Windows editors leave on the file.
+func loadDotEnv() error {
+	data, err := os.ReadFile(".env")
+	if err != nil {
+		return err
+	}
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
+	envMap, err := godotenv.Parse(bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	for k, v := range envMap {
+		if _, exists := os.LookupEnv(k); !exists {
+			if err := os.Setenv(k, v); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func parseIntEnv(key string, fallback int) int {

@@ -127,7 +127,7 @@ func (r *activityLogRepository) List(
 	if err != nil {
 		return nil, 0, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	items := make([]model.ActivityLog, 0)
 	if err := cursor.All(ctx, &items); err != nil {

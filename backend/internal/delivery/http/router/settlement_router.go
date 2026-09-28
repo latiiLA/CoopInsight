@@ -37,6 +37,14 @@ func registerSettlementRoutes(
 		),
 		unsettledHandler.ListMastercard,
 	)
+	settlement.GET(
+		"/unsettled/visacybersource",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"settlement:view-unsettled-visa-cybersource"},
+		),
+		unsettledHandler.ListVisaCybersource,
+	)
 
 	settlement.GET(
 		"/settled/eth",

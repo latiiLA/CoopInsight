@@ -38,6 +38,7 @@ func NewClearedRepository(db *sql.DB) repository.ClearedRepository {
 
 func (r *clearedRepository) List(
 	ctx context.Context,
+	msgType int64,
 	dateFrom, dateTo string,
 	sourceBin, destBin int64,
 	page, pageSize int,
@@ -46,7 +47,7 @@ func (r *clearedRepository) List(
 	rows, err := r.db.QueryContext(
 		ctx,
 		clearedBinQuery,
-		clearingListArgs(sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
+		clearingListArgs(msgType, sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
 	)
 	if err != nil {
 		return nil, false, wrapError(common.ErrFailedToFetchReport, err)
@@ -69,6 +70,7 @@ func scanClearedRows(rows *sql.Rows) ([]model.ClearedTransaction, error) {
 		var (
 			id        sql.NullFloat64
 			date      sql.NullString
+			txnDate   sql.NullString
 			timeVal   sql.NullString
 			msgType   sql.NullFloat64
 			procCode  sql.NullFloat64
@@ -84,11 +86,13 @@ func scanClearedRows(rows *sql.Rows) ([]model.ClearedTransaction, error) {
 			txnDest   sql.NullString
 			issAcq    sql.NullString
 			posAtm    sql.NullString
+			txnId     sql.NullString
 		)
 
 		if err := rows.Scan(
 			&id,
 			&date,
+			&txnDate,
 			&timeVal,
 			&msgType,
 			&procCode,
@@ -104,6 +108,7 @@ func scanClearedRows(rows *sql.Rows) ([]model.ClearedTransaction, error) {
 			&txnDest,
 			&issAcq,
 			&posAtm,
+			&txnId,
 		); err != nil {
 			return nil, wrapError(common.ErrFailedToFetchReport, err)
 		}
@@ -111,6 +116,7 @@ func scanClearedRows(rows *sql.Rows) ([]model.ClearedTransaction, error) {
 		results = append(results, model.ClearedTransaction{
 			ID:             int64(id.Float64),
 			Date:           strings.TrimSpace(date.String),
+			TxnDate:        strings.TrimSpace(txnDate.String),
 			Time:           formatClearingTime(timeVal.String),
 			MsgType:        int64(msgType.Float64),
 			ProcCode:       int64(procCode.Float64),
@@ -126,6 +132,7 @@ func scanClearedRows(rows *sql.Rows) ([]model.ClearedTransaction, error) {
 			TxnDest:        strings.TrimSpace(txnDest.String),
 			IssuerAcquirer: strings.TrimSpace(issAcq.String),
 			PosAtm:         strings.TrimSpace(posAtm.String),
+			TxnID:          strings.TrimSpace(txnId.String),
 		})
 	}
 

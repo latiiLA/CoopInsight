@@ -2,11 +2,14 @@ import { format, parseISO } from "date-fns";
 import {
   ArrowDownWideNarrow,
   ArrowUpNarrowWide,
+  CreditCard,
   Download,
+  MousePointerClick,
   Search,
   Trophy,
 } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -41,21 +44,45 @@ import {
   selectBranch,
 } from "@/features/card_activity_slice";
 import { CardBranchActivity } from "@/types/card-activity";
+import { CardMetric } from "@/types/card-detail";
+import { hasPermission } from "../../../utility/has-permission";
 import { cn } from "@/lib/utils";
 import { AppDispatch, RootState } from "../../../app/store/store";
+import { CardDetailSheet } from "./card-detail-sheet";
+import { DrillValue } from "./card-detail-drill";
+
+/** Permission that opens the card detail list at all. */
+const CARD_DETAIL_PERMISSION = "card:view-card-details";
+
+type DetailRequest = {
+  metric: CardMetric;
+  dateFrom: string;
+  dateTo: string;
+  branchId?: number;
+  scopeLabel?: string;
+};
+
+/**
+ * What a trigger supplies. Dates are optional: a trigger that drills into a
+ * single day overrides them, everything else inherits the page range.
+ */
+type DetailScope = Omit<DetailRequest, "dateFrom" | "dateTo"> & {
+  dateFrom?: string;
+  dateTo?: string;
+};
 
 type MetricKey = "created" | "issued" | "activated" | "total";
 
 const METRICS: { key: MetricKey; label: string }[] = [
   { key: "total", label: "Total" },
   { key: "created", label: "Requested" },
-  { key: "issued", label: "Printed" },
+  { key: "issued", label: "Issued" },
   { key: "activated", label: "Activated" },
 ];
 
 const ACTIVITY_METRICS = [
   { key: "created" as const, label: "Requested", color: "var(--chart-1)" },
-  { key: "issued" as const, label: "Printed", color: "var(--chart-2)" },
+  { key: "issued" as const, label: "Issued", color: "var(--chart-2)" },
   {
     key: "activated" as const,
     label: "Activated",
@@ -210,6 +237,7 @@ function TopBranchCard({
   loading,
   selected,
   onSelect,
+  onViewCards,
 }: {
   label: string;
   branch: CardBranchActivity | null;
@@ -217,6 +245,7 @@ function TopBranchCard({
   loading: boolean;
   selected: boolean;
   onSelect: () => void;
+  onViewCards?: () => void;
 }) {
   return (
     <button
@@ -242,8 +271,31 @@ function TopBranchCard({
           <div className="mt-1 text-2xl font-semibold tabular-nums">
             {formatCount(value)}
           </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            Click to view progress over time
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {onViewCards ? (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onViewCards();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onViewCards();
+                  }
+                }}
+                className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                <CreditCard className="size-3.5" />
+                View cards
+              </span>
+            ) : null}
+            <span className="text-xs text-muted-foreground">
+              Click card for progress over time
+            </span>
           </div>
         </>
       ) : (
@@ -277,6 +329,31 @@ export default function CardBranchSection({
   // Stick to a manual pick until the date range changes; otherwise always
   // follow the highest branch for the active metric.
   const userPickedRef = useRef(false);
+
+  // Null while the detail sheet is closed.
+  const [detail, setDetail] = useState<DetailRequest | null>(null);
+
+  const canViewDetails = useMemo(
+    () => hasPermission([CARD_DETAIL_PERMISSION]),
+    [],
+  );
+
+  const openDetails = useCallback(
+    (request: DetailScope) => {
+      // An explicit single-day range wins; otherwise inherit the page range.
+      const from = request.dateFrom ?? dateFrom;
+      const to = request.dateTo ?? dateTo;
+      if (!from || !to) return;
+      setDetail({ ...request, dateFrom: from, dateTo: to });
+    },
+    [dateFrom, dateTo],
+  );
+
+  const closeDetails = useCallback((open: boolean) => {
+    if (!open) {
+      setDetail(null);
+    }
+  }, []);
 
   useEffect(() => {
     userPickedRef.current = false;
@@ -383,6 +460,83 @@ export default function CardBranchSection({
     [branchTrend],
   );
 
+  // Declared after trendRows and selectedBranch because the dependency arrays
+  // below are evaluated immediately, not lazily.
+  //
+  // The trend card can be scoped to a single day, which overrides the page range
+  // with that one date. The branch is always the selected one.
+  const openBranchDetails = useCallback(
+    (nextMetric: CardMetric, day?: string) => {
+      if (selectedBranchId === null) return;
+
+      const scope = selectedBranch
+        ? branchLabel(selectedBranch)
+        : `Branch ${selectedBranchId}`;
+
+      if (day) {
+        // The report rows are yyyy-MM-dd; the API takes MM/dd/yyyy.
+        const single = format(parseISO(day), "MM/dd/yyyy");
+        openDetails({
+          metric: nextMetric,
+          dateFrom: single,
+          dateTo: single,
+          branchId: selectedBranchId,
+          scopeLabel: `${scope} · ${format(parseISO(day), "MMM d, yyyy")}`,
+        });
+        return;
+      }
+
+      openDetails({
+        metric: nextMetric,
+        branchId: selectedBranchId,
+        scopeLabel: scope,
+      });
+    },
+    [openDetails, selectedBranch, selectedBranchId],
+  );
+
+  // "total" has no matching endpoint, so a total-scoped view falls back to the
+  // requested metric rather than guessing.
+  const drillMetric: CardMetric =
+    metric === "issued" || metric === "activated" ? metric : "created";
+
+  // Recharts leaves activeTooltipIndex undefined unless the tooltip is active,
+  // so the index is tracked on mousemove and read on click. The ref is kept
+  // after a click so repeated clicks in one spot still work.
+  const trendHoverIndexRef = useRef<number | null>(null);
+
+  const resolveTrendIndex = (
+    state: { activeTooltipIndex?: number | string } | undefined,
+  ): number | null => {
+    const raw = state?.activeTooltipIndex;
+    if (typeof raw === "number") {
+      return Number.isInteger(raw) ? raw : null;
+    }
+    if (typeof raw === "string" && raw.trim() !== "") {
+      const parsed = Number(raw);
+      return Number.isInteger(parsed) ? parsed : null;
+    }
+    return null;
+  };
+
+  const handleTrendMove = (state: { activeTooltipIndex?: number | string }) => {
+    trendHoverIndexRef.current = resolveTrendIndex(state);
+  };
+
+  const handleTrendLeave = () => {
+    trendHoverIndexRef.current = null;
+  };
+
+  const handleTrendClick = (state: { activeTooltipIndex?: number | string }) => {
+    const index = resolveTrendIndex(state) ?? trendHoverIndexRef.current;
+    if (index === null) return;
+
+    const row = trendRows[index];
+    if (row) {
+      openBranchDetails(drillMetric, row.date);
+    }
+  };
+
   const handleSelect = (branchId: number, nextMetric?: MetricKey) => {
     userPickedRef.current = true;
     if (nextMetric) setMetric(nextMetric);
@@ -403,7 +557,7 @@ export default function CardBranchSection({
       "branch_code",
       "branch_name",
       "requested",
-      "printed",
+      "issued",
       "activated",
       "total",
     ];
@@ -442,6 +596,16 @@ export default function CardBranchSection({
             Highest and lowest branches, full ranking, and per-branch progress
             over time. Select a branch to load its trend.
           </p>
+          {canViewDetails ? (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MousePointerClick className="size-3.5 shrink-0 text-primary" />
+              <span>
+                Tip: click a Requested, Issued or Activated count in the ranking,
+                or use “View cards” on a leader card, to open that branch’s
+                cards.
+              </span>
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-1">
           {METRICS.map((item) => (
@@ -471,6 +635,16 @@ export default function CardBranchSection({
               onSelect={() => {
                 if (branch) handleSelect(branch.branchId, item.key);
               }}
+              onViewCards={
+                canViewDetails && branch
+                  ? () =>
+                      openDetails({
+                        metric: item.key,
+                        branchId: branch.branchId,
+                        scopeLabel: branchLabel(branch),
+                      })
+                  : undefined
+              }
             />
           );
         })}
@@ -552,7 +726,7 @@ export default function CardBranchSection({
                     <th className="py-2 pr-3 font-medium">#</th>
                     <th className="py-2 pr-3 font-medium">Branch</th>
                     <th className="py-2 pr-3 text-right font-medium">Requested</th>
-                    <th className="py-2 pr-3 text-right font-medium">Printed</th>
+                    <th className="py-2 pr-3 text-right font-medium">Issued</th>
                     <th className="py-2 pr-3 text-right font-medium">
                       Activated
                     </th>
@@ -579,13 +753,52 @@ export default function CardBranchSection({
                           {branchLabel(branch)}
                         </td>
                         <td className="py-2 pr-3 text-right tabular-nums">
-                          {formatCount(branch.created)}
+                          <DrillValue
+                            value={branch.created}
+                            format={formatCount}
+                            onClick={
+                              canViewDetails
+                                ? () =>
+                                    openDetails({
+                                      metric: "created",
+                                      branchId: branch.branchId,
+                                      scopeLabel: branchLabel(branch),
+                                    })
+                                : undefined
+                            }
+                          />
                         </td>
                         <td className="py-2 pr-3 text-right tabular-nums">
-                          {formatCount(branch.issued)}
+                          <DrillValue
+                            value={branch.issued}
+                            format={formatCount}
+                            onClick={
+                              canViewDetails
+                                ? () =>
+                                    openDetails({
+                                      metric: "issued",
+                                      branchId: branch.branchId,
+                                      scopeLabel: branchLabel(branch),
+                                    })
+                                : undefined
+                            }
+                          />
                         </td>
                         <td className="py-2 pr-3 text-right tabular-nums">
-                          {formatCount(branch.activated)}
+                          <DrillValue
+                            value={branch.activated}
+                            format={formatCount}
+                            onClick={
+                              canViewDetails
+                                ? () =>
+                                    openDetails({
+                                      metric: "activated",
+                                      branchId: branch.branchId,
+                                      scopeLabel: branchLabel(branch),
+                                    })
+                                : undefined
+                            }
+                          />
                         </td>
                         <td className="py-2 text-right font-medium tabular-nums">
                           {formatCount(metricValue(branch, "total"))}
@@ -603,16 +816,42 @@ export default function CardBranchSection({
       <div ref={trendRef}>
         <Card className="py-4">
           <CardHeader className="px-4">
-            <CardTitle>
-              {selectedBranch
-                ? `${branchLabel(selectedBranch)} · progress over time`
-                : "Branch progress over time"}
-            </CardTitle>
-            <CardDescription>
-              {branchTrend
-                ? `Daily requested, printed, and activated · ${branchTrend.from} to ${branchTrend.to}`
-                : "Select a branch to view its daily progress"}
-            </CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <CardTitle>
+                  {selectedBranch
+                    ? `${branchLabel(selectedBranch)} · progress over time`
+                    : "Branch progress over time"}
+                </CardTitle>
+                <CardDescription>
+                  {branchTrend
+                    ? `Daily requested, issued, and activated · ${branchTrend.from} to ${branchTrend.to}`
+                    : "Select a branch to view its daily progress"}
+                </CardDescription>
+                {canViewDetails && selectedBranchId !== null ? (
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <MousePointerClick className="size-3.5 shrink-0 text-primary" />
+                    <span>
+                      Tip: click a total or a point on the chart to open this
+                      branch’s cards.
+                    </span>
+                  </p>
+                ) : null}
+              </div>
+
+              {canViewDetails && selectedBranchId !== null ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 shrink-0 gap-1.5"
+                  onClick={() => openBranchDetails(drillMetric)}
+                >
+                  <CreditCard className="size-3.5" />
+                  View cards
+                </Button>
+              ) : null}
+            </div>
           </CardHeader>
           <CardContent className="px-4">
             {selectedBranchId === null ? (
@@ -631,7 +870,33 @@ export default function CardBranchSection({
                   {TREND_SERIES.map((series) => (
                     <div
                       key={series.key}
-                      className="rounded-lg border p-3 text-sm"
+                      className={cn(
+                        "rounded-lg border p-3 text-sm",
+                        canViewDetails &&
+                          "cursor-pointer transition-colors hover:border-primary/50 hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                      )}
+                      role={canViewDetails ? "button" : undefined}
+                      tabIndex={canViewDetails ? 0 : undefined}
+                      onClick={
+                        canViewDetails
+                          ? () => openBranchDetails(series.key)
+                          : undefined
+                      }
+                      onKeyDown={
+                        canViewDetails
+                          ? (event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                openBranchDetails(series.key);
+                              }
+                            }
+                          : undefined
+                      }
+                      aria-label={
+                        canViewDetails
+                          ? `View ${series.label.toLowerCase()} cards for this branch`
+                          : undefined
+                      }
                     >
                       <div className="text-muted-foreground">{series.label}</div>
                       <div className="text-xl font-semibold tabular-nums">
@@ -645,6 +910,12 @@ export default function CardBranchSection({
                     <ComposedChart
                       data={trendRows}
                       margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+                      className={cn(canViewDetails && "cursor-pointer")}
+                      onMouseMove={
+                        canViewDetails ? handleTrendMove : undefined
+                      }
+                      onMouseLeave={canViewDetails ? handleTrendLeave : undefined}
+                      onClick={canViewDetails ? handleTrendClick : undefined}
                     >
                       <CartesianGrid
                         strokeDasharray="3 3"
@@ -677,6 +948,16 @@ export default function CardBranchSection({
           </CardContent>
         </Card>
       </div>
+
+      <CardDetailSheet
+        open={detail !== null}
+        onOpenChange={closeDetails}
+        metric={detail?.metric ?? "created"}
+        dateFrom={detail?.dateFrom ?? dateFrom ?? ""}
+        dateTo={detail?.dateTo ?? dateTo ?? ""}
+        branchId={detail?.branchId}
+        scopeLabel={detail?.scopeLabel}
+      />
     </div>
   );
 }

@@ -15,7 +15,7 @@ SELECT` + clearingSelectColumns + `
 FROM clearing.trans_log t
 WHERE t.ISS_ACQ = 'ACQ'
 	AND t.POS_ATM = 'POS'
-	AND t.MSGTYPE = 210
+	AND t.MSGTYPE = :msgType
 	AND t.TR_RESPCODE = '0'
 	AND t.TR_POSTED = 1
 	AND t.TR_SETTLE = '1'
@@ -35,6 +35,7 @@ func NewSettledRepository(db *sql.DB) repository.SettledRepository {
 
 func (r *settledRepository) List(
 	ctx context.Context,
+	msgType int64,
 	dateFrom, dateTo string,
 	sourceBin, destBin int64,
 	page, pageSize int,
@@ -43,7 +44,7 @@ func (r *settledRepository) List(
 	rows, err := r.db.QueryContext(
 		ctx,
 		settledBinQuery,
-		clearingListArgs(sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
+		clearingListArgs(msgType, sourceBin, destBin, dateFrom, dateTo, page, pageSize)...,
 	)
 	if err != nil {
 		return nil, false, wrapError(common.ErrFailedToFetchReport, err)
@@ -66,6 +67,7 @@ func scanSettledRows(rows *sql.Rows) ([]model.SettledTransaction, error) {
 		var (
 			id        sql.NullFloat64
 			date      sql.NullString
+			txnDate   sql.NullString
 			timeVal   sql.NullString
 			msgType   sql.NullFloat64
 			procCode  sql.NullFloat64
@@ -81,11 +83,13 @@ func scanSettledRows(rows *sql.Rows) ([]model.SettledTransaction, error) {
 			txnDest   sql.NullString
 			issAcq    sql.NullString
 			posAtm    sql.NullString
+			txnId     sql.NullString
 		)
 
 		if err := rows.Scan(
 			&id,
 			&date,
+			&txnDate,
 			&timeVal,
 			&msgType,
 			&procCode,
@@ -101,6 +105,7 @@ func scanSettledRows(rows *sql.Rows) ([]model.SettledTransaction, error) {
 			&txnDest,
 			&issAcq,
 			&posAtm,
+			&txnId,
 		); err != nil {
 			return nil, wrapError(common.ErrFailedToFetchReport, err)
 		}
@@ -108,6 +113,7 @@ func scanSettledRows(rows *sql.Rows) ([]model.SettledTransaction, error) {
 		results = append(results, model.SettledTransaction{
 			ID:             int64(id.Float64),
 			Date:           strings.TrimSpace(date.String),
+			TxnDate:        strings.TrimSpace(txnDate.String),
 			Time:           formatClearingTime(timeVal.String),
 			MsgType:        int64(msgType.Float64),
 			ProcCode:       int64(procCode.Float64),
@@ -123,6 +129,7 @@ func scanSettledRows(rows *sql.Rows) ([]model.SettledTransaction, error) {
 			TxnDest:        strings.TrimSpace(txnDest.String),
 			IssuerAcquirer: strings.TrimSpace(issAcq.String),
 			PosAtm:         strings.TrimSpace(posAtm.String),
+			TxnID:          strings.TrimSpace(txnId.String),
 		})
 	}
 

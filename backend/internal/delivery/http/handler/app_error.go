@@ -65,6 +65,13 @@ var appErrors = []struct {
 	{common.ErrOracleUnavailable, http.StatusServiceUnavailable},
 	{common.ErrSourceMongoUnavailable, http.StatusServiceUnavailable},
 	{common.ErrInvalidReportDate, http.StatusBadRequest},
+	{common.ErrInvalidCardMetric, http.StatusBadRequest},
+	{common.ErrInvalidCardBranchID, http.StatusBadRequest},
+	{common.ErrInvalidCardGroupBy, http.StatusBadRequest},
+	{common.ErrInvalidCardDateField, http.StatusBadRequest},
+	{common.ErrInvalidCardProductID, http.StatusBadRequest},
+	{common.ErrInvalidCardExpiryWindow, http.StatusBadRequest},
+	{common.ErrMixRangeTooLarge, http.StatusBadRequest},
 	{common.ErrInvalidDateRange, http.StatusBadRequest},
 	{common.ErrDateRangeTooLarge, http.StatusBadRequest},
 	{common.ErrInvalidSuccessChannel, http.StatusBadRequest},
@@ -96,7 +103,6 @@ func writeAppError(c *gin.Context, err error) {
 	for _, mapped := range appErrors {
 		if errors.Is(err, mapped.err) {
 			status = mapped.status
-			message = mapped.err.Error()
 			break
 		}
 	}

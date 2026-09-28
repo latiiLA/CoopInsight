@@ -2,45 +2,50 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
 import api from "@/lib/api";
-import { CardStatusReport } from "@/types/card-status-report";
+import {
+  CardStatusDateField,
+  CardStatusGroupBy,
+  CardStatusReport,
+  CardStatusResponse,
+} from "@/types/card-status-report";
 import { RootState } from "../../app/store/store";
 import { getTokenFromAuth, withAuthHeader } from "../../utility/auth-token";
 import getErrorMessage from "../../utility/error-message";
-
-type CardStatusPayload = {
-  items: CardStatusReport[];
-};
 
 interface CardStatusState {
   rows: CardStatusReport[];
   loading: boolean;
   error: string | null;
-  dateFrom: string | null;
-  dateTo: string | null;
+  /** Echoed by the API, so the table can label itself from the server's view. */
+  groupBy: CardStatusGroupBy;
+  dateField: CardStatusDateField;
+  expiringWithinMonths: number;
 }
 
 const initialState: CardStatusState = {
   rows: [],
   loading: false,
   error: null,
-  dateFrom: null,
-  dateTo: null,
+  groupBy: "status",
+  dateField: "created",
+  expiringWithinMonths: 60,
 };
 
 export type FetchCardStatusArgs = {
   dateFrom?: string;
   dateTo?: string;
+  groupBy?: CardStatusGroupBy;
+  dateField?: CardStatusDateField;
+  expiringWithinMonths?: number;
+  productId?: number;
+  branchId?: number;
 };
 
 export const fetchCardStatus = createAsyncThunk<
-  {
-    items: CardStatusReport[];
-    dateFrom?: string;
-    dateTo?: string;
-  },
+  CardStatusResponse,
   FetchCardStatusArgs,
   { state: RootState; rejectValue: string }
->("cardStatus/fetchCardStatus", async ({ dateFrom, dateTo }, thunkAPI) => {
+>("cardStatus/fetchCardStatus", async (args, thunkAPI) => {
   try {
     const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
 
@@ -48,13 +53,20 @@ export const fetchCardStatus = createAsyncThunk<
       return thunkAPI.rejectWithValue("Authentication token not found");
     }
 
-    const response = await api.get<{ data: CardStatusPayload }>(
+    const response = await api.get<{ data: CardStatusResponse }>(
       "/card/count-per-status",
       {
         ...withAuthHeader(token),
         params: {
-          ...(dateFrom ? { dateFrom } : {}),
-          ...(dateTo ? { dateTo } : {}),
+          ...(args.dateFrom ? { dateFrom: args.dateFrom } : {}),
+          ...(args.dateTo ? { dateTo: args.dateTo } : {}),
+          ...(args.groupBy ? { groupBy: args.groupBy } : {}),
+          ...(args.dateField ? { dateField: args.dateField } : {}),
+          ...(args.expiringWithinMonths !== undefined
+            ? { expiringWithinMonths: args.expiringWithinMonths }
+            : {}),
+          ...(args.productId ? { productId: args.productId } : {}),
+          ...(args.branchId ? { branchId: args.branchId } : {}),
         },
         signal: thunkAPI.signal,
         timeout: 180_000,
@@ -65,8 +77,9 @@ export const fetchCardStatus = createAsyncThunk<
 
     return {
       items: payload?.items ?? [],
-      dateFrom,
-      dateTo,
+      groupBy: payload?.groupBy ?? args.groupBy ?? "status",
+      dateField: payload?.dateField ?? args.dateField ?? "created",
+      expiringWithinMonths: payload?.expiringWithinMonths ?? 60,
     };
   } catch (error) {
     if (
@@ -96,9 +109,10 @@ const cardStatusSlice = createSlice({
       .addCase(fetchCardStatus.fulfilled, (state, action) => {
         state.loading = false;
         state.error = null;
-        state.dateFrom = action.payload.dateFrom ?? null;
-        state.dateTo = action.payload.dateTo ?? null;
         state.rows = action.payload.items;
+        state.groupBy = action.payload.groupBy;
+        state.dateField = action.payload.dateField;
+        state.expiringWithinMonths = action.payload.expiringWithinMonths;
       })
       .addCase(fetchCardStatus.rejected, (state, action) => {
         if (action.meta.aborted) {

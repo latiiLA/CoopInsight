@@ -65,6 +65,19 @@ interface DataTableProps<TData extends RowData> {
 
   onDateChange?: (date: DateRange | undefined) => void;
   defaultDate?: DateRange;
+
+  /**
+   * Optional per-column override for the value written to CSV/XLSX, keyed by
+   * column id.
+   *
+   * Export reads the raw accessor value, not the rendered cell, so a column
+   * whose `cell` formats its value for display needs this to keep the file
+   * consistent with the screen. Columns with no entry are unaffected.
+   */
+  exportValueByColumn?: Record<
+    string,
+    (value: unknown, row: TData) => unknown
+  >;
 }
 
 export function DataTable<TData extends RowData>({
@@ -82,6 +95,7 @@ export function DataTable<TData extends RowData>({
   enablePagination = true,
   onDateChange,
   defaultDate,
+  exportValueByColumn,
 }: DataTableProps<TData>) {
   const [date, setDate] = useState<DateRange | undefined>(defaultDate);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -154,7 +168,9 @@ export function DataTable<TData extends RowData>({
           .getVisibleCells()
           .find((cell) => cell.column.id === column.id);
 
-        const value = cell?.getValue();
+        const raw = cell?.getValue();
+        const override = exportValueByColumn?.[column.id];
+        const value = override ? override(raw, row.original) : raw;
 
         return typeof value === "string"
           ? value.replace(/"/g, '""')

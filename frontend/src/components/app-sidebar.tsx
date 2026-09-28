@@ -7,12 +7,14 @@ import {
   ChevronRight,
   CreditCard,
   CreditCardIcon,
+  FileUp,
   Home,
   Inbox,
   KeyRound,
   LayoutDashboard,
   LucideIdCard,
   Radio,
+  PieChart,
   Scale,
   ServerCog,
   Settings,
@@ -321,6 +323,12 @@ const data: {
           url: "ebirr-cardless-withdrawal",
           permissions: ["report:view-ebirr-cardless-withdrawal"],
         },
+        {
+          title: "Transaction Mix",
+          icon: PieChart,
+          url: "transaction-mix",
+          permissions: ["report:view-transaction-mix"],
+        },
       ],
     },
     {
@@ -452,6 +460,12 @@ const data: {
           permissions: ["clearing:view-uncleared-visa"],
         },
         {
+          title: "Uncleared VISA Cybersource",
+          url: "uncleared-visa-cybersource",
+          icon: VisaIcon,
+          permissions: ["clearing:view-uncleared-visa-cybersource"],
+        },
+        {
           title: "Uncleared Mastercard",
           url: "uncleared-mastercard",
           icon: MastercardIcon,
@@ -488,6 +502,12 @@ const data: {
           permissions: ["settlement:view-unsettled-visa"],
         },
         {
+          title: "Unsettled VISA Cybersource",
+          url: "unsettled-visa-cybersource",
+          icon: VisaIcon,
+          permissions: ["settlement:view-unsettled-visa-cybersource"],
+        },
+        {
           title: "Unsettled Mastercard",
           url: "unsettled-mastercard",
           icon: MastercardIcon,
@@ -501,7 +521,7 @@ const data: {
         },
         {
           title: "Settled VISA",
-          url: "settled-visa",
+          url: "visa-settlement",
           icon: VisaIcon,
           permissions: ["settlement:view-settled-visa"],
         },
@@ -631,12 +651,16 @@ function NavMainItem({ item }: { item: NavItem }) {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { authUser, permissions } = useSelector((state: RootState) => state.user);
+  const { authUser, permissions } = useSelector(
+    (state: RootState) => state.user,
+  );
   const HomeIcon = data.navHome.icon;
   const navMain = data.navMain
     .map((item) => ({
       ...item,
-      items: item.items.filter((subItem) => canSeeNavItem(subItem, permissions)),
+      items: item.items.filter((subItem) =>
+        canSeeNavItem(subItem, permissions),
+      ),
     }))
     .filter((item) => item.items.length > 0);
 
