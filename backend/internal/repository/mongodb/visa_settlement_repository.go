@@ -457,7 +457,7 @@ func (r *visaSettlementRepository) FindSettledTransactionIDsByIDs(ctx context.Co
 	if err != nil {
 		return nil, fmt.Errorf("find settled transaction IDs by IDs: %w", err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var results []struct {
 		TransactionID string `bson:"transaction_id"`
@@ -497,7 +497,7 @@ func (r *visaSettlementRepository) FindSettledTransactionsByIDs(ctx context.Cont
 	if err != nil {
 		return nil, fmt.Errorf("find settled transactions by IDs: %w", err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var results []model.VisaSettlementTransaction
 	if err := cursor.All(ctx, &results); err != nil {
