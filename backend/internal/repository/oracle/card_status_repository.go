@@ -209,7 +209,7 @@ func (r *cardRepository) CountCardPerStatus(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	cards := make([]model.Card, 0, 32)
 

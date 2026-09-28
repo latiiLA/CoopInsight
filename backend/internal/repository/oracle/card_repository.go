@@ -65,7 +65,7 @@ func (r *cardRepository) CardActivity(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	byDay := make(map[string]*model.CardDailyActivity)
 
@@ -247,7 +247,7 @@ func (r *cardRepository) CardActivityForBranch(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	byDay := make(map[string]*model.CardDailyActivity)
 

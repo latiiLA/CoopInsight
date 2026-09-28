@@ -261,7 +261,7 @@ func (r *visaSettlementRepository) FindByDateRange(ctx context.Context, startDat
 	if err != nil {
 		return nil, fmt.Errorf("find by date range: %w", err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var results []model.VisaSettlementTransaction
 	if err := cursor.All(ctx, &results); err != nil {
@@ -287,7 +287,7 @@ func (r *visaSettlementRepository) FindByBatchID(ctx context.Context, batchID pr
 	if err != nil {
 		return nil, fmt.Errorf("find by batch id: %w", err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var results []model.VisaSettlementTransaction
 	if err := cursor.All(ctx, &results); err != nil {
@@ -305,7 +305,7 @@ func (r *visaSettlementRepository) FindByAccountNumber(ctx context.Context, acco
 	if err != nil {
 		return nil, fmt.Errorf("find by account number: %w", err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var results []model.VisaSettlementTransaction
 	if err := cursor.All(ctx, &results); err != nil {
