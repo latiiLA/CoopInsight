@@ -107,7 +107,7 @@ func (r *cardRepository) ListCardDetails(
 	if err != nil {
 		return nil, false, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	items := make([]model.CardDetail, 0, pageSize)
 

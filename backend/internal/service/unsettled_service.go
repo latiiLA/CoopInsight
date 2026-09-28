@@ -169,27 +169,7 @@ func (s *unsettledService) ListVisaCybersource(
 	// Convert to UnsettledTransaction
 	converted := make([]model.UnsettledTransaction, 0, len(unclearedRows))
 	for _, u := range unclearedRows {
-		converted = append(converted, model.UnsettledTransaction{
-			ID:             u.ID,
-			Date:           u.Date,
-			TxnDate:        u.TxnDate,
-			Time:           u.Time,
-			MsgType:        u.MsgType,
-			ProcCode:       u.ProcCode,
-			RRN:            u.RRN,
-			STAN:           u.STAN,
-			RespCode:       u.RespCode,
-			Amount:         u.Amount,
-			Currency:       u.Currency,
-			TerminalID:     u.TerminalID,
-			Merchant:       u.Merchant,
-			CardProduct:    u.CardProduct,
-			TxnSource:      u.TxnSource,
-			TxnDest:        u.TxnDest,
-			IssuerAcquirer: u.IssuerAcquirer,
-			PosAtm:         u.PosAtm,
-			TxnID:          u.TxnID,
-		})
+		converted = append(converted, model.UnsettledTransaction(u))
 	}
 
 	// Filter out settled transactions by matching txnId = transaction_id

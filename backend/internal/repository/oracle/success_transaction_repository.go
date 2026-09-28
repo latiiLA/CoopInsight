@@ -445,7 +445,7 @@ func (r *successTransactionRepository) ListTransactions(
 		outcomeFilter = `NOT (` + trulyApprovedExpr() + `)`
 	}
 
-	respFilter := "1=1"
+	var respFilter string
 	switch respCode {
 	case "":
 		respFilter = "1=1"

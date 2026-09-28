@@ -165,9 +165,7 @@ func (r *cardRepository) CountCardPerStatus(
 	for i, col := range columns {
 		projection = append(projection, fmt.Sprintf("%s AS %s", col, aliases[i]))
 	}
-	for _, measure := range measures {
-		projection = append(projection, measure)
-	}
+	projection = append(projection, measures...)
 
 	query := "\tSELECT\n\t\t" + strings.Join(projection, ",\n\t\t") +
 		"\n\tFROM cortex.crddet c" +

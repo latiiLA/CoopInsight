@@ -270,7 +270,7 @@ func passwordMatches(stored, provided string) bool {
 	}
 
 	// Accept only bcrypt hashes — plaintext comparison is rejected.
-	if !(strings.HasPrefix(stored, "$2a$") || strings.HasPrefix(stored, "$2b$") || strings.HasPrefix(stored, "$2y$")) {
+	if !strings.HasPrefix(stored, "$2a$") && !strings.HasPrefix(stored, "$2b$") && !strings.HasPrefix(stored, "$2y$") {
 		logrus.Warn("local auth rejected: stored password is not a bcrypt hash")
 		return false
 	}

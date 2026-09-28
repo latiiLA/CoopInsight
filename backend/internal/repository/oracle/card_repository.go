@@ -151,7 +151,7 @@ func (r *cardRepository) CardActivityByBranch(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	byBranch := make(map[int64]*model.CardBranchActivity)
 

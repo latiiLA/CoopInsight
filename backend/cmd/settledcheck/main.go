@@ -19,7 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Oracle connect: %v", err)
 	}
-	defer oracleDB.Close()
+	defer func() { _ = oracleDB.Close() }()
 
 	if err := oracleDB.PingContext(ctx); err != nil {
 		log.Fatalf("Oracle ping: %v", err)
@@ -94,7 +94,7 @@ FETCH FIRST 20 ROWS ONLY
 	if err != nil {
 		log.Fatalf("Sample query: %v", err)
 	}
-	defer rows2.Close()
+	defer func() { _ = rows2.Close() }()
 
 	fmt.Printf("%-10s %-10s %-20s %-12s %-15s %-12s\n", "Settle", "Posted", "TR_ARF", "STAN", "Amount", "Date")
 	fmt.Println(string(make([]byte, 85)))

@@ -52,7 +52,7 @@ func (h *visaSettlementHandler) UploadReport(c *gin.Context) {
 		})
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// 3. Delegate file processing to the service layer
 	summary, err := h.visaSettlementService.ProcessReportFile(c.Request.Context(), fileHeader.Filename, file)

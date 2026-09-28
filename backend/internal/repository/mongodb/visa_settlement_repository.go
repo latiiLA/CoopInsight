@@ -215,7 +215,7 @@ func (r *visaSettlementRepository) FindByTransactionIDPrefix(
 	if err != nil {
 		return nil, fmt.Errorf("search by transaction id: %w", err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	results := make([]model.VisaSettlementTransaction, 0, 16)
 	if err := cursor.All(ctx, &results); err != nil {
