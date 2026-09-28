@@ -351,7 +351,7 @@ func (r *visaSettlementRepository) ListBatchSummaries(ctx context.Context, limit
 	if err != nil {
 		return nil, fmt.Errorf("list batch summaries: %w", err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var results []model.SettlementBatchSummary
 	if err := cursor.All(ctx, &results); err != nil {
@@ -384,7 +384,7 @@ func (r *visaSettlementRepository) FindSettledTransactionIDs(ctx context.Context
 	if err != nil {
 		return nil, fmt.Errorf("find settled transaction IDs: %w", err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var results []struct {
 		TransactionID string `bson:"transaction_id"`
@@ -419,7 +419,7 @@ func (r *visaSettlementRepository) FindAllSettledTransactionIDs(ctx context.Cont
 	if err != nil {
 		return nil, fmt.Errorf("find all settled transaction IDs: %w", err)
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var results []struct {
 		TransactionID string `bson:"transaction_id"`
