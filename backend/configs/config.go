@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"bytes"
 	"log"
 	"os"
 	"strconv"
@@ -126,7 +127,7 @@ var (
 )
 
 func LoadConfig() {
-	err := godotenv.Load()
+	err := loadDotEnv()
 	if err != nil {
 		log.Println("No .env file found or couldn't load it, relying on environment variables", err)
 	}
@@ -597,6 +598,29 @@ func LoadConfig() {
 	} else {
 		log.Print("MAS SSH is disabled")
 	}
+}
+
+
+// loadDotEnv loads .env with the same semantics as godotenv.Load, but strips a
+// leading UTF-8 BOM (EF BB BF) that some Windows editors leave on the file.
+func loadDotEnv() error {
+	data, err := os.ReadFile(".env")
+	if err != nil {
+		return err
+	}
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
+	envMap, err := godotenv.Parse(bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	for k, v := range envMap {
+		if _, exists := os.LookupEnv(k); !exists {
+			if err := os.Setenv(k, v); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func parseIntEnv(key string, fallback int) int {
