@@ -72,6 +72,10 @@ var (
 	// LDAPTLSMode: empty/"none" = plain ldap://host:port;
 	// "starttls" = ldap + StartTLS; "ldaps" = ldaps://host:port
 	LDAPTLSMode string
+	// LDAPTLSInsecureSkipVerify skips LDAP server cert verification (corp AD private CA).
+	// Prefer LDAP_CA_FILE when a CA PEM is available.
+	LDAPTLSInsecureSkipVerify bool
+	LDAPCAFile                string
 
 	// ssl
 	CertFile string
@@ -363,6 +367,15 @@ func LoadConfig() {
 	}
 	if LDAPTLSMode == "" || LDAPTLSMode == "none" {
 		log.Println("LDAP_TLS_MODE is unset/none: using plaintext LDAP. Prefer starttls or ldaps in production.")
+	}
+
+	_, LDAPTLSInsecureSkipVerify = parseBoolEnv("LDAP_TLS_INSECURE_SKIP_VERIFY")
+	LDAPCAFile = strings.TrimSpace(os.Getenv("LDAP_CA_FILE"))
+	if LDAPTLSInsecureSkipVerify {
+		log.Println("LDAP_TLS_INSECURE_SKIP_VERIFY=true: LDAP TLS certificate verification is disabled")
+	}
+	if LDAPCAFile != "" && LDAPTLSInsecureSkipVerify {
+		log.Println("LDAP_CA_FILE is set but LDAP_TLS_INSECURE_SKIP_VERIFY=true; CA file ignored while skip-verify is on")
 	}
 
 	// Read allowed origins from environment and split into slice

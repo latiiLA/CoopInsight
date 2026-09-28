@@ -192,6 +192,10 @@ func (a *userHandler) writeLoginResult(c *gin.Context, username string, user *dt
 			status = http.StatusForbidden
 			message = "User doesn't have AD account"
 
+		case errors.Is(err, common.ErrADUnavailable):
+			status = http.StatusServiceUnavailable
+			message = "Active Directory is temporarily unavailable"
+
 		case errors.Is(err, common.ErrUserNotFound):
 			status = http.StatusForbidden
 			message = "User isn't registered for the system"

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net"
 	"os"
@@ -277,6 +278,32 @@ func passwordMatches(stored, provided string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(stored), []byte(provided)) == nil
 }
 
+func (s *userService) ldapTLSConfig() (*tls.Config, error) {
+	host := strings.TrimSpace(s.host)
+	cfg := &tls.Config{
+		MinVersion:         tls.VersionTLS12,
+		ServerName:         host,
+		InsecureSkipVerify: configs.LDAPTLSInsecureSkipVerify, //nolint:gosec // opt-in for corp AD private CA
+	}
+	if configs.LDAPTLSInsecureSkipVerify {
+		return cfg, nil
+	}
+	caFile := strings.TrimSpace(configs.LDAPCAFile)
+	if caFile == "" {
+		return cfg, nil
+	}
+	pemBytes, err := os.ReadFile(caFile)
+	if err != nil {
+		return nil, fmt.Errorf("read LDAP CA file: %w", err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(pemBytes) {
+		return nil, fmt.Errorf("LDAP CA file contains no certificates")
+	}
+	cfg.RootCAs = pool
+	return cfg, nil
+}
+
 func (s *userService) dialLDAP() (*ldap.Conn, error) {
 	host := strings.TrimSpace(s.host)
 	port := strings.TrimSpace(s.port)
@@ -292,19 +319,22 @@ func (s *userService) dialLDAP() (*ldap.Conn, error) {
 
 	switch mode {
 	case "ldaps":
-		return ldap.DialURL("ldaps://"+addr, ldap.DialWithTLSConfig(&tls.Config{
-			MinVersion: tls.VersionTLS12,
-			ServerName: host,
-		}))
+		tlsCfg, err := s.ldapTLSConfig()
+		if err != nil {
+			return nil, err
+		}
+		return ldap.DialURL("ldaps://"+addr, ldap.DialWithTLSConfig(tlsCfg))
 	case "starttls":
 		conn, err := ldap.DialURL("ldap://" + addr)
 		if err != nil {
 			return nil, err
 		}
-		if err := conn.StartTLS(&tls.Config{
-			MinVersion: tls.VersionTLS12,
-			ServerName: host,
-		}); err != nil {
+		tlsCfg, err := s.ldapTLSConfig()
+		if err != nil {
+			_ = conn.Close()
+			return nil, err
+		}
+		if err := conn.StartTLS(tlsCfg); err != nil {
 			_ = conn.Close()
 			return nil, err
 		}
