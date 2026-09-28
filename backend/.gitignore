@@ -8,6 +8,9 @@ coopinsight.exe
 migrate
 credentials/
 cmd/explorer
+cmd/settledcheck
+cmd/successrollup
+cmd/tmpprobe
 
 air.*
 
