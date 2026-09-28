@@ -10,8 +10,8 @@ import {
 import {
   Avatar,
   AvatarFallback,
-  AvatarImage,
 } from "@/components/ui/avatar"
+import { AuthAvatarImage } from "@/components/auth-avatar-image";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,7 +62,7 @@ export function NavUser({
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 {user.avatar ? (
-                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AuthAvatarImage src={user.avatar} alt={user.name} />
                 ) : null}
                 <AvatarFallback className="rounded-lg">
                   {(user.name || user.username || "?").slice(0, 1).toUpperCase()}
@@ -85,7 +85,7 @@ export function NavUser({
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   {user.avatar ? (
-                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AuthAvatarImage src={user.avatar} alt={user.name} />
                   ) : null}
                   <AvatarFallback className="rounded-lg">
                     {(user.name || user.username || "?").slice(0, 1).toUpperCase()}

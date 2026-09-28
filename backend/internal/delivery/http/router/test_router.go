@@ -3,12 +3,12 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/handler"
+	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/middleware"
 )
 
 func registerTestRoutes(protected *gin.RouterGroup, testHandler handler.TestHandler) {
-	users := protected.Group("/tests")
+	tests := protected.Group("/tests")
 
-	users.GET("/test", testHandler.GetTestData)
-	// group.POST("/register", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"user:create"}), authController.Register)
-
+	// Diagnostic oracle probe — SUPERADMIN only (was any authenticated user).
+	tests.GET("/test", middleware.AuthorizeRolesOrPermissions([]string{"SUPERADMIN"}, []string{}), testHandler.GetTestData)
 }

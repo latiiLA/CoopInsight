@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
-	"crypto/subtle"
+	"crypto/tls"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"sort"
@@ -83,50 +84,43 @@ func (s *userService) Authenticate(ctx context.Context, username, password, ip s
 		return nil, err
 	}
 
-	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s", s.host))
+	l, err := s.dialLDAP()
 	if err != nil {
-		logrus.Println("LDAP: Connection failed")
-		return nil, fmt.Errorf("failed to connect to LDAP: %w", err)
+		logrus.WithError(err).Warn("LDAP: connection failed")
+		return nil, fmt.Errorf("%w", common.ErrADUnavailable)
 	}
 	defer func() { _ = l.Close() }()
 
-	// Search for user DN
+	if err := l.Bind(s.bindUser, s.bindPassword); err != nil {
+		logrus.WithError(err).Warn("LDAP: service bind failed")
+		return nil, fmt.Errorf("%w", common.ErrADUnavailable)
+	}
+
+	filter := fmt.Sprintf("(%s=%s)", s.userFilter, ldap.EscapeFilter(username))
 	searchRequest := ldap.NewSearchRequest(
 		s.basedDN,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(%s=%s)", s.userFilter, username),
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 1, 0, false,
+		filter,
 		[]string{"dn"},
 		nil,
 	)
 
-	// Bind with service account
-	err = l.Bind(s.bindUser, s.bindPassword)
-	if err != nil {
-		logrus.Println(fmt.Errorf("bind failed: %w", err))
-		return nil, fmt.Errorf("bind failed: %w", err)
-	}
-	logrus.Println("LDAP: Initial bind successful")
-
 	sr, err := l.Search(searchRequest)
 	if err != nil {
-		logrus.Println(fmt.Errorf("LDAP search error: %w", err))
-		return nil, fmt.Errorf("LDAP search error: %w", err)
+		logrus.WithError(err).Warn("LDAP: search failed")
+		return nil, fmt.Errorf("%w", common.ErrADUnavailable)
 	}
 	if len(sr.Entries) == 0 {
-		logrus.Println(fmt.Errorf("user not found"))
 		return nil, common.ErrADUserNotFound
 	}
 
 	userDN := sr.Entries[0].DN
-	logrus.Printf("LDAP: Found user DN = %s\n", userDN)
 
-	// Try binding as the user with the provided password
-	err = l.Bind(userDN, password)
-	if err != nil {
-		logrus.Println(fmt.Errorf("user authentication failed: %w", err))
+	if err := l.Bind(userDN, password); err != nil {
+		logrus.Warn("LDAP: user authentication failed")
 		return nil, common.ErrInvalidCredentials
 	}
-	logrus.Println("✅ User authentication successful")
+	logrus.Info("LDAP: user authentication successful")
 
 	return s.issueSessionResponse(ctx, existingUser, ip, "")
 }
@@ -274,15 +268,51 @@ func passwordMatches(stored, provided string) bool {
 		return false
 	}
 
-	if strings.HasPrefix(stored, "$2a$") || strings.HasPrefix(stored, "$2b$") || strings.HasPrefix(stored, "$2y$") {
-		return bcrypt.CompareHashAndPassword([]byte(stored), []byte(provided)) == nil
-	}
-
-	if len(stored) != len(provided) {
+	// Accept only bcrypt hashes — plaintext comparison is rejected.
+	if !(strings.HasPrefix(stored, "$2a$") || strings.HasPrefix(stored, "$2b$") || strings.HasPrefix(stored, "$2y$")) {
+		logrus.Warn("local auth rejected: stored password is not a bcrypt hash")
 		return false
 	}
 
-	return subtle.ConstantTimeCompare([]byte(stored), []byte(provided)) == 1
+	return bcrypt.CompareHashAndPassword([]byte(stored), []byte(provided)) == nil
+}
+
+func (s *userService) dialLDAP() (*ldap.Conn, error) {
+	host := strings.TrimSpace(s.host)
+	port := strings.TrimSpace(s.port)
+	if host == "" {
+		return nil, fmt.Errorf("ldap host not configured")
+	}
+	if port == "" {
+		port = "389"
+	}
+
+	mode := strings.ToLower(strings.TrimSpace(configs.LDAPTLSMode))
+	addr := net.JoinHostPort(host, port)
+
+	switch mode {
+	case "ldaps":
+		return ldap.DialURL("ldaps://"+addr, ldap.DialWithTLSConfig(&tls.Config{
+			MinVersion: tls.VersionTLS12,
+			ServerName: host,
+		}))
+	case "starttls":
+		conn, err := ldap.DialURL("ldap://" + addr)
+		if err != nil {
+			return nil, err
+		}
+		if err := conn.StartTLS(&tls.Config{
+			MinVersion: tls.VersionTLS12,
+			ServerName: host,
+		}); err != nil {
+			_ = conn.Close()
+			return nil, err
+		}
+		return conn, nil
+	default:
+		// Plain LDAP when LDAP_TLS_MODE is unset/none. Prefer starttls or ldaps in production.
+		return ldap.DialURL("ldap://" + addr)
+	}
 }
 
 // Inside your LDAP service
@@ -292,16 +322,16 @@ func (s *userService) GetUserDetails(ctx context.Context, username string) (*dto
 		return nil, common.ErrADUserNotFound
 	}
 
-	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s:%s", s.host, s.port))
+	l, err := s.dialLDAP()
 	if err != nil {
 		logrus.WithError(err).Warn("LDAP: connection failed")
-		return nil, fmt.Errorf("%w: %v", common.ErrADUnavailable, err)
+		return nil, fmt.Errorf("%w", common.ErrADUnavailable)
 	}
 	defer func() { _ = l.Close() }()
 
 	if err := l.Bind(s.bindUser, s.bindPassword); err != nil {
 		logrus.WithError(err).Warn("LDAP: bind failed")
-		return nil, fmt.Errorf("%w: %v", common.ErrADUnavailable, err)
+		return nil, fmt.Errorf("%w", common.ErrADUnavailable)
 	}
 
 	filter := fmt.Sprintf(
@@ -321,7 +351,7 @@ func (s *userService) GetUserDetails(ctx context.Context, username string) (*dto
 	sr, err := l.Search(searchRequest)
 	if err != nil {
 		logrus.WithError(err).WithField("username", username).Warn("LDAP: search failed")
-		return nil, fmt.Errorf("%w: %v", common.ErrADUnavailable, err)
+		return nil, fmt.Errorf("%w", common.ErrADUnavailable)
 	}
 	if sr == nil || len(sr.Entries) == 0 {
 		logrus.WithField("username", username).Warn("LDAP: username does not exist")

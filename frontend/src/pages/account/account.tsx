@@ -3,7 +3,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { Check, ImageUp, UserRound } from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AuthAvatarImage } from "@/components/auth-avatar-image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -227,7 +228,7 @@ const Account = () => {
         <CardContent className="flex flex-wrap items-center gap-4">
           <Avatar className="size-16 rounded-xl">
             {pictureSrc ? (
-              <AvatarImage src={pictureSrc} alt={fullName} />
+              <AuthAvatarImage src={pictureSrc} alt={fullName} />
             ) : null}
             <AvatarFallback className="rounded-xl text-lg">
               {initial}

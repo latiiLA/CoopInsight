@@ -14,19 +14,23 @@ type LiveSwitchFeedProps = {
   emptyLabel: string;
 };
 
-function monitoringSocketUrl(socketPath: string, token: string) {
+function monitoringSocketUrl(socketPath: string) {
   const apiBase = config.API_URL.replace(/\/$/, "");
   const path = socketPath.startsWith("/") ? socketPath : `/${socketPath}`;
 
   if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
     const url = new URL(`${apiBase}${path}`);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-    url.searchParams.set("token", token);
     return url.toString();
   }
 
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}${apiBase}${path}?token=${encodeURIComponent(token)}`;
+  return `${protocol}//${window.location.host}${apiBase}${path}`;
+}
+
+function monitoringSocketProtocols(token: string) {
+  // Must match backend bearerToken Sec-WebSocket-Protocol jwt.<token> parsing.
+  return [`jwt.${token}`];
 }
 
 function formatAmount(value: number) {
@@ -70,7 +74,10 @@ export function LiveSwitchFeed({
         return;
       }
 
-      socket = new WebSocket(monitoringSocketUrl(socketPath, token));
+      socket = new WebSocket(
+        monitoringSocketUrl(socketPath),
+        monitoringSocketProtocols(token),
+      );
 
       socket.onmessage = (message) => {
         let frame: OnusFrame;

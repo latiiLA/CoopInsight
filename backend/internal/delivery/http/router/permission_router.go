@@ -9,7 +9,7 @@ import (
 func registerPermissionRoutes(protected *gin.RouterGroup, permissionHandler handler.PermissionHandler) {
 	permissions := protected.Group("/permissions")
 
-	permissions.GET("", permissionHandler.GetAll)
+	permissions.GET("", middleware.AuthorizeRolesOrPermissions([]string{}, []string{"permission:view"}), permissionHandler.GetAll)
 	permissions.GET(
 		"/:id",
 		middleware.AuthorizeRolesOrPermissions([]string{}, []string{"permission:view", "permission:view-details", "permission:update"}),

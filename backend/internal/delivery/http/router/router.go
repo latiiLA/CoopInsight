@@ -47,6 +47,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+	router.Use(middleware.SecurityHeaders())
 
 	allowed := configs.AllowedOrigins
 
@@ -83,12 +84,9 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	router.ForwardedByClientIP = true
 
 	// --------------------------------------------------
-	// Static files
+	// Health check (root + /api for vite/nginx proxies that only forward /api)
 	// --------------------------------------------------
 
-	router.Static("/uploads", configs.FileUploadPath)
-
-	// Health check (root + /api for vite/nginx proxies that only forward /api)
 	healthHandler := func(c *gin.Context) {
 		oracleStatus := "disabled"
 		if configs.OracleEnabled {
@@ -125,6 +123,14 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	// --------------------------------------------------
 
 	registerAuthRoutes(api, handlers.User)
+
+	// --------------------------------------------------
+	// Authenticated uploads (avatars) — no anonymous Static mount
+	// --------------------------------------------------
+
+	uploads := router.Group("/uploads")
+	uploads.Use(middleware.JwtAuthMiddleware())
+	uploads.GET("/*filepath", handler.ServeUpload)
 
 	// --------------------------------------------------
 	// Protected routes - default timeout

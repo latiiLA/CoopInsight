@@ -4,7 +4,8 @@ import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, Loader2, Pencil, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AuthAvatarImage } from "@/components/auth-avatar-image";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
@@ -146,7 +147,7 @@ const ViewUser = () => {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-4">
             <Avatar className="h-14 w-14">
-              {pictureSrc ? <AvatarImage src={pictureSrc} alt={fullName} /> : null}
+              {pictureSrc ? <AuthAvatarImage src={pictureSrc} alt={fullName} /> : null}
               <AvatarFallback>{initial}</AvatarFallback>
             </Avatar>
             <div>

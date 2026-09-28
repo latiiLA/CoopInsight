@@ -186,10 +186,8 @@ func bearerToken(c *gin.Context) string {
 		return parts[1]
 	}
 
-	if token := strings.TrimSpace(c.Query("token")); token != "" {
-		return token
-	}
-
+	// WebSocket browsers cannot set Authorization; accept JWT via subprotocol.
+	// Format: Sec-WebSocket-Protocol: jwt.<access-token>
 	for _, proto := range strings.Split(c.GetHeader("Sec-WebSocket-Protocol"), ",") {
 		proto = strings.TrimSpace(proto)
 		if strings.HasPrefix(proto, "jwt.") {

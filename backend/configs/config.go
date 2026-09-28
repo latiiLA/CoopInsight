@@ -69,6 +69,9 @@ var (
 	LDAPBaseDN       string
 	LDAPBindUser     string
 	LDAPBindPassword string
+	// LDAPTLSMode: empty/"none" = plain ldap://host:port;
+	// "starttls" = ldap + StartTLS; "ldaps" = ldaps://host:port
+	LDAPTLSMode string
 
 	// ssl
 	CertFile string
@@ -349,6 +352,17 @@ func LoadConfig() {
 	LDAPBindPassword = os.Getenv("LDAP_BIND_PASSWORD")
 	if LDAPBindPassword == "" {
 		log.Fatalf("LDAP bind password is required but not set")
+	}
+
+	LDAPTLSMode = strings.ToLower(strings.TrimSpace(os.Getenv("LDAP_TLS_MODE")))
+	switch LDAPTLSMode {
+	case "", "none", "starttls", "ldaps":
+		// ok
+	default:
+		log.Fatalf("LDAP_TLS_MODE must be one of: none, starttls, ldaps (got %q)", LDAPTLSMode)
+	}
+	if LDAPTLSMode == "" || LDAPTLSMode == "none" {
+		log.Println("LDAP_TLS_MODE is unset/none: using plaintext LDAP. Prefer starttls or ldaps in production.")
 	}
 
 	// Read allowed origins from environment and split into slice
