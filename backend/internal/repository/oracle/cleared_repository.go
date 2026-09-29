@@ -13,7 +13,7 @@ import (
 const clearedBaseWhere = `
 WHERE t.ISS_ACQ = 'ACQ'
 	AND t.POS_ATM = 'POS'
-	AND t.MSGTYPE = 210
+	AND t.MSGTYPE = :msgType
 	AND t.TR_RESPCODE = '0'
 	AND t.TR_POSTED = 1
 	AND t.TR_CONV_DATE >= TO_DATE(:date_from, 'MM-DD-YYYY')
