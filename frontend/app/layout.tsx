@@ -7,6 +7,7 @@ import {
 import { ModeToggle } from "@/components/mode-toggle";
 import { SwitchHubMark } from "@/components/switch-hub-mark";
 import { Separator } from "@/components/ui/separator";
+import { Footer } from "@/components/footer";
 import { Navigate, NavLink, Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "./store/store";
@@ -55,6 +56,7 @@ export default function Layout() {
         <div className="p-2">
           <Outlet />
         </div>
+        <Footer />
       </main>
     </SidebarProvider>
   )
