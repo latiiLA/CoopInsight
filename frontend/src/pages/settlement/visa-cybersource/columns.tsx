@@ -167,6 +167,9 @@ export function buildTransactionColumns() {
           ? row.original.transaction_date.slice(0, 10)
           : "Not parsed",
     }),
+    txHelper.accessor("transaction_id", {
+      header: ({ column }) => sortableHeader("Txn ID", column),
+    }),
     txHelper.accessor("merchant_name", {
       header: ({ column }) => sortableHeader("Merchant", column),
     }),
@@ -190,9 +193,6 @@ export function buildTransactionColumns() {
     }),
     txHelper.accessor("terminal_id", {
       header: ({ column }) => sortableHeader("Terminal", column),
-    }),
-    txHelper.accessor("transaction_id", {
-      header: ({ column }) => sortableHeader("Transaction ID", column),
     }),
     txHelper.accessor("account_number", {
       header: ({ column }) => sortableHeader("Account", column),

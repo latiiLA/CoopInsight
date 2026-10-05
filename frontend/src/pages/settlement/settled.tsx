@@ -13,7 +13,7 @@ import {
   type SettledProduct,
 } from "@/features/settled_slice";
 import { AppDispatch, RootState } from "../../../app/store/store";
-import { settledColumns } from "./settled-columns";
+import { getSettledColumns } from "./settled-columns";
 
 type SettledPageProps = {
   product: SettledProduct;
@@ -27,7 +27,7 @@ export default function Settled({
   description,
 }: SettledPageProps) {
   const dispatch = useDispatch<AppDispatch>();
-  const columns = useMemo(() => settledColumns, []);
+  const columns = useMemo(() => getSettledColumns(product), [product]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const requestIdRef = useRef(0);
 

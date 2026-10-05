@@ -11,6 +11,7 @@ import SuccessRateTrends from "./pages/reports/success-rate/success-rate-trends"
 import EbirrCardlessWithdrawal from "./pages/reports/ebirr-cardless-withdrawal/ebirr-cardless-withdrawal";
 import TransactionMix from "./pages/reports/transaction-mix/transaction-mix";
 import VisaCyberSource from "./pages/settlement/visa-cybersource/visa-cybersource";
+import MastercardIPM from "./pages/settlement/mastercard-ipm/mastercard-ipm";
 import ManageUsers from "./pages/system administrations/users/manage-users";
 import CreateUser from "./pages/system administrations/users/create-user";
 import ManageAccountRequests from "./pages/system administrations/users/manage-account-requests";
@@ -608,7 +609,7 @@ function App() {
                   key="unsettled-MDS"
                   product="MDS"
                   title="Unsettled Mastercard"
-                  description="Mastercard POS purchases that have been cleared but are not yet settled."
+                  description="Mastercard POS clearing vs nearest-day IPM settlement totals. Matched = settlement found; No settlement = no nearby settlement amount."
                 />
               </RequirePermission>
             }
@@ -620,6 +621,16 @@ function App() {
                 permissions={["settlement:view-settled-visa"]}
               >
                 <VisaCyberSource />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/mastercard-ipm"
+            element={
+              <RequirePermission
+                permissions={["settlement:view-settled-mastercard"]}
+              >
+                <MastercardIPM />
               </RequirePermission>
             }
           />

@@ -531,6 +531,12 @@ const data: {
           icon: MastercardIcon,
           permissions: ["settlement:view-settled-mastercard"],
         },
+        {
+          title: "Mastercard IPM",
+          url: "mastercard-ipm",
+          icon: MastercardIcon,
+          permissions: ["settlement:view-settled-mastercard"],
+        },
       ],
     },
     {

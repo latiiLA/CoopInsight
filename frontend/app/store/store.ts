@@ -16,6 +16,7 @@ import cardReducer from "@/features/card_slice";
 import cardActivityReducer from "@/features/card_activity_slice";
 import cardDetailReducer from "@/features/card_detail_slice";
 import visaSettlementReducer from "@/features/visa_settlement_slice";
+import mastercardIPMReducer from "@/features/mastercard_ipm_slice";
 
 export const store = configureStore({
   reducer: {
@@ -36,6 +37,7 @@ export const store = configureStore({
     cardActivity: cardActivityReducer,
     cardDetail: cardDetailReducer,
     visaSettlement: visaSettlementReducer,
+    mastercardIPM: mastercardIPMReducer,
   },
 });
 

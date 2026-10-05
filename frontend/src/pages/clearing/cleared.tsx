@@ -13,7 +13,7 @@ import {
 } from "@/features/cleared_slice";
 import { CLEARING_MAX_AUTO_PAGES } from "@/features/clearing_constants";
 import { AppDispatch, RootState } from "../../../app/store/store";
-import { clearedColumns } from "./cleared-columns";
+import { getClearedColumns } from "./cleared-columns";
 
 type ClearedPageProps = {
   product: ClearedProduct;
@@ -27,7 +27,7 @@ export default function Cleared({
   description,
 }: ClearedPageProps) {
   const dispatch = useDispatch<AppDispatch>();
-  const columns = useMemo(() => clearedColumns, []);
+  const columns = useMemo(() => getClearedColumns(product), [product]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const requestIdRef = useRef(0);
 

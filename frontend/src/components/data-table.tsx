@@ -7,7 +7,7 @@ import {
   type ColumnDef,
   type RowData,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 
 import {
@@ -78,6 +78,13 @@ interface DataTableProps<TData extends RowData> {
     string,
     (value: unknown, row: TData) => unknown
   >;
+
+  /**
+   * Starting visibility. Re-applied when this object's contents change so a
+   * page can hide presentment columns until a financial row actually has them.
+   * A user toggle is kept until that content changes.
+   */
+  initialColumnVisibility?: ColumnVisibilityState;
 }
 
 export function DataTable<TData extends RowData>({
@@ -96,12 +103,21 @@ export function DataTable<TData extends RowData>({
   onDateChange,
   defaultDate,
   exportValueByColumn,
+  initialColumnVisibility,
 }: DataTableProps<TData>) {
   const [date, setDate] = useState<DateRange | undefined>(defaultDate);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] =
-    useState<ColumnVisibilityState>({});
+    useState<ColumnVisibilityState>(initialColumnVisibility ?? {});
+  const visibilityKey = JSON.stringify(initialColumnVisibility ?? null);
+  useEffect(() => {
+    if (initialColumnVisibility) {
+      setColumnVisibility(initialColumnVisibility);
+    }
+    // Serialized key is the dependency; the object is often a fresh literal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibilityKey]);
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
 
   const [globalFilter, setGlobalFilter] = useState("");

@@ -4,6 +4,7 @@ import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableFeatures } from "@/components/data-table-features";
+import type { ClearedProduct } from "@/features/cleared_slice";
 import { ClearedTransaction } from "@/types/cleared";
 
 const columnHelper = createColumnHelper<DataTableFeatures, ClearedTransaction>();
@@ -15,7 +16,8 @@ function formatAmount(value: number) {
   });
 }
 
-export const clearedColumns = columnHelper.columns([
+export function getClearedColumns(product: ClearedProduct) {
+  return columnHelper.columns([
   columnHelper.display({
     id: "select",
     header: ({ table }) => (
@@ -61,6 +63,13 @@ export const clearedColumns = columnHelper.columns([
   columnHelper.accessor("stan", {
     header: "Trace no.",
   }),
+  ...(product === "VISA"
+    ? [
+        columnHelper.accessor("txnId", {
+          header: "Txn ID",
+        }),
+      ]
+    : []),
   columnHelper.accessor("respCode", {
     header: "Response",
   }),
@@ -92,4 +101,5 @@ export const clearedColumns = columnHelper.columns([
   columnHelper.accessor("procCode", {
     header: "Processing code",
   }),
-]);
+  ]);
+}

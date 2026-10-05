@@ -13,7 +13,7 @@ import {
   type UnclearedProduct,
 } from "@/features/uncleared_slice";
 import { AppDispatch, RootState } from "../../../app/store/store";
-import { unclearedColumns } from "./columns";
+import { getUnclearedColumns } from "./columns";
 
 type UnclearedPageProps = {
   product: UnclearedProduct;
@@ -27,7 +27,7 @@ export default function Uncleared({
   description,
 }: UnclearedPageProps) {
   const dispatch = useDispatch<AppDispatch>();
-  const columns = useMemo(() => unclearedColumns, []);
+  const columns = useMemo(() => getUnclearedColumns(product), [product]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const requestIdRef = useRef(0);
 

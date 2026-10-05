@@ -16,4 +16,5 @@ export type SettledTransaction = {
   txnDest: string;
   issuerAcquirer: string;
   posAtm: string;
+  txnId: string;
 };

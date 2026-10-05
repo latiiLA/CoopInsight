@@ -13,7 +13,7 @@ import {
   type UnsettledProduct,
 } from "@/features/unsettled_slice";
 import { AppDispatch, RootState } from "../../../app/store/store";
-import { unsettledColumns } from "./columns";
+import { getUnsettledColumns } from "./columns";
 
 type UnsettledPageProps = {
   product: UnsettledProduct;
@@ -27,7 +27,7 @@ export default function Unsettled({
   description,
 }: UnsettledPageProps) {
   const dispatch = useDispatch<AppDispatch>();
-  const columns = useMemo(() => unsettledColumns, []);
+  const columns = useMemo(() => getUnsettledColumns(product), [product]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const requestIdRef = useRef(0);
 
@@ -50,7 +50,11 @@ export default function Unsettled({
       let nextPage = 1;
       let continueFetch = true;
 
-      while (continueFetch && !cancelled && requestId === requestIdRef.current) {
+      while (
+        continueFetch &&
+        !cancelled &&
+        requestId === requestIdRef.current
+      ) {
         const promise = dispatch(
           fetchUnsettled({
             dateFrom,
@@ -68,7 +72,9 @@ export default function Unsettled({
 
         if (fetchUnsettled.rejected.match(result)) {
           if (!result.meta.aborted) {
-            toast.error(result.payload || "Failed to fetch unsettled transactions");
+            toast.error(
+              result.payload || "Failed to fetch unsettled transactions",
+            );
           }
           return;
         }

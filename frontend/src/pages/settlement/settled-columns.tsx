@@ -4,6 +4,7 @@ import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableFeatures } from "@/components/data-table-features";
+import type { SettledProduct } from "@/features/settled_slice";
 import { SettledTransaction } from "@/types/settled";
 
 const columnHelper = createColumnHelper<DataTableFeatures, SettledTransaction>();
@@ -15,7 +16,8 @@ function formatAmount(value: number) {
   });
 }
 
-export const settledColumns = columnHelper.columns([
+export function getSettledColumns(product: SettledProduct) {
+  return columnHelper.columns([
   columnHelper.display({
     id: "select",
     header: ({ table }) => (
@@ -49,6 +51,13 @@ export const settledColumns = columnHelper.columns([
       </Button>
     ),
   }),
+    ...(product === "VISA" || product === "VISACBS"
+      ? [
+          columnHelper.accessor("txnId", {
+            header: "Txn ID",
+          }),
+        ]
+      : []),
   columnHelper.accessor("time", {
     header: "Time",
   }),
@@ -92,4 +101,5 @@ export const settledColumns = columnHelper.columns([
   columnHelper.accessor("procCode", {
     header: "Processing code",
   }),
-]);
+  ]);
+}
