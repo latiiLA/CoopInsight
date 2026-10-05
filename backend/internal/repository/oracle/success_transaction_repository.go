@@ -3,191 +3,12 @@ package oracle
 import (
 	"context"
 	"database/sql"
-	"strconv"
 	"time"
 
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/repository"
 )
-
-const approvedRespCodes = `'0','2','11','12','13','17','41','42','43','44','46','51','54','55','59','61','62','65','67','75','76','80','89','98','115','251','252','503','902','904'`
-
-const classifiedRespCodes = `'0','2','11','12','13','17','41','42','43','44','46','51','54','55','59','61','62','65','67','75','76','80','89','98','115','251','252','503','902','904','4','5','8','9','10','14','19','20','22','23','30','48','56','57','58','68','81','82','87','91','92','93','96','99','102','103','112','113','121','702','801','802','900','903','906','930','990','3','39','811'`
-
-// Routing filters (merchant type applied separately for atm/pos).
-// ATM uses MSGTYPE 210 only. POS uses MSGTYPE 110 and 210.
-// ATM on-us uses acquirer 1000000011 + Cortex.
-// POS on-us uses Cortex + CoopBank BIN in TXNSRC (402032); POS issuing excludes that set.
-const (
-	coopPOSTxnSrcBIN = "402032"
-
-	msgTypesATM = `t.MSGTYPE = 210`
-	msgTypesPOS = `t.MSGTYPE IN (110, 210)`
-	// Switch: ATM rows stay 210-only; POS rows allow 110 and 210.
-	msgTypesSwitch = `((t.MERCHANT_TYPE = 6011 AND t.MSGTYPE = 210) OR (t.MERCHANT_TYPE <> 6011 AND t.MSGTYPE IN (110, 210)))`
-
-	routingATMOnus      = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'`
-	routingATMOffus     = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')`
-	routingATMIssuing   = `TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'`
-	routingATMAcquiring = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('CBOBCORTEX', '8888888888', '04', '05')`
-	routingATMOverall   = `((TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('CBOBCORTEX', '8888888888', '04', '05')) OR (TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'))`
-
-	routingPOSOnus      = `TRIM(t.TXNDEST) = 'CBOBCORTEX' AND TRIM(t.TXNSRC) = '` + coopPOSTxnSrcBIN + `'`
-	routingPOSOffus     = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')`
-	routingPOSIssuing   = `TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX' AND TRIM(t.TXNSRC) <> '` + coopPOSTxnSrcBIN + `'`
-	routingPOSAcquiring = `((` + routingPOSOnus + `) OR (` + routingPOSOffus + `))`
-	routingPOSOverall   = `((` + routingPOSOnus + `) OR (` + routingPOSOffus + `) OR (` + routingPOSIssuing + `))`
-)
-
-func msgTypeFilterFor(channel string) string {
-	switch channel {
-	case "pos":
-		return msgTypesPOS
-	case "switch":
-		return msgTypesSwitch
-	default:
-		return msgTypesATM
-	}
-}
-
-func routingFilterFor(channel, flow string) string {
-	switch channel {
-	case "pos":
-		switch flow {
-		case "onus":
-			return routingPOSOnus
-		case "offus":
-			return routingPOSOffus
-		case "issuing":
-			return routingPOSIssuing
-		case "acquiring":
-			return routingPOSAcquiring
-		case "overall":
-			return routingPOSOverall
-		default:
-			return routingPOSAcquiring
-		}
-	case "switch":
-		// ATM rule OR POS rule, scoped by merchant type so channels do not bleed.
-		atm := routingFilterFor("atm", flow)
-		pos := routingFilterFor("pos", flow)
-		return `((t.MERCHANT_TYPE = 6011 AND (` + atm + `)) OR (t.MERCHANT_TYPE <> 6011 AND (` + pos + `)))`
-	default: // atm
-		switch flow {
-		case "onus":
-			return routingATMOnus
-		case "offus":
-			return routingATMOffus
-		case "issuing":
-			return routingATMIssuing
-		case "acquiring":
-			return routingATMAcquiring
-		case "overall":
-			return routingATMOverall
-		default:
-			return routingATMAcquiring
-		}
-	}
-}
-
-// Offus routing: another switch is the destination, so declines from the
-// issuer's switch (respcode 5, 8) are not our switch's fault.
-const offusRoutingExpr = `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')`
-
-// Success requires an approved respcode and no matching 410/420/430 on the same REFNUM.
-// Respcode 5 (Unable to process) and 8 (Issuer timeout) are approved when offus,
-// because the decline originates from the issuer's switch, not ours.
-func trulyApprovedExpr() string {
-	return `(t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NULL)` +
-		` OR (t.respcode IN ('5','8') AND rev.refnum IS NULL AND (` + offusRoutingExpr + `))`
-}
-
-func approvedThenReversedExpr() string {
-	return `(t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NOT NULL)` +
-		` OR (t.respcode IN ('5','8') AND rev.refnum IS NOT NULL AND (` + offusRoutingExpr + `))`
-}
-
-func successTransactionQuery(msgTypeFilter, merchantTypeFilter, routingFilter string) string {
-	// Materialize the reversal REFNUM set and force a hash join. Without this, Oracle
-	// often picks a nested-loop plan for small POS filters (~70s) even though ATM/switch
-	// hash-join the same pattern in ~1s.
-	return `
-WITH rev AS (
-	SELECT /*+ MATERIALIZE */ DISTINCT TRIM(REFNUM) AS refnum
-	FROM oasis.shclog
-	WHERE MSGTYPE IN (410, 420, 430)
-		AND REFNUM IS NOT NULL
-		AND LOCAL_DATE >= TO_DATE(:date_from, 'MM-DD-YYYY')
-		AND LOCAL_DATE < TO_DATE(:date_to, 'MM-DD-YYYY') + 2
-)
-SELECT /*+ USE_HASH(t rev) */
-	COUNT(*) AS total_number_of_transaction,
-	COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END) AS number_of_approved_txn,
-	COUNT(CASE WHEN t.respcode = '4' THEN 1 END) AS do_not_honor,
-	COUNT(CASE WHEN t.respcode = '5' AND NOT (` + offusRoutingExpr + `) THEN 1 END) AS unable_to_process,
-	COUNT(CASE WHEN t.respcode = '8' AND NOT (` + offusRoutingExpr + `) THEN 1 END) AS issuer_timeout_8,
-	COUNT(CASE WHEN t.respcode = '9' THEN 1 END) AS issuer_timeout_9,
-	COUNT(CASE WHEN t.respcode = '10' THEN 1 END) AS unable_to_reverse,
-	COUNT(CASE WHEN t.respcode = '14' THEN 1 END) AS invalid_card,
-	COUNT(CASE WHEN t.respcode = '19' THEN 1 END) AS system_error_reenter,
-	COUNT(CASE WHEN t.respcode = '20' THEN 1 END) AS no_from_account,
-	COUNT(CASE WHEN t.respcode = '22' THEN 1 END) AS no_checking_account,
-	COUNT(CASE WHEN t.respcode = '23' THEN 1 END) AS no_saving_account,
-	COUNT(CASE WHEN t.respcode = '30' THEN 1 END) AS format_error,
-	COUNT(CASE WHEN t.respcode = '48' THEN 1 END) AS chip_arqc_failure,
-	COUNT(CASE WHEN t.respcode = '56' THEN 1 END) AS no_card_record,
-	COUNT(CASE WHEN t.respcode = '57' THEN 1 END) AS txn_not_permitted_on_card,
-	COUNT(CASE WHEN t.respcode = '58' THEN 1 END) AS txn_not_permitted_on_terminal,
-	COUNT(CASE WHEN t.respcode = '68' THEN 1 END) AS late_response,
-	COUNT(CASE WHEN t.respcode = '81' THEN 1 END) AS invalid_pin_block,
-	COUNT(CASE WHEN t.respcode = '82' THEN 1 END) AS invalid_cvv,
-	COUNT(CASE WHEN t.respcode = '87' THEN 1 END) AS pin_key_error,
-	COUNT(CASE WHEN t.respcode = '91' THEN 1 END) AS switch_not_available,
-	COUNT(CASE WHEN t.respcode = '92' THEN 1 END) AS invalid_issuer,
-	COUNT(CASE WHEN t.respcode = '93' THEN 1 END) AS invalid_acquirer,
-	COUNT(CASE WHEN t.respcode = '96' THEN 1 END) AS system_error,
-	COUNT(CASE WHEN t.respcode = '99' THEN 1 END) AS duplicate_transaction,
-	COUNT(CASE WHEN t.respcode = '102' THEN 1 END) AS partial_dispense,
-	COUNT(CASE WHEN t.respcode = '103' THEN 1 END) AS unable_to_dispense,
-	COUNT(CASE WHEN t.respcode = '112' THEN 1 END) AS uncertain_dispense,
-	COUNT(CASE WHEN t.respcode = '113' THEN 1 END) AS deposit_error_113,
-	COUNT(CASE WHEN t.respcode = '121' THEN 1 END) AS deposit_error_121,
-	COUNT(CASE WHEN t.respcode = '702' THEN 1 END) AS server_declined,
-	COUNT(CASE WHEN t.respcode = '801' THEN 1 END) AS clarification_two,
-	COUNT(CASE WHEN t.respcode = '802' THEN 1 END) AS invalid_cvv_two,
-	COUNT(CASE WHEN t.respcode = '900' THEN 1 END) AS issuer_down,
-	COUNT(CASE WHEN t.respcode = '903' THEN 1 END) AS rejected_message,
-	COUNT(CASE WHEN t.respcode = '906' THEN 1 END) AS transferee_down,
-	COUNT(CASE WHEN t.respcode = '930' THEN 1 END) AS system_up,
-	COUNT(CASE WHEN t.respcode = '990' THEN 1 END) AS system_error_990,
-	COUNT(CASE WHEN t.respcode = '3' THEN 1 END) AS invalid_merchant,
-	COUNT(CASE WHEN t.respcode = '39' THEN 1 END) AS no_credit_account,
-	COUNT(CASE WHEN t.respcode = '811' THEN 1 END) AS system_security_error,
-	COUNT(CASE WHEN t.respcode NOT IN (` + classifiedRespCodes + `) THEN 1 END) AS others,
-	COUNT(CASE WHEN ` + approvedThenReversedExpr() + ` THEN 1 END) AS reversed_after_approve,
-	COUNT(*) - COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END) AS number_of_declined_txn,
-	NVL(
-		ROUND(
-			(
-				COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END)
-				/ NULLIF(COUNT(*), 0)
-			) * 100,
-			2
-		),
-		0
-	) AS percent_success_rate,
-	NVL(SUM(CASE WHEN ` + trulyApprovedExpr() + ` THEN t.amount ELSE 0 END), 0) AS total_approved_amount,
-	NVL(SUM(t.amount), 0) - NVL(SUM(CASE WHEN ` + trulyApprovedExpr() + ` THEN t.amount ELSE 0 END), 0) AS total_declined_amount,
-	NVL(SUM(t.amount), 0) AS total_transaction_amount
-FROM oasis.shclog t
-LEFT JOIN rev ON rev.refnum = TRIM(t.REFNUM)
-WHERE ` + msgTypeFilter + `
-	AND ` + merchantTypeFilter + `
-	AND ` + routingFilter + `
-	AND t.LOCAL_DATE BETWEEN TO_DATE(:date_from, 'MM-DD-YYYY') AND TO_DATE(:date_to, 'MM-DD-YYYY')
-`
-}
 
 type successTransactionRepository struct {
 	db *sql.DB
@@ -252,9 +73,7 @@ type successTransactionRow struct {
 }
 
 func (r *successTransactionRepository) GetReport(ctx context.Context, dateFrom, dateTo, channel, flow string) (*model.SuccessTransactionReport, error) {
-	merchantTypeFilter := merchantTypeFilterFor(channel)
-	routingFilter := routingFilterFor(channel, flow)
-	msgTypeFilter := msgTypeFilterFor(channel)
+	msgTypeFilter, merchantTypeFilter, routingFilter := channelFilters(channel, flow)
 
 	metric, err := r.queryFlow(ctx, dateFrom, dateTo, msgTypeFilter, merchantTypeFilter, routingFilter)
 	if err != nil {
@@ -277,56 +96,6 @@ func (r *successTransactionRepository) GetReport(ctx context.Context, dateFrom, 
 	}, nil
 }
 
-func periodExprFor(granularity string) string {
-	switch granularity {
-	case "week":
-		return `TRUNC(t.LOCAL_DATE, 'IW')`
-	case "month":
-		return `TRUNC(t.LOCAL_DATE, 'MM')`
-	default:
-		return `TRUNC(t.LOCAL_DATE)`
-	}
-}
-
-func successTrendQuery(msgTypeFilter, merchantTypeFilter, routingFilter, periodExpr string) string {
-	return `
-WITH rev AS (
-	SELECT /*+ MATERIALIZE */ DISTINCT TRIM(REFNUM) AS refnum
-	FROM oasis.shclog
-	WHERE MSGTYPE IN (410, 420, 430)
-		AND REFNUM IS NOT NULL
-		AND LOCAL_DATE >= TO_DATE(:date_from, 'MM-DD-YYYY')
-		AND LOCAL_DATE < TO_DATE(:date_to, 'MM-DD-YYYY') + 2
-)
-SELECT /*+ USE_HASH(t rev) */
-	TO_CHAR(` + periodExpr + `, 'YYYY-MM-DD') AS period_start,
-	COUNT(*) AS total_number_of_transaction,
-	COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END) AS number_of_approved_txn,
-	COUNT(*) - COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END) AS number_of_declined_txn,
-	NVL(
-		ROUND(
-			(
-				COUNT(CASE WHEN ` + trulyApprovedExpr() + ` THEN 1 END)
-				/ NULLIF(COUNT(*), 0)
-			) * 100,
-			2
-		),
-		0
-	) AS percent_success_rate,
-	NVL(SUM(CASE WHEN ` + trulyApprovedExpr() + ` THEN t.amount ELSE 0 END), 0) AS total_approved_amount,
-	NVL(SUM(t.amount), 0) - NVL(SUM(CASE WHEN ` + trulyApprovedExpr() + ` THEN t.amount ELSE 0 END), 0) AS total_declined_amount,
-	NVL(SUM(t.amount), 0) AS total_transaction_amount
-FROM oasis.shclog t
-LEFT JOIN rev ON rev.refnum = TRIM(t.REFNUM)
-WHERE ` + msgTypeFilter + `
-	AND ` + merchantTypeFilter + `
-	AND ` + routingFilter + `
-	AND t.LOCAL_DATE BETWEEN TO_DATE(:date_from, 'MM-DD-YYYY') AND TO_DATE(:date_to, 'MM-DD-YYYY')
-GROUP BY ` + periodExpr + `
-ORDER BY ` + periodExpr + `
-`
-}
-
 func trendPeriodLabel(periodStart, granularity string) string {
 	parsed, err := time.Parse("2006-01-02", periodStart)
 	if err != nil {
@@ -347,13 +116,8 @@ func (r *successTransactionRepository) GetTrend(
 	ctx context.Context,
 	dateFrom, dateTo, channel, flow, granularity string,
 ) (*model.SuccessRateTrendReport, error) {
-	periodExpr := periodExprFor(granularity)
-	query := successTrendQuery(
-		msgTypeFilterFor(channel),
-		merchantTypeFilterFor(channel),
-		routingFilterFor(channel, flow),
-		periodExpr,
-	)
+	msgType, merchantType, routing := channelFilters(channel, flow)
+	query := successTrendQuery(msgType, merchantType, routing, periodExprFor(granularity))
 
 	rows, err := r.db.QueryContext(
 		ctx,
@@ -412,17 +176,6 @@ func (r *successTransactionRepository) GetTrend(
 	}, nil
 }
 
-func merchantTypeFilterFor(channel string) string {
-	switch channel {
-	case "pos":
-		return "t.MERCHANT_TYPE <> 6011"
-	case "switch":
-		return "1=1"
-	default:
-		return "t.MERCHANT_TYPE = 6011"
-	}
-}
-
 func (r *successTransactionRepository) ListTransactions(
 	ctx context.Context,
 	dateFrom, dateTo, channel, flow, outcome, respCode string,
@@ -457,47 +210,7 @@ func (r *successTransactionRepository) ListTransactions(
 		respFilter = `TRIM(TO_CHAR(t.respcode)) = :resp_code`
 	}
 
-	query := `
-WITH rev AS (
-	SELECT /*+ MATERIALIZE */ DISTINCT TRIM(REFNUM) AS refnum
-	FROM oasis.shclog
-	WHERE MSGTYPE IN (410, 420, 430)
-		AND REFNUM IS NOT NULL
-		AND LOCAL_DATE >= TO_DATE(:date_from, 'MM-DD-YYYY')
-		AND LOCAL_DATE < TO_DATE(:date_to, 'MM-DD-YYYY') + 1
-)
-SELECT /*+ USE_HASH(t rev) */
-	NVL(TRIM(t.REFNUM), '') AS refnum,
-	TO_CHAR(t.LOCAL_DATE, 'YYYY-MM-DD') AS txn_at,
-	TO_CHAR(
-	TO_DATE(LPAD(TO_CHAR(t.LOCAL_TIME), 6, '0'), 'HH24MISS'), 'HH24:MI:SS') AS txn_time,
-	t.MSGTYPE AS msg_type,
-	NVL(TRIM(t.TERMID), '') AS terminal_id,
-	NVL(TRIM(t.TERMLOC), '') AS terminal_location,
-	NVL(TRIM(t.CARDPRODUCT), '') AS card_product,
-	NVL(TRIM(TO_CHAR(t.respcode)), '') AS resp_code,
-	CASE
-		WHEN ` + trulyApprovedExpr() + ` THEN 'approved'
-		WHEN ` + approvedThenReversedExpr() + ` THEN 'reversed'
-		ELSE 'declined'
-	END AS outcome,
-	NVL(t.amount, 0) AS amount,
-	NVL(TRIM(t.ACQUIRER), '') AS acquirer,
-	NVL(TRIM(t.TXNSRC), '') AS txn_src,
-	NVL(TRIM(t.TXNDEST), '') AS txn_dest,
-	NVL(t.MERCHANT_TYPE, 0) AS merchant_type
-FROM oasis.shclog t
-LEFT JOIN rev ON rev.refnum = TRIM(t.REFNUM)
-WHERE ` + msgTypeFilterFor(channel) + `
-	AND ` + merchantTypeFilterFor(channel) + `
-	AND ` + routingFilterFor(channel, flow) + `
-	AND ` + outcomeFilter + `
-	AND ` + respFilter + `
-	AND t.LOCAL_DATE >= TO_DATE(:date_from, 'MM-DD-YYYY')
-	AND t.LOCAL_DATE < TO_DATE(:date_to, 'MM-DD-YYYY') + 1
-ORDER BY t.LOCAL_DATE DESC, t.LOCAL_TIME DESC, t.REFNUM DESC
-FETCH FIRST ` + strconv.Itoa(limit) + ` ROWS ONLY
-`
+	query := listSuccessTransactionsQuery(channel, flow, outcomeFilter, respFilter, limit)
 
 	args := []any{
 		sql.Named("date_from", dateFrom),

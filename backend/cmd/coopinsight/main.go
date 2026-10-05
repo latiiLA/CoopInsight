@@ -168,6 +168,14 @@ func main() {
 		service.NewVisaSettlementService(visaSettlementRepo),
 	)
 
+	mastercardIPMRepo := mongodb.NewMastercardIPMRepository(db)
+	if err := mastercardIPMRepo.EnsureIndexes(ctx); err != nil {
+		logrus.WithError(err).Warn("Could not create Mastercard IPM indexes; duplicate uploads may not be rejected")
+	}
+	mastercardIPMHandler := handler.NewMastercardIPMHandler(
+		service.NewMastercardIPMService(mastercardIPMRepo),
+	)
+
 	userService := service.NewUserService(
 		userRepository,
 		roleRepository,
@@ -243,7 +251,7 @@ func main() {
 			service.NewClearedService(oracle.NewClearedRepository(oracleDB)),
 		)
 		unsettledHandler = handler.NewUnsettledHandler(
-			service.NewUnsettledService(oracle.NewUnsettledRepository(oracleDB), visaSettlementRepo, oracle.NewUnclearedRepository(oracleDB)),
+			service.NewUnsettledService(oracle.NewUnsettledRepository(oracleDB), visaSettlementRepo, oracle.NewUnclearedRepository(oracleDB), mastercardIPMRepo),
 		)
 		settledHandler = handler.NewSettledHandler(
 			service.NewSettledService(oracle.NewSettledRepository(oracleDB)),
@@ -267,7 +275,7 @@ func main() {
 		)
 		unclearedHandler = handler.NewUnclearedHandler(service.NewUnclearedService(nil))
 		clearedHandler = handler.NewClearedHandler(service.NewClearedService(nil))
-		unsettledHandler = handler.NewUnsettledHandler(service.NewUnsettledService(nil, nil, nil))
+		unsettledHandler = handler.NewUnsettledHandler(service.NewUnsettledService(nil, nil, nil, nil))
 		settledHandler = handler.NewSettledHandler(service.NewSettledService(nil))
 		cardHandler = handler.NewCardHandler(service.NewCardService(nil))
 		transactionMixHandler = handler.NewTransactionMixHandler(
@@ -407,6 +415,7 @@ func main() {
 		Card:                       cardHandler,
 		TransactionMix:             transactionMixHandler,
 		VisaSettlement:             visaSettlementHandler,
+		MastercardIPM:              mastercardIPMHandler,
 	})
 
 	// --------------------------------------------------

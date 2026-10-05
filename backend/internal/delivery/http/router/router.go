@@ -36,6 +36,7 @@ type Handlers struct {
 	Card                       handler.CardHandler
 	TransactionMix             handler.TransactionMixHandler
 	VisaSettlement             handler.VisaSettlementHandler
+	MastercardIPM              handler.MastercardIPMHandler
 }
 
 func SetupRouter(handlers Handlers) *gin.Engine {
@@ -193,6 +194,11 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	registerVisaSettlementRoutes(
 		protected,
 		handlers.VisaSettlement,
+	)
+
+	registerMastercardIPMRoutes(
+		protected,
+		handlers.MastercardIPM,
 	)
 
 	return router

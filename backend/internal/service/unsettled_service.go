@@ -24,13 +24,24 @@ type UnsettledService interface {
 }
 
 type unsettledService struct {
-	repository    repository.UnsettledRepository
-	unclearedRepo repository.UnclearedRepository
+	repository     repository.UnsettledRepository
+	unclearedRepo  repository.UnclearedRepository
 	settlementRepo repository.VisaSettlementRepository
+	mastercardIPM  repository.MastercardIPMRepository
 }
 
-func NewUnsettledService(repository repository.UnsettledRepository, settlementRepo repository.VisaSettlementRepository, unclearedRepo repository.UnclearedRepository) UnsettledService {
-	return &unsettledService{repository: repository, settlementRepo: settlementRepo, unclearedRepo: unclearedRepo}
+func NewUnsettledService(
+	repository repository.UnsettledRepository,
+	settlementRepo repository.VisaSettlementRepository,
+	unclearedRepo repository.UnclearedRepository,
+	mastercardIPM repository.MastercardIPMRepository,
+) UnsettledService {
+	return &unsettledService{
+		repository:     repository,
+		settlementRepo: settlementRepo,
+		unclearedRepo:  unclearedRepo,
+		mastercardIPM:  mastercardIPM,
+	}
 }
 
 func (s *unsettledService) ListETH(
@@ -126,12 +137,127 @@ func (s *unsettledService) ListVisa(
 	}, nil
 }
 
+// Cap matching work to the same volume the UI auto-fetches (500 × 20).
+const mastercardMatchMaxPages = 20
+
+// ListMastercard returns Mastercard clearing rows annotated with nearest-day
+// IPM settlement amount match status (see mastercard_unsettled_match.go).
+// Matching runs over the full date-range set (up to mastercardMatchMaxPages)
+// so settlement totals are not double-consumed across auto-fetched pages; the
+// requested page is then sliced from that annotated set.
 func (s *unsettledService) ListMastercard(
 	ctx context.Context,
 	dateFrom, dateTo string,
 	page, pageSize int,
 ) (ClearingPageResult[model.UnsettledTransaction], error) {
-	return s.list(ctx, 210, dateFrom, dateTo, unsettledMDSBin, unsettledMDSBin, page, pageSize)
+	empty := ClearingPageResult[model.UnsettledTransaction]{
+		Items:    []model.UnsettledTransaction{},
+		Page:     page,
+		PageSize: pageSize,
+	}
+
+	if s.repository == nil {
+		return empty, common.ErrOracleUnavailable
+	}
+
+	from, to, page, pageSize, err := parseClearingListArgs(dateFrom, dateTo, page, pageSize)
+	if err != nil {
+		return empty, err
+	}
+	empty.Page, empty.PageSize = page, pageSize
+
+	all := make([]model.UnsettledTransaction, 0, pageSize)
+	hasMoreBeyondCap := false
+	for p := 1; p <= mastercardMatchMaxPages; p++ {
+		chunk, more, listErr := s.repository.List(ctx, 210, from, to, unsettledMDSBin, unsettledMDSBin, p, pageSize)
+		if listErr != nil {
+			return empty, listErr
+		}
+		if chunk != nil {
+			all = append(all, chunk...)
+		}
+		if !more {
+			hasMoreBeyondCap = false
+			break
+		}
+		if p == mastercardMatchMaxPages {
+			hasMoreBeyondCap = true
+		}
+	}
+
+	if s.mastercardIPM != nil && len(all) > 0 {
+		start, end := mastercardMatchWindow(from, to, all)
+		summaries, ipmErr := s.mastercardIPM.FindSettlementSummariesByDateRange(ctx, start, end)
+		if ipmErr != nil {
+			// Degrade: still return Oracle clearing with unmatched status.
+			for i := range all {
+				all[i].MatchStatus = mcMatchStatusUnmatched
+				all[i].MatchNote = "IPM settlement register unavailable"
+			}
+		} else {
+			all = annotateMastercardUnsettled(all, summaries)
+		}
+	} else {
+		for i := range all {
+			all[i].MatchStatus = mcMatchStatusUnmatched
+			all[i].MatchNote = "IPM settlement register unavailable"
+		}
+	}
+
+	startIdx := (page - 1) * pageSize
+	if startIdx > len(all) {
+		startIdx = len(all)
+	}
+	endIdx := startIdx + pageSize
+	if endIdx > len(all) {
+		endIdx = len(all)
+	}
+	pageRows := all[startIdx:endIdx]
+	hasMore := endIdx < len(all) || hasMoreBeyondCap
+
+	return ClearingPageResult[model.UnsettledTransaction]{
+		Items:    pageRows,
+		Page:     page,
+		PageSize: pageSize,
+		HasMore:  hasMore,
+	}, nil
+}
+
+// mastercardMatchWindow expands the search/clearing date range by the
+// nearest-day settlement window so D+2 settlement files are included.
+func mastercardMatchWindow(dateFrom, dateTo string, rows []model.UnsettledTransaction) (time.Time, time.Time) {
+	parse := func(s string) time.Time {
+		for _, layout := range []string{"01/02/2006", "01-02-2006", "2006-01-02"} {
+			if t, err := time.Parse(layout, s); err == nil {
+				return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+			}
+		}
+		return time.Time{}
+	}
+
+	start := parse(dateFrom)
+	end := parse(dateTo)
+	for _, r := range rows {
+		d := parseOracleDate(firstNonEmpty(r.TxnDate, r.Date))
+		if d.IsZero() {
+			continue
+		}
+		d = time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
+		if start.IsZero() || d.Before(start) {
+			start = d
+		}
+		if end.IsZero() || d.After(end) {
+			end = d
+		}
+	}
+	if start.IsZero() {
+		start = time.Now().UTC().Truncate(24 * time.Hour)
+	}
+	if end.IsZero() || end.Before(start) {
+		end = start
+	}
+	end = end.AddDate(0, 0, mcSettlementMatchWindowDays)
+	return start, end
 }
 
 // ListVisaCybersource returns unsettled Visa Cybersource transactions.
@@ -169,7 +295,27 @@ func (s *unsettledService) ListVisaCybersource(
 	// Convert to UnsettledTransaction
 	converted := make([]model.UnsettledTransaction, 0, len(unclearedRows))
 	for _, u := range unclearedRows {
-		converted = append(converted, model.UnsettledTransaction(u))
+		converted = append(converted, model.UnsettledTransaction{
+			ID:             u.ID,
+			Date:           u.Date,
+			TxnDate:        u.TxnDate,
+			Time:           u.Time,
+			MsgType:        u.MsgType,
+			ProcCode:       u.ProcCode,
+			RRN:            u.RRN,
+			STAN:           u.STAN,
+			RespCode:       u.RespCode,
+			Amount:         u.Amount,
+			Currency:       u.Currency,
+			TerminalID:     u.TerminalID,
+			Merchant:       u.Merchant,
+			CardProduct:    u.CardProduct,
+			TxnSource:      u.TxnSource,
+			TxnDest:        u.TxnDest,
+			IssuerAcquirer: u.IssuerAcquirer,
+			PosAtm:         u.PosAtm,
+			TxnID:          u.TxnID,
+		})
 	}
 
 	// Filter out settled transactions by matching txnId = transaction_id
@@ -223,8 +369,6 @@ func (s *unsettledService) ListVisaCybersource(
 		HasMore:  hasMore,
 	}, nil
 }
-
-
 
 // parseOracleDate parses a date string from Oracle (YYYY-MM-DD) to time.Time.
 func parseOracleDate(dateStr string) time.Time {
