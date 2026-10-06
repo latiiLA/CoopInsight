@@ -35,7 +35,7 @@ From the **repo root** (so `-p` makes `certificates/` and `frontend/dist` resolv
 nginx -p "$(pwd)" -c deploy/nginx/nginx.conf
 ```
 
-Open **https://localhost:8443** for the signed-in app. Grafana panels must iframe **HTTP** `http://<this-host>/embed.html` (port 80) so the browser does not prompt for the self-signed cert on :8443. Anything else on port 80 redirects to HTTPS.
+Open **https://localhost:8443** for the signed-in app. Grafana panels must iframe **HTTP** `http://<this-host>:8089/embed.html` (not port 80 — that host’s :80/:443 may be a different site). Anything else on 8089 redirects to HTTPS :8443.
 
 Reload after config changes:
 
