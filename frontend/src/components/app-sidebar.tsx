@@ -150,7 +150,8 @@ const data: {
       // overall = channel identity (SwitchIcon / AtmIcon / PosIcon)
       // on-us = OnUsIcon (bank / CoopBank)
       // off-us = OffUsIcon (cross-bank swap)
-      // issuing = IssuingIcon (card issuing)
+      // remote on-us = IssuingIcon (CoopBank cards elsewhere)
+      // issuing = on-us + remote on-us (switch)
       // acquiring = AcquiringIcon (inbound payments)
       title: "Success Rates",
       icon: SuccessRateIcon,
@@ -175,6 +176,7 @@ const data: {
             "report:view-switch-overall-success-rate",
             "report:view-switch-onus-success-rate",
             "report:view-switch-offus-success-rate",
+            "report:view-switch-remote-onus-success-rate",
             "report:view-switch-issuing-success-rate",
           ],
         },
@@ -202,6 +204,16 @@ const data: {
           url: "switch-offus-success-rate",
           permissions: [
             "report:view-switch-offus-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "Switch Remote On-us",
+          icon: IssuingIcon,
+          url: "switch-remote-onus-success-rate",
+          permissions: [
+            "report:view-switch-remote-onus-success-rate",
+            "report:view-switch-issuing-success-rate",
             "report:view-success-transactions",
           ],
         },
@@ -251,7 +263,7 @@ const data: {
           ],
         },
         {
-          title: "ATM Issuing",
+          title: "ATM Remote On-us",
           icon: IssuingIcon,
           url: "atm-issuing-success-rate",
           permissions: [
@@ -296,7 +308,7 @@ const data: {
           ],
         },
         {
-          title: "POS Issuing",
+          title: "POS Remote On-us",
           icon: IssuingIcon,
           url: "pos-issuing-success-rate",
           permissions: [

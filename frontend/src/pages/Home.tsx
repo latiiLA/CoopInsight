@@ -220,7 +220,7 @@ export default function Home() {
   const quickLinks = [
     {
       title: "Switch Overall Success Rate",
-      description: "On-us, off-us, and issuing across ATM and POS",
+      description: "On-us, off-us, and remote on-us across ATM and POS",
       to: "/switch-overall-success-rate",
       icon: Percent,
       show: hasPermission([
@@ -249,8 +249,19 @@ export default function Home() {
       ]),
     },
     {
-      title: "Switch Issuing Success Rate",
+      title: "Switch Remote On-us Success Rate",
       description: "CoopBank cards on other bank ATM and POS terminals",
+      to: "/switch-remote-onus-success-rate",
+      icon: Percent,
+      show: hasPermission([
+        "report:view-switch-remote-onus-success-rate",
+        "report:view-switch-issuing-success-rate",
+        "report:view-success-transactions",
+      ]),
+    },
+    {
+      title: "Switch Issuing Success Rate",
+      description: "On-us and remote on-us across ATM and POS",
       to: "/switch-issuing-success-rate",
       icon: Percent,
       show: hasPermission([
@@ -260,7 +271,7 @@ export default function Home() {
     },
     {
       title: "ATM Overall Success Rate",
-      description: "On-us, off-us, and issuing ATM authorizations",
+      description: "On-us, off-us, and remote on-us ATM authorizations",
       to: "/atm-overall-success-rate",
       icon: Percent,
       show: canViewAtmOverall,
@@ -287,7 +298,7 @@ export default function Home() {
       show: canViewAtmOffus,
     },
     {
-      title: "ATM Issuing Success Rate",
+      title: "ATM Remote On-us Success Rate",
       description: "CoopBank cards on other bank ATMs",
       to: "/atm-issuing-success-rate",
       icon: Percent,
@@ -295,7 +306,7 @@ export default function Home() {
     },
     {
       title: "POS Overall Success Rate",
-      description: "On-us, off-us, and issuing POS authorizations",
+      description: "On-us, off-us, and remote on-us POS authorizations",
       to: "/pos-overall-success-rate",
       icon: Percent,
       show: canViewPosOverall,
@@ -322,7 +333,7 @@ export default function Home() {
       show: canViewPosOffus,
     },
     {
-      title: "POS Issuing Success Rate",
+      title: "POS Remote On-us Success Rate",
       description: "CoopBank cards on other bank POS terminals",
       to: "/pos-issuing-success-rate",
       icon: Percent,

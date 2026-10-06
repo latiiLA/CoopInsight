@@ -93,6 +93,7 @@ function App() {
                   "report:view-switch-overall-success-rate",
                   "report:view-switch-onus-success-rate",
                   "report:view-switch-offus-success-rate",
+                  "report:view-switch-remote-onus-success-rate",
                   "report:view-switch-issuing-success-rate",
                 ]}
               >
@@ -149,6 +150,20 @@ function App() {
                 ]}
               >
                 <SuccessRate channel="switch" flow="issuing" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/switch-remote-onus-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-switch-remote-onus-success-rate",
+                  "report:view-switch-issuing-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <SuccessRate channel="switch" flow="remote_onus" />
               </RequirePermission>
             }
           />

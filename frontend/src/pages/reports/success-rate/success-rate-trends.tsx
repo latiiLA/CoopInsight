@@ -80,7 +80,9 @@ const FLOW_OPTIONS: {
   { value: "acquiring", label: "Acquiring", channels: ["atm", "pos"] },
   { value: "onus", label: "On-us", channels: ["switch", "atm", "pos"] },
   { value: "offus", label: "Off-us", channels: ["switch", "atm", "pos"] },
-  { value: "issuing", label: "Issuing", channels: ["switch", "atm", "pos"] },
+  { value: "remote_onus", label: "Remote On-us", channels: ["switch"] },
+  { value: "issuing", label: "Issuing", channels: ["switch"] },
+  { value: "issuing", label: "Remote On-us", channels: ["atm", "pos"] },
 ];
 
 const PRESETS: { id: Exclude<TrendPreset, "custom">; label: string }[] = [
@@ -91,7 +93,8 @@ const PRESETS: { id: Exclude<TrendPreset, "custom">; label: string }[] = [
 ];
 
 function permissionFor(channel: SuccessChannel, flow: SuccessFlow) {
-  return `report:view-${channel}-${flow}-success-rate`;
+  const slug = flow === "remote_onus" ? "remote-onus" : flow;
+  return `report:view-${channel}-${slug}-success-rate`;
 }
 
 function canViewCombo(
@@ -99,10 +102,11 @@ function canViewCombo(
   flow: SuccessFlow,
   permissions: string[],
 ) {
-  return hasPermission(
-    [permissionFor(channel, flow), "report:view-success-transactions"],
-    permissions,
-  );
+  const required = [permissionFor(channel, flow), "report:view-success-transactions"];
+  if (channel === "switch" && flow === "remote_onus") {
+    required.push("report:view-switch-issuing-success-rate");
+  }
+  return hasPermission(required, permissions);
 }
 
 function rangeForPreset(preset: Exclude<TrendPreset, "custom">): DateRange {

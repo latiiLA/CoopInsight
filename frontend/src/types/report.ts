@@ -1,6 +1,6 @@
 export type SuccessChannel = "atm" | "pos" | "switch";
 
-export type SuccessFlow = "overall" | "onus" | "offus" | "issuing" | "acquiring";
+export type SuccessFlow = "overall" | "onus" | "offus" | "remote_onus" | "issuing" | "acquiring";
 
 export type SuccessGranularity = "day" | "week" | "month";
 

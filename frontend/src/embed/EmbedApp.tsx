@@ -29,8 +29,9 @@ function fetchFlow(
   to: Date,
   signal: AbortSignal,
 ): Promise<SuccessTransactionReport> {
+  const slug = flow === "remote_onus" ? "remote-onus" : flow;
   return getEmbedJson<SuccessTransactionReport>(
-    `/switch/${flow}-success-rate`,
+    `/switch/${slug}-success-rate`,
     apiKey,
     { dateFrom: toApiDate(from), dateTo: toApiDate(to) },
     signal,

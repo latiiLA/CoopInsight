@@ -131,6 +131,7 @@ const successRatePaths: Partial<
   "switch-overall": "/reports/switch-overall-success-rate",
   "switch-onus": "/reports/switch-onus-success-rate",
   "switch-offus": "/reports/switch-offus-success-rate",
+  "switch-remote_onus": "/reports/switch-remote-onus-success-rate",
   "switch-issuing": "/reports/switch-issuing-success-rate",
 };
 
@@ -203,6 +204,7 @@ function normalizeFlow(flow: string | undefined): SuccessFlow {
     flow === "overall" ||
     flow === "onus" ||
     flow === "offus" ||
+    flow === "remote_onus" ||
     flow === "issuing" ||
     flow === "acquiring"
   ) {

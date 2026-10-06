@@ -1,6 +1,6 @@
 import { format, isValid, parseISO, startOfDay, subDays } from "date-fns";
 
-export type SwitchFlow = "overall" | "onus" | "offus" | "issuing";
+export type SwitchFlow = "overall" | "onus" | "offus" | "issuing" | "remote_onus";
 export type RangePreset = "today" | "yesterday" | "7d" | "30d" | "custom";
 export type EmbedTheme = "light" | "dark" | "auto";
 export type EmbedDashboard = "switch" | "card";
@@ -17,6 +17,7 @@ export const FLOWS: Array<{ key: SwitchFlow; label: string }> = [
   { key: "onus", label: "On-us" },
   { key: "offus", label: "Off-us" },
   { key: "issuing", label: "Issuing" },
+  { key: "remote_onus", label: "Remote On-us" },
 ];
 
 export const PRESETS: Array<{ key: Exclude<RangePreset, "custom">; label: string }> = [

@@ -40,7 +40,7 @@ export const OnUsIcon = mdIcon(MdAccountBalance, "OnUsIcon");
 /** Off-us — cross-bank exchange (no currency symbol). */
 export const OffUsIcon = mdIcon(MdSwapHoriz, "OffUsIcon");
 
-/** Issuing — CoopBank cards elsewhere. */
+/** Remote on-us — CoopBank cards on other banks' terminals. */
 export const IssuingIcon = mdIcon(MdCreditCard, "IssuingIcon");
 
 /** Acquiring — inbound payments on CoopBank terminals. */

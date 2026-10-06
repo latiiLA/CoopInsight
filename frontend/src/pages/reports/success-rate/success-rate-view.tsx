@@ -124,7 +124,7 @@ type PageCopy = {
 const pageCopy: Partial<Record<`${SuccessChannel}-${SuccessFlow}`, PageCopy>> = {
   "atm-overall": {
     title: "ATM Overall Success Rate",
-    subtitle: "On-us, off-us, and issuing ATM authorizations",
+    subtitle: "On-us, off-us, and remote on-us ATM authorizations",
     label: "ATM overall",
     rateLabel: "ATM overall success rate",
     searchPlaceholder: "Search ATM overall declined reasons...",
@@ -147,12 +147,12 @@ const pageCopy: Partial<Record<`${SuccessChannel}-${SuccessFlow}`, PageCopy>> = 
     exportFileName: "atm-offus-success-rate",
   },
   "atm-issuing": {
-    title: "ATM Issuing Success Rate",
+    title: "ATM Remote On-us Success Rate",
     subtitle: "CoopBank cards on other bank ATMs",
-    label: "ATM issuing",
-    rateLabel: "ATM issuing success rate",
-    searchPlaceholder: "Search ATM issuing declined reasons...",
-    exportFileName: "atm-issuing-success-rate",
+    label: "ATM remote on-us",
+    rateLabel: "ATM remote on-us success rate",
+    searchPlaceholder: "Search ATM remote on-us declined reasons...",
+    exportFileName: "atm-remote-onus-success-rate",
   },
   "atm-acquiring": {
     title: "ATM Acquiring Success Rate",
@@ -164,7 +164,7 @@ const pageCopy: Partial<Record<`${SuccessChannel}-${SuccessFlow}`, PageCopy>> = 
   },
   "pos-overall": {
     title: "POS Overall Success Rate",
-    subtitle: "On-us, off-us, and issuing POS authorizations",
+    subtitle: "On-us, off-us, and remote on-us POS authorizations",
     label: "POS overall",
     rateLabel: "POS overall success rate",
     searchPlaceholder: "Search POS overall declined reasons...",
@@ -187,12 +187,12 @@ const pageCopy: Partial<Record<`${SuccessChannel}-${SuccessFlow}`, PageCopy>> = 
     exportFileName: "pos-offus-success-rate",
   },
   "pos-issuing": {
-    title: "POS Issuing Success Rate",
+    title: "POS Remote On-us Success Rate",
     subtitle: "CoopBank cards on other bank POS terminals",
-    label: "POS issuing",
-    rateLabel: "POS issuing success rate",
-    searchPlaceholder: "Search POS issuing declined reasons...",
-    exportFileName: "pos-issuing-success-rate",
+    label: "POS remote on-us",
+    rateLabel: "POS remote on-us success rate",
+    searchPlaceholder: "Search POS remote on-us declined reasons...",
+    exportFileName: "pos-remote-onus-success-rate",
   },
   "pos-acquiring": {
     title: "POS Acquiring Success Rate",
@@ -204,7 +204,7 @@ const pageCopy: Partial<Record<`${SuccessChannel}-${SuccessFlow}`, PageCopy>> = 
   },
   "switch-overall": {
     title: "Switch Overall Success Rate",
-    subtitle: "On-us, off-us, and issuing across ATM and POS",
+    subtitle: "On-us, off-us, and remote on-us across ATM and POS",
     label: "Switch overall",
     rateLabel: "Switch overall success rate",
     searchPlaceholder: "Search switch overall declined reasons...",
@@ -226,9 +226,17 @@ const pageCopy: Partial<Record<`${SuccessChannel}-${SuccessFlow}`, PageCopy>> = 
     searchPlaceholder: "Search switch off-us declined reasons...",
     exportFileName: "switch-offus-success-rate",
   },
+  "switch-remote_onus": {
+    title: "Switch Remote On-us Success Rate",
+    subtitle: "CoopBank cards on other bank ATM and POS terminals",
+    label: "Switch remote on-us",
+    rateLabel: "Switch remote on-us success rate",
+    searchPlaceholder: "Search switch remote on-us declined reasons...",
+    exportFileName: "switch-remote-onus-success-rate",
+  },
   "switch-issuing": {
     title: "Switch Issuing Success Rate",
-    subtitle: "CoopBank cards on other bank ATM and POS terminals",
+    subtitle: "On-us and remote on-us across ATM and POS",
     label: "Switch issuing",
     rateLabel: "Switch issuing success rate",
     searchPlaceholder: "Search switch issuing declined reasons...",
