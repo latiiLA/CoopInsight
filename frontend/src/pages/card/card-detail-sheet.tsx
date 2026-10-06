@@ -20,6 +20,7 @@ import {
 import { CardMetric, isSentinelDate } from "@/types/card-detail";
 import { AppDispatch, RootState } from "../../../app/store/store";
 import { cardDetailColumns } from "./card-detail-columns";
+import type { CardDetailSheetProps } from "./card-detail-sheet-types";
 
 const METRIC_LABEL: Record<CardMetric, string> = {
   created: "requested",
@@ -47,17 +48,6 @@ const exportValueByColumn = Object.fromEntries(
     (value: unknown) => (isSentinelDate(value as string) ? "" : value),
   ]),
 );
-
-type CardDetailSheetProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  metric: CardMetric;
-  dateFrom: string;
-  dateTo: string;
-  branchId?: number;
-  /** Human-readable scope shown in the subtitle, e.g. a branch or day name. */
-  scopeLabel?: string;
-};
 
 /**
  * CardDetailSheet lists the individual cards behind an activity count.

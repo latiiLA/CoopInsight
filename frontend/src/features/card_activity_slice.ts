@@ -49,6 +49,58 @@ export type FetchCardBranchTrendArgs = FetchCardActivityArgs & {
   branchId: number;
 };
 
+/**
+ * Transport for the card activity endpoints, keyed by the logged-in path
+ * (e.g. "/card/activity"). A store may supply one through the thunk extra
+ * argument; the Grafana embed does, to call the key-gated /api/embed routes
+ * instead of the session-authenticated API.
+ */
+export type CardActivityClient = <T>(
+  path: string,
+  params: Record<string, string | number>,
+  signal: AbortSignal,
+) => Promise<T>;
+
+export type CardActivityThunkExtra = { cardActivityClient?: CardActivityClient };
+
+class MissingTokenError extends Error {}
+
+type ThunkContext = {
+  getState: () => unknown;
+  signal: AbortSignal;
+  extra: unknown;
+};
+
+async function getCardJson<T>(
+  thunkAPI: ThunkContext,
+  path: string,
+  params: Record<string, string | number>,
+): Promise<T> {
+  const client = (thunkAPI.extra as CardActivityThunkExtra | undefined)
+    ?.cardActivityClient;
+  if (client) {
+    return client<T>(path, params, thunkAPI.signal);
+  }
+
+  const token = getTokenFromAuth((thunkAPI.getState() as RootState).user.authUser);
+  if (!token) {
+    throw new MissingTokenError("Authentication token not found");
+  }
+
+  const response = await api.get<T>(path, {
+    ...withAuthHeader(token),
+    params,
+    signal: thunkAPI.signal,
+    timeout: 180_000,
+  });
+  return response.data;
+}
+
+const rangeParams = ({ dateFrom, dateTo }: FetchCardActivityArgs) => ({
+  ...(dateFrom ? { dateFrom } : {}),
+  ...(dateTo ? { dateTo } : {}),
+});
+
 function isCanceled(
   thunkAPI: { signal: AbortSignal },
   error: unknown,
@@ -63,28 +115,15 @@ export const fetchCardActivity = createAsyncThunk<
   CardActivityReport | null,
   FetchCardActivityArgs,
   { state: RootState; rejectValue: string }
->("cardActivity/fetchCardActivity", async ({ dateFrom, dateTo }, thunkAPI) => {
+>("cardActivity/fetchCardActivity", async (args, thunkAPI) => {
   try {
-    const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
-
-    if (!token) {
-      return thunkAPI.rejectWithValue("Authentication token not found");
-    }
-
-    const response = await api.get<{ data: { report: CardActivityReport | null } }>(
+    const body = await getCardJson<{ data: { report: CardActivityReport | null } }>(
+      thunkAPI,
       "/card/activity",
-      {
-        ...withAuthHeader(token),
-        params: {
-          ...(dateFrom ? { dateFrom } : {}),
-          ...(dateTo ? { dateTo } : {}),
-        },
-        signal: thunkAPI.signal,
-        timeout: 180_000,
-      },
+      rangeParams(args),
     );
 
-    return response.data.data?.report ?? null;
+    return body.data?.report ?? null;
   } catch (error) {
     if (isCanceled(thunkAPI, error)) {
       throw error;
@@ -98,39 +137,23 @@ export const fetchCardActivityByBranch = createAsyncThunk<
   CardBranchActivity[],
   FetchCardActivityArgs,
   { state: RootState; rejectValue: string }
->(
-  "cardActivity/fetchCardActivityByBranch",
-  async ({ dateFrom, dateTo }, thunkAPI) => {
-    try {
-      const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+>("cardActivity/fetchCardActivityByBranch", async (args, thunkAPI) => {
+  try {
+    const body = await getCardJson<{ data: { items: CardBranchActivity[] } }>(
+      thunkAPI,
+      "/card/activity/by-branch",
+      rangeParams(args),
+    );
 
-      if (!token) {
-        return thunkAPI.rejectWithValue("Authentication token not found");
-      }
-
-      const response = await api.get<{ data: { items: CardBranchActivity[] } }>(
-        "/card/activity/by-branch",
-        {
-          ...withAuthHeader(token),
-          params: {
-            ...(dateFrom ? { dateFrom } : {}),
-            ...(dateTo ? { dateTo } : {}),
-          },
-          signal: thunkAPI.signal,
-          timeout: 180_000,
-        },
-      );
-
-      return response.data.data?.items ?? [];
-    } catch (error) {
-      if (isCanceled(thunkAPI, error)) {
-        throw error;
-      }
-
-      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    return body.data?.items ?? [];
+  } catch (error) {
+    if (isCanceled(thunkAPI, error)) {
+      throw error;
     }
-  },
-);
+
+    return thunkAPI.rejectWithValue(getErrorMessage(error));
+  }
+});
 
 export const fetchCardBranchTrend = createAsyncThunk<
   { branchId: number; report: CardActivityReport | null },
@@ -138,29 +161,15 @@ export const fetchCardBranchTrend = createAsyncThunk<
   { state: RootState; rejectValue: string }
 >(
   "cardActivity/fetchCardBranchTrend",
-  async ({ branchId, dateFrom, dateTo }, thunkAPI) => {
+  async ({ branchId, ...range }, thunkAPI) => {
     try {
-      const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
-
-      if (!token) {
-        return thunkAPI.rejectWithValue("Authentication token not found");
-      }
-
-      const response = await api.get<{ data: { report: CardActivityReport | null } }>(
+      const body = await getCardJson<{ data: { report: CardActivityReport | null } }>(
+        thunkAPI,
         "/card/activity/branch-trend",
-        {
-          ...withAuthHeader(token),
-          params: {
-            branchId,
-            ...(dateFrom ? { dateFrom } : {}),
-            ...(dateTo ? { dateTo } : {}),
-          },
-          signal: thunkAPI.signal,
-          timeout: 180_000,
-        },
+        { branchId, ...rangeParams(range) },
       );
 
-      return { branchId, report: response.data.data?.report ?? null };
+      return { branchId, report: body.data?.report ?? null };
     } catch (error) {
       if (isCanceled(thunkAPI, error)) {
         throw error;

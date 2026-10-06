@@ -8,6 +8,7 @@ import Transaction from "./pages/transaction/Transaction";
 import DepositPerTerminal from "./pages/reports/deposit-per-terminal";
 import SuccessRate from "./pages/reports/success-rate/success-rate";
 import SuccessRateTrends from "./pages/reports/success-rate/success-rate-trends";
+import TerminalSuccessRate from "./pages/reports/success-rate/terminal-success-rate";
 import EbirrCardlessWithdrawal from "./pages/reports/ebirr-cardless-withdrawal/ebirr-cardless-withdrawal";
 import TransactionMix from "./pages/reports/transaction-mix/transaction-mix";
 import VisaCyberSource from "./pages/settlement/visa-cybersource/visa-cybersource";
@@ -49,7 +50,7 @@ import Settled from "./pages/settlement/settled";
 import NotFound from "./pages/not-found";
 import { RequirePermission } from "./components/require-permission";
 import CardPerStatus from "./pages/card/card-per-status";
-import CardActivityDashboard from "./pages/card/card-activity-dashboard";
+import CardActivityPage from "./pages/card/card-activity-page";
 
 function App() {
   return (
@@ -286,6 +287,32 @@ function App() {
                 ]}
               >
                 <SuccessRate channel="pos" flow="issuing" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pos-terminal-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-pos-acquiring-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <TerminalSuccessRate channel="pos" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/atm-terminal-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-atm-acquiring-success-rate",
+                  "report:view-success-transactions",
+                ]}
+              >
+                <TerminalSuccessRate channel="atm" />
               </RequirePermission>
             }
           />
@@ -692,7 +719,7 @@ function App() {
             path="/card-activity"
             element={
               <RequirePermission permissions={["card:view-activity-dashboard"]}>
-                <CardActivityDashboard />
+                <CardActivityPage />
               </RequirePermission>
             }
           />

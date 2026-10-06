@@ -16,6 +16,14 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        embed: path.resolve(__dirname, "embed.html"),
+      },
+    },
+  },
   server: {
     proxy: {
       "/api": {

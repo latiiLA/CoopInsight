@@ -56,14 +56,10 @@ import {
   fetchCardActivity,
 } from "@/features/card_activity_slice";
 import { CardMetric } from "@/types/card-detail";
-import { hasPermission } from "../../../utility/has-permission";
 import { AppDispatch, RootState } from "../../../app/store/store";
 import CardBranchSection from "./card-branch-section";
-import { CardDetailSheet } from "./card-detail-sheet";
 import { DrillValue } from "./card-detail-drill";
-
-/** Permission that opens the card detail list at all. */
-const CARD_DETAIL_PERMISSION = "card:view-card-details";
+import type { CardDetailSheetComponent } from "./card-detail-sheet-types";
 
 type DetailRequest = {
   metric: CardMetric;
@@ -156,25 +152,42 @@ function DrillCell({
   return <DrillValue value={value} onClick={onClick} format={formatCount} />;
 }
 
-export default function CardActivityDashboard() {
+export type CardDashboardPreset = Exclude<RangePreset, "custom">;
+
+/**
+ * The card activity dashboard. Data comes from the cardActivity slice, so the
+ * host decides the transport (session API in the app, embed key in Grafana).
+ *
+ * Drill-down into individual cards is only available when the host passes
+ * `DetailSheet`; the app does so for users with card:view-card-details.
+ */
+export default function CardActivityDashboard({
+  DetailSheet,
+  initialPreset = "30d",
+  initialRange,
+}: {
+  DetailSheet?: CardDetailSheetComponent;
+  initialPreset?: CardDashboardPreset;
+  /** A fixed custom range; overrides initialPreset. */
+  initialRange?: DateRange;
+} = {}) {
   const dispatch = useDispatch<AppDispatch>();
   const { report, loading, error } = useSelector(
     (state: RootState) => state.cardActivity,
   );
 
-  const [preset, setPreset] = useState<RangePreset>("30d");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(() =>
-    rangeForPreset("30d"),
+  const [preset, setPreset] = useState<RangePreset>(
+    initialRange ? "custom" : initialPreset,
+  );
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(
+    () => initialRange ?? rangeForPreset(initialPreset),
   );
 
   // Null means the detail sheet is closed; otherwise it holds the filters for
   // the drill-down the user just triggered.
   const [detail, setDetail] = useState<DetailRequest | null>(null);
 
-  const canViewDetails = useMemo(
-    () => hasPermission([CARD_DETAIL_PERMISSION]),
-    [],
-  );
+  const canViewDetails = !!DetailSheet;
 
   const openDetails = useCallback((request: DetailRequest) => {
     setDetail(request);
@@ -709,17 +722,20 @@ export default function CardActivityDashboard() {
       <CardBranchSection
         dateFrom={rangeFrom}
         dateTo={rangeTo}
+        DetailSheet={DetailSheet}
       />
 
-      <CardDetailSheet
-        open={detail !== null}
-        onOpenChange={closeDetails}
-        metric={detail?.metric ?? "created"}
-        dateFrom={detail?.dateFrom ?? rangeFrom ?? ""}
-        dateTo={detail?.dateTo ?? rangeTo ?? ""}
-        branchId={detail?.branchId}
-        scopeLabel={detail?.scopeLabel}
-      />
+      {DetailSheet ? (
+        <DetailSheet
+          open={detail !== null}
+          onOpenChange={closeDetails}
+          metric={detail?.metric ?? "created"}
+          dateFrom={detail?.dateFrom ?? rangeFrom ?? ""}
+          dateTo={detail?.dateTo ?? rangeTo ?? ""}
+          branchId={detail?.branchId}
+          scopeLabel={detail?.scopeLabel}
+        />
+      ) : null}
     </div>
   );
 }

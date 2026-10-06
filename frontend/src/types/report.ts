@@ -54,7 +54,7 @@ export type SuccessRateRow = DeclineReason & {
 export type SuccessTransactionDetail = {
   id: string;
   txnAt: string;
-  txnTime: string,
+  txnTime: string;
   msgType: number;
   terminalId: string;
   terminalLocation: string;
@@ -72,6 +72,19 @@ export type SuccessTransactionDetail = {
 };
 
 export type SuccessBrowseOutcome = "all" | "approved" | "declined";
+
+export type TerminalSuccessReport = {
+  terminalId: string;
+  channel: string;
+  totalTransactions: number;
+  approvedCount: number;
+  declinedCount: number;
+  successRatePercent: number;
+  approvedAmount: number;
+  declinedAmount: number;
+  totalAmount: number;
+  declineReasons: DeclineReason[];
+};
 
 export type EbirrCardlessWithdrawal = {
   id: string;

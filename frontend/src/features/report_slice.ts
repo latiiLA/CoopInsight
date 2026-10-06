@@ -15,6 +15,7 @@ import {
   SuccessTransactionReport,
   TerminalPerformanceReport,
   TerminalPerformanceRow,
+  TerminalSuccessReport,
   TerminalTransaction,
 } from "@/types/report";
 import {
@@ -63,6 +64,16 @@ interface ReportState {
   terminalComparison: TerminalPerformanceReport | null;
   terminalComparisonLoading: boolean;
   terminalComparisonError: string | null;
+  terminalSuccessRate: TerminalSuccessReport[];
+  terminalSuccessRateLoading: boolean;
+  terminalSuccessRateError: string | null;
+  /**
+   * Channel the rows in terminalSuccessRate belong to.
+   *
+   * Both fleets share this one slot, so without it a slow POS response could
+   * land after the user opened the ATM page and render POS terminals there.
+   */
+  terminalSuccessRateChannel: string | null;
   transactionMix: TransactionMixReport | null;
   transactionMixLoading: boolean;
   transactionMixError: string | null;
@@ -92,6 +103,10 @@ interface FetchSuccessBrowseParams extends FetchReportDateParams {
   outcome?: SuccessBrowseOutcome;
   respCode?: string;
   limit?: number;
+}
+
+interface FetchTerminalSuccessRateParams extends FetchReportDateParams {
+  channel?: "pos" | "atm";
 }
 
 interface FetchSuccessRateTrendParams extends FetchReportDateParams {
@@ -153,6 +168,10 @@ const initialState: ReportState = {
   terminalComparison: null,
   terminalComparisonLoading: false,
   terminalComparisonError: null,
+  terminalSuccessRate: [],
+  terminalSuccessRateLoading: false,
+  terminalSuccessRateError: null,
+  terminalSuccessRateChannel: null,
   transactionMix: null,
   transactionMixLoading: false,
   transactionMixError: null,
@@ -322,6 +341,70 @@ export const fetchSuccessTransactions = createAsyncThunk<
       // Rethrow on cancellation so the action is marked aborted and the reducer
       // can ignore it. Swallowing it marks a superseded request as a genuine
       // failure and surfaces a spurious error toast.
+      if (
+        thunkAPI.signal.aborted ||
+        (axios.isAxiosError(error) && error.code === "ERR_CANCELED")
+      ) {
+        throw error;
+      }
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+export const fetchTerminalSuccessRate = createAsyncThunk<
+  TerminalSuccessReport[],
+  FetchTerminalSuccessRateParams,
+  {
+    state: RootState;
+    rejectValue: string;
+  }
+>(
+  "report/fetchTerminalSuccessRate",
+  async ({ dateFrom, dateTo, channel = "pos" }, thunkAPI) => {
+    try {
+      const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+
+      if (!token) {
+        return thunkAPI.rejectWithValue("Authentication token not found");
+      }
+
+      const response = await api.get<{
+        isSuccessful: boolean;
+        message: string;
+        data: TerminalSuccessReport[];
+      }>(`/reports/${channel}-terminal-success-rate`, {
+        ...withAuthHeader(token),
+        params: {
+          dateFrom,
+          dateTo,
+          channel,
+        },
+        signal: thunkAPI.signal,
+        timeout: 180_000,
+      });
+
+      const rows = response.data.data;
+
+      if (!rows) {
+        return thunkAPI.rejectWithValue(
+          "Failed to fetch terminal success rate",
+        );
+      }
+
+      return rows.map((row) => ({
+        terminalId: toText(row.terminalId),
+        channel: toText(row.channel),
+        totalTransactions: toNumber(row.totalTransactions),
+        approvedCount: toNumber(row.approvedCount),
+        declinedCount: toNumber(row.declinedCount),
+        successRatePercent: toNumber(row.successRatePercent),
+        approvedAmount: toNumber(row.approvedAmount),
+        declinedAmount: toNumber(row.declinedAmount),
+        totalAmount: toNumber(row.totalAmount),
+        declineReasons: (row.declineReasons ?? []).map(normalizeDeclineReason),
+      }));
+    } catch (error) {
       if (
         thunkAPI.signal.aborted ||
         (axios.isAxiosError(error) && error.code === "ERR_CANCELED")
@@ -767,6 +850,11 @@ const reportSlice = createSlice({
       state.terminalComparison = null;
       state.terminalComparisonError = null;
     },
+    clearTerminalSuccessRate: (state) => {
+      state.terminalSuccessRate = [];
+      state.terminalSuccessRateError = null;
+      state.terminalSuccessRateChannel = null;
+    },
     clearTransactionMix: (state) => {
       state.transactionMix = null;
       state.transactionMixError = null;
@@ -881,6 +969,31 @@ const reportSlice = createSlice({
         state.terminalComparisonError =
           action.payload || "Failed to fetch terminal comparison";
       })
+      .addCase(fetchTerminalSuccessRate.pending, (state, action) => {
+        state.terminalSuccessRateLoading = true;
+        state.terminalSuccessRateError = null;
+        state.terminalSuccessRateChannel =
+          action.meta.arg.channel ?? "pos";
+        state.terminalSuccessRate = [];
+      })
+      .addCase(fetchTerminalSuccessRate.fulfilled, (state, action) => {
+        // Discard a response the user has already navigated away from.
+        if (state.terminalSuccessRateChannel !== (action.meta.arg.channel ?? "pos")) {
+          return;
+        }
+        state.terminalSuccessRateLoading = false;
+        state.terminalSuccessRate = action.payload;
+      })
+      .addCase(fetchTerminalSuccessRate.rejected, (state, action) => {
+        if (action.meta.aborted) return;
+        if (state.terminalSuccessRateChannel !== (action.meta.arg.channel ?? "pos")) {
+          return;
+        }
+        state.terminalSuccessRateLoading = false;
+        state.terminalSuccessRate = [];
+        state.terminalSuccessRateError =
+          action.payload || "Failed to fetch terminal success rate";
+      })
       .addCase(fetchTransactionMix.pending, (state, action) => {
         state.transactionMixLoading = true;
         state.transactionMixError = null;
@@ -916,6 +1029,7 @@ export const {
   clearEbirrCardless,
   clearTerminalTransactions,
   clearTerminalComparison,
+  clearTerminalSuccessRate,
   clearTransactionMix,
 } = reportSlice.actions;
 

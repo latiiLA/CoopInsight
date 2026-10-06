@@ -45,14 +45,10 @@ import {
 } from "@/features/card_activity_slice";
 import { CardBranchActivity } from "@/types/card-activity";
 import { CardMetric } from "@/types/card-detail";
-import { hasPermission } from "../../../utility/has-permission";
 import { cn } from "@/lib/utils";
 import { AppDispatch, RootState } from "../../../app/store/store";
-import { CardDetailSheet } from "./card-detail-sheet";
 import { DrillValue } from "./card-detail-drill";
-
-/** Permission that opens the card detail list at all. */
-const CARD_DETAIL_PERMISSION = "card:view-card-details";
+import type { CardDetailSheetComponent } from "./card-detail-sheet-types";
 
 type DetailRequest = {
   metric: CardMetric;
@@ -308,9 +304,12 @@ function TopBranchCard({
 export default function CardBranchSection({
   dateFrom,
   dateTo,
+  DetailSheet,
 }: {
   dateFrom?: string;
   dateTo?: string;
+  /** Omitted by the embed: no drill-down into individual cards there. */
+  DetailSheet?: CardDetailSheetComponent;
 }) {
   const dispatch = useDispatch<AppDispatch>();
   const {
@@ -333,10 +332,7 @@ export default function CardBranchSection({
   // Null while the detail sheet is closed.
   const [detail, setDetail] = useState<DetailRequest | null>(null);
 
-  const canViewDetails = useMemo(
-    () => hasPermission([CARD_DETAIL_PERMISSION]),
-    [],
-  );
+  const canViewDetails = !!DetailSheet;
 
   const openDetails = useCallback(
     (request: DetailScope) => {
@@ -949,15 +945,17 @@ export default function CardBranchSection({
         </Card>
       </div>
 
-      <CardDetailSheet
-        open={detail !== null}
-        onOpenChange={closeDetails}
-        metric={detail?.metric ?? "created"}
-        dateFrom={detail?.dateFrom ?? dateFrom ?? ""}
-        dateTo={detail?.dateTo ?? dateTo ?? ""}
-        branchId={detail?.branchId}
-        scopeLabel={detail?.scopeLabel}
-      />
+      {DetailSheet ? (
+        <DetailSheet
+          open={detail !== null}
+          onOpenChange={closeDetails}
+          metric={detail?.metric ?? "created"}
+          dateFrom={detail?.dateFrom ?? dateFrom ?? ""}
+          dateTo={detail?.dateTo ?? dateTo ?? ""}
+          branchId={detail?.branchId}
+          scopeLabel={detail?.scopeLabel}
+        />
+      ) : null}
     </div>
   );
 }

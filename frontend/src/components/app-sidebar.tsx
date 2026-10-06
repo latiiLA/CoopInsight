@@ -304,6 +304,24 @@ const data: {
             "report:view-success-transactions",
           ],
         },
+        {
+          title: "POS Terminal Success Rate",
+          icon: PosIcon,
+          url: "pos-terminal-success-rate",
+          permissions: [
+            "report:view-pos-acquiring-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "ATM Terminal Success Rate",
+          icon: AtmIcon,
+          url: "atm-terminal-success-rate",
+          permissions: [
+            "report:view-atm-acquiring-success-rate",
+            "report:view-success-transactions",
+          ],
+        },
       ],
     },
     {
