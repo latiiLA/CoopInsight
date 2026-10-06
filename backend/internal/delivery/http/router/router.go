@@ -37,6 +37,8 @@ type Handlers struct {
 	TransactionMix             handler.TransactionMixHandler
 	VisaSettlement             handler.VisaSettlementHandler
 	MastercardIPM              handler.MastercardIPMHandler
+	EmbedSuccessRate           handler.EmbedSuccessRateHandler
+	EmbedCardActivity          handler.EmbedCardActivityHandler
 }
 
 func SetupRouter(handlers Handlers) *gin.Engine {
@@ -59,6 +61,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 			"Content-Type",
 			"Authorization",
 			"Content-Disposition",
+			"X-Api-Key",
 		},
 		AllowCredentials: true,
 	}
@@ -200,6 +203,18 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 		protected,
 		handlers.MastercardIPM,
 	)
+
+	// --------------------------------------------------
+	// Embed surface (Grafana widgets)
+	//
+	// Registered on the unauthenticated api group and gated by a shared API key.
+	// Skipped entirely when EMBED_API_KEY is unset, so an unconfigured
+	// deployment exposes nothing here.
+	// --------------------------------------------------
+
+	if configs.EmbedAPIKey != "" {
+		registerEmbedRoutes(api, handlers.EmbedSuccessRate, handlers.EmbedCardActivity)
+	}
 
 	return router
 }

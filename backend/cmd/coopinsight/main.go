@@ -219,6 +219,7 @@ func main() {
 
 	var testHandler handler.TestHandler
 	var successTransactionHandler handler.SuccessTransactionHandler
+	var successTransactionSvc service.SuccessTransactionService
 	var ebirrCardlessHandler handler.EbirrCardlessWithdrawalHandler
 	var terminalTransactionHandler handler.TerminalTransactionHandler
 	var unclearedHandler handler.UnclearedHandler
@@ -226,14 +227,18 @@ func main() {
 	var unsettledHandler handler.UnsettledHandler
 	var settledHandler handler.SettledHandler
 	var cardHandler handler.CardHandler
+	var cardSvc service.CardService
 	var transactionMixHandler handler.TransactionMixHandler
 	if oracleDB != nil {
 		testHandler = handler.NewTestHandler(
 			service.NewTestService(oracle.NewTestRepository(oracleDB)),
 		)
-		successTransactionHandler = handler.NewSuccessTransactionHandler(
-			service.NewSuccessTransactionService(oracle.NewSuccessTransactionRepository(oracleDB)),
+		successTransactionSvc = service.NewSuccessTransactionService(
+			oracle.NewSuccessTransactionRepository(oracleDB),
+			posTerminalRepo,
+			atmTerminalRepo,
 		)
+		successTransactionHandler = handler.NewSuccessTransactionHandler(successTransactionSvc)
 		ebirrCardlessHandler = handler.NewEbirrCardlessWithdrawalHandler(
 			service.NewEbirrCardlessWithdrawalService(oracle.NewEbirrCardlessWithdrawalRepository(oracleDB)),
 		)
@@ -256,17 +261,15 @@ func main() {
 		settledHandler = handler.NewSettledHandler(
 			service.NewSettledService(oracle.NewSettledRepository(oracleDB)),
 		)
-		cardHandler = handler.NewCardHandler(
-			service.NewCardService(oracle.NewCardRepository(oracleDB)),
-		)
+		cardSvc = service.NewCardService(oracle.NewCardRepository(oracleDB))
+		cardHandler = handler.NewCardHandler(cardSvc)
 		transactionMixHandler = handler.NewTransactionMixHandler(
 			service.NewTransactionMixService(oracle.NewTransactionMixRepository(oracleDB)),
 		)
 	} else {
 		testHandler = handler.NewTestHandler(service.NewTestService(nil))
-		successTransactionHandler = handler.NewSuccessTransactionHandler(
-			service.NewSuccessTransactionService(nil),
-		)
+		successTransactionSvc = service.NewSuccessTransactionService(nil, posTerminalRepo, atmTerminalRepo)
+		successTransactionHandler = handler.NewSuccessTransactionHandler(successTransactionSvc)
 		ebirrCardlessHandler = handler.NewEbirrCardlessWithdrawalHandler(
 			service.NewEbirrCardlessWithdrawalService(nil),
 		)
@@ -277,10 +280,22 @@ func main() {
 		clearedHandler = handler.NewClearedHandler(service.NewClearedService(nil))
 		unsettledHandler = handler.NewUnsettledHandler(service.NewUnsettledService(nil, nil, nil, nil))
 		settledHandler = handler.NewSettledHandler(service.NewSettledService(nil))
-		cardHandler = handler.NewCardHandler(service.NewCardService(nil))
+		cardSvc = service.NewCardService(nil)
+		cardHandler = handler.NewCardHandler(cardSvc)
 		transactionMixHandler = handler.NewTransactionMixHandler(
 			service.NewTransactionMixService(nil),
 		)
+	}
+
+	// The embed handler reuses the same success-rate service as the dashboard, so
+	// an embedded widget and the UI can never disagree on a figure.
+	var embedSuccessRateHandler handler.EmbedSuccessRateHandler
+	if successTransactionSvc != nil {
+		embedSuccessRateHandler = handler.NewEmbedSuccessRateHandler(successTransactionSvc)
+	}
+	var embedCardActivityHandler handler.EmbedCardActivityHandler
+	if cardSvc != nil {
+		embedCardActivityHandler = handler.NewEmbedCardActivityHandler(cardSvc)
 	}
 
 	var onusCollector *sshswitch.Collector
@@ -397,6 +412,8 @@ func main() {
 		ActivityLog:                activityLogHandler,
 		Test:                       testHandler,
 		SuccessTransaction:         successTransactionHandler,
+		EmbedSuccessRate:           embedSuccessRateHandler,
+		EmbedCardActivity:          embedCardActivityHandler,
 		EbirrCardlessWithdrawal:    ebirrCardlessHandler,
 		TerminalTransaction:        terminalTransactionHandler,
 		AtmTerminal:                atmTerminalHandler,

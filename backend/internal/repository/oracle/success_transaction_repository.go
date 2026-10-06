@@ -457,6 +457,100 @@ func mapFlowMetric(row successTransactionRow) flowMetricResult {
 	}
 }
 
+// GetTerminalReport returns per-terminal acquiring success-rate metrics.
+func (r *successTransactionRepository) GetTerminalReport(ctx context.Context, dateFrom, dateTo, channel string) ([]model.TerminalSuccessReport, error) {
+	query := terminalSuccessQuery(channel)
+
+	rows, err := r.db.QueryContext(
+		ctx,
+		query,
+		sql.Named("date_from", dateFrom),
+		sql.Named("date_to", dateTo),
+	)
+	if err != nil {
+		return nil, wrapError(common.ErrFailedToFetchReport, err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var results []model.TerminalSuccessReport
+	for rows.Next() {
+		var row successTransactionRow
+		var terminalID string
+		if err := rows.Scan(
+			&terminalID,
+			&row.TotalTransactions,
+			&row.ApprovedCount,
+			&row.DoNotHonor,
+			&row.UnableToProcess,
+			&row.IssuerTimeout8,
+			&row.IssuerTimeout9,
+			&row.UnableToReverse,
+			&row.InvalidCard,
+			&row.SystemErrorReenter,
+			&row.NoFromAccount,
+			&row.NoCheckingAccount,
+			&row.NoSavingAccount,
+			&row.FormatError,
+			&row.ChipArqcFailure,
+			&row.NoCardRecord,
+			&row.NotPermittedOnCard,
+			&row.NotPermittedOnTerm,
+			&row.LateResponse,
+			&row.InvalidPINBlock,
+			&row.InvalidCVV,
+			&row.PINKeyError,
+			&row.SwitchNotAvailable,
+			&row.InvalidIssuer,
+			&row.InvalidAcquirer,
+			&row.SystemError,
+			&row.DuplicateTxn,
+			&row.PartialDispense,
+			&row.UnableToDispense,
+			&row.UncertainDispense,
+			&row.DepositError113,
+			&row.DepositError121,
+			&row.ServerDeclined,
+			&row.ClarificationTwo,
+			&row.InvalidCVVTwo,
+			&row.IssuerDown,
+			&row.RejectedMessage,
+			&row.TransfereeDown,
+			&row.SystemUp,
+			&row.SystemError990,
+			&row.InvalidMerchant,
+			&row.NoCreditAccount,
+			&row.SystemSecurityError,
+			&row.Others,
+			&row.Reversed,
+			&row.DeclinedCount,
+			&row.SuccessRatePercent,
+			&row.ApprovedAmount,
+			&row.DeclinedAmount,
+			&row.TotalAmount,
+		); err != nil {
+			return nil, wrapError(common.ErrFailedToFetchReport, err)
+		}
+
+		results = append(results, model.TerminalSuccessReport{
+			TerminalID:         terminalID,
+			Channel:            channel,
+			TotalTransactions:  nullInt(row.TotalTransactions),
+			ApprovedCount:      nullInt(row.ApprovedCount),
+			DeclinedCount:      nullInt(row.DeclinedCount),
+			SuccessRatePercent: nullFloat(row.SuccessRatePercent),
+			ApprovedAmount:     nullFloat(row.ApprovedAmount),
+			DeclinedAmount:     nullFloat(row.DeclinedAmount),
+			TotalAmount:        nullFloat(row.TotalAmount),
+			DeclineReasons:     mapFlowMetric(row).DeclineReasons,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, wrapError(common.ErrFailedToFetchReport, err)
+	}
+
+	return results, nil
+}
+
 func nullInt(value sql.NullFloat64) int64 {
 	if !value.Valid {
 		return 0

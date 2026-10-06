@@ -355,6 +355,113 @@ WHERE `)
 	return b.String()
 }
 
+// terminalSuccessQuery returns per-terminal acquiring success-rate metrics.
+// Acquiring = on-us + offus. Groups by TERMID so each row is one terminal.
+// Channel scopes the msgtype/merchant-type filters, so pos and atm reuse this.
+func terminalSuccessQuery(channel string) string {
+	approved := trulyApprovedExpr()
+	reversed := approvedThenReversedExpr()
+	offus := offusRoutingExpr()
+	msgType, merchantType, routing := channelFilters(channel, "acquiring")
+
+	var b strings.Builder
+	b.WriteString(reversalsCTE(2))
+	b.WriteString("\n")
+	b.WriteString(`SELECT /*+ USE_HASH(t rev) */
+	TRIM(t.TERMID) AS terminal_id,
+	COUNT(*) AS total_number_of_transaction,
+	COUNT(CASE WHEN `)
+	b.WriteString(approved)
+	b.WriteString(` THEN 1 END) AS number_of_approved_txn,
+	COUNT(CASE WHEN t.respcode = '4' THEN 1 END) AS do_not_honor,
+	COUNT(CASE WHEN t.respcode = '5' AND NOT (`)
+	b.WriteString(offus)
+	b.WriteString(`) THEN 1 END) AS unable_to_process,
+	COUNT(CASE WHEN t.respcode = '8' AND NOT (`)
+	b.WriteString(offus)
+	b.WriteString(`) THEN 1 END) AS issuer_timeout_8,
+	COUNT(CASE WHEN t.respcode = '9' THEN 1 END) AS issuer_timeout_9,
+	COUNT(CASE WHEN t.respcode = '10' THEN 1 END) AS unable_to_reverse,
+	COUNT(CASE WHEN t.respcode = '14' THEN 1 END) AS invalid_card,
+	COUNT(CASE WHEN t.respcode = '19' THEN 1 END) AS system_error_reenter,
+	COUNT(CASE WHEN t.respcode = '20' THEN 1 END) AS no_from_account,
+	COUNT(CASE WHEN t.respcode = '22' THEN 1 END) AS no_checking_account,
+	COUNT(CASE WHEN t.respcode = '23' THEN 1 END) AS no_saving_account,
+	COUNT(CASE WHEN t.respcode = '30' THEN 1 END) AS format_error,
+	COUNT(CASE WHEN t.respcode = '48' THEN 1 END) AS chip_arqc_failure,
+	COUNT(CASE WHEN t.respcode = '56' THEN 1 END) AS no_card_record,
+	COUNT(CASE WHEN t.respcode = '57' THEN 1 END) AS txn_not_permitted_on_card,
+	COUNT(CASE WHEN t.respcode = '58' THEN 1 END) AS txn_not_permitted_on_terminal,
+	COUNT(CASE WHEN t.respcode = '68' THEN 1 END) AS late_response,
+	COUNT(CASE WHEN t.respcode = '81' THEN 1 END) AS invalid_pin_block,
+	COUNT(CASE WHEN t.respcode = '82' THEN 1 END) AS invalid_cvv,
+	COUNT(CASE WHEN t.respcode = '87' THEN 1 END) AS pin_key_error,
+	COUNT(CASE WHEN t.respcode = '91' THEN 1 END) AS switch_not_available,
+	COUNT(CASE WHEN t.respcode = '92' THEN 1 END) AS invalid_issuer,
+	COUNT(CASE WHEN t.respcode = '93' THEN 1 END) AS invalid_acquirer,
+	COUNT(CASE WHEN t.respcode = '96' THEN 1 END) AS system_error,
+	COUNT(CASE WHEN t.respcode = '99' THEN 1 END) AS duplicate_transaction,
+	COUNT(CASE WHEN t.respcode = '102' THEN 1 END) AS partial_dispense,
+	COUNT(CASE WHEN t.respcode = '103' THEN 1 END) AS unable_to_dispense,
+	COUNT(CASE WHEN t.respcode = '112' THEN 1 END) AS uncertain_dispense,
+	COUNT(CASE WHEN t.respcode = '113' THEN 1 END) AS deposit_error_113,
+	COUNT(CASE WHEN t.respcode = '121' THEN 1 END) AS deposit_error_121,
+	COUNT(CASE WHEN t.respcode = '702' THEN 1 END) AS server_declined,
+	COUNT(CASE WHEN t.respcode = '801' THEN 1 END) AS clarification_two,
+	COUNT(CASE WHEN t.respcode = '802' THEN 1 END) AS invalid_cvv_two,
+	COUNT(CASE WHEN t.respcode = '900' THEN 1 END) AS issuer_down,
+	COUNT(CASE WHEN t.respcode = '903' THEN 1 END) AS rejected_message,
+	COUNT(CASE WHEN t.respcode = '906' THEN 1 END) AS transferee_down,
+	COUNT(CASE WHEN t.respcode = '930' THEN 1 END) AS system_up,
+	COUNT(CASE WHEN t.respcode = '990' THEN 1 END) AS system_error_990,
+	COUNT(CASE WHEN t.respcode = '3' THEN 1 END) AS invalid_merchant,
+	COUNT(CASE WHEN t.respcode = '39' THEN 1 END) AS no_credit_account,
+	COUNT(CASE WHEN t.respcode = '811' THEN 1 END) AS system_security_error,
+	COUNT(CASE WHEN t.respcode NOT IN (`)
+	b.WriteString(classifiedRespCodes)
+	b.WriteString(`) THEN 1 END) AS others,
+	COUNT(CASE WHEN `)
+	b.WriteString(reversed)
+	b.WriteString(` THEN 1 END) AS reversed_after_approve,
+	COUNT(*) - COUNT(CASE WHEN `)
+	b.WriteString(approved)
+	b.WriteString(` THEN 1 END) AS number_of_declined_txn,
+	CASE
+		WHEN COUNT(*) = 0 THEN 0
+		ELSE ROUND(
+			(
+				COUNT(CASE WHEN `)
+	b.WriteString(approved)
+	b.WriteString(` THEN 1 END)
+				/ NULLIF(COUNT(*), 0)
+			) * 100,
+			2
+		)
+	END AS percent_success_rate,
+	CASE WHEN COUNT(*) = 0 THEN 0 ELSE SUM(CASE WHEN (`)
+	b.WriteString(approved)
+	b.WriteString(`) AND t.amount IS NOT NULL THEN t.amount ELSE 0 END) END AS total_approved_amount,
+	CASE WHEN COUNT(*) = 0 THEN 0 ELSE
+		SUM(CASE WHEN t.amount IS NULL THEN 0 ELSE t.amount END) -
+		SUM(CASE WHEN (`)
+	b.WriteString(approved)
+	b.WriteString(`) AND t.amount IS NOT NULL THEN t.amount ELSE 0 END)
+	END AS total_declined_amount,
+	CASE WHEN COUNT(*) = 0 THEN 0 ELSE SUM(CASE WHEN t.amount IS NULL THEN 0 ELSE t.amount END) END AS total_transaction_amount
+FROM oasis.shclog t
+LEFT JOIN rev ON rev.refnum = TRIM(t.REFNUM)
+WHERE `)
+	b.WriteString(msgType)
+	b.WriteString("\n\tAND ")
+	b.WriteString(merchantType)
+	b.WriteString("\n\tAND ")
+	b.WriteString(routing)
+	b.WriteString("\n\tAND t.LOCAL_DATE BETWEEN TO_DATE(:date_from, 'MM-DD-YYYY') AND TO_DATE(:date_to, 'MM-DD-YYYY')\n")
+	b.WriteString("GROUP BY t.TERMID\n")
+	b.WriteString("ORDER BY COUNT(*) DESC\n")
+	return b.String()
+}
+
 func listSuccessTransactionsQuery(
 	channel, flow, outcomeFilter, respFilter string,
 	limit int,

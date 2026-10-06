@@ -29,6 +29,7 @@ type SuccessTransactionHandler interface {
 	GetSwitchIssuing(c *gin.Context)
 	GetTrend(c *gin.Context)
 	ListTransactions(c *gin.Context)
+	GetTerminalReport(c *gin.Context)
 }
 
 type successTransactionHandler struct {
@@ -180,6 +181,38 @@ func (h *successTransactionHandler) ListTransactions(c *gin.Context) {
 		IsSuccessful: true,
 		Message:      "Success transactions fetched successfully",
 		Data:         rows,
+	})
+}
+
+func (h *successTransactionHandler) GetTerminalReport(c *gin.Context) {
+	dateFrom := c.Query("dateFrom")
+	dateTo := c.Query("dateTo")
+	channel := c.Query("channel")
+
+	if dateFrom == "" || dateTo == "" {
+		c.JSON(http.StatusBadRequest, response.Status{
+			IsSuccessful: false,
+			Message:      common.ErrInvalidReportDate.Error(),
+			Error:        common.MessInvalidRequest,
+		})
+		return
+	}
+
+	if !canViewSuccessRate(c, channel, "acquiring") {
+		writeAppError(c, common.ErrForbidden)
+		return
+	}
+
+	report, err := h.service.GetTerminalReport(c.Request.Context(), dateFrom, dateTo, channel)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Terminal success rate report fetched successfully",
+		Data:         report,
 	})
 }
 

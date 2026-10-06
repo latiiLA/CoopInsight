@@ -205,6 +205,28 @@ func registerReportRoutes(
 		successTransactionHandler.ListTransactions,
 	)
 	reports.GET(
+		"/pos-terminal-success-rate",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{
+				"report:view-pos-acquiring-success-rate",
+				"report:view-success-transactions",
+			},
+		),
+		successTransactionHandler.GetTerminalReport,
+	)
+	reports.GET(
+		"/atm-terminal-success-rate",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{
+				"report:view-atm-acquiring-success-rate",
+				"report:view-success-transactions",
+			},
+		),
+		successTransactionHandler.GetTerminalReport,
+	)
+	reports.GET(
 		"/ebirr-cardless-withdrawal",
 		middleware.AuthorizeRolesOrPermissions([]string{}, []string{"report:view-ebirr-cardless-withdrawal"}),
 		ebirrCardlessHandler.GetReport,

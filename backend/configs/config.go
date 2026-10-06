@@ -84,6 +84,14 @@ var (
 
 	AllowedOrigins []string
 
+	// embed
+	//
+	// Shared secret for the read-only /api/embed surface that Grafana widgets
+	// call. Blank disables the group entirely, so an unset key does not leave
+	// report endpoints reachable. Never commit a real value; read it from env.
+	EmbedAPIKey     string
+	EmbedAPITimeout time.Duration
+
 	// oracle
 	OracleEnabled     bool
 	OracleConnected   bool
@@ -388,6 +396,25 @@ func LoadConfig() {
 				AllowedOrigins = append(AllowedOrigins, origin)
 			}
 		}
+	}
+
+	// Embed surface for Grafana widgets. Key is optional: when unset the group
+	// is not registered at all, so a missing key fails closed.
+	EmbedAPIKey = strings.TrimSpace(os.Getenv("EMBED_API_KEY"))
+	if EmbedAPIKey == "" {
+		log.Println("EMBED_API_KEY is unset: /api/embed endpoints are disabled")
+	} else {
+		log.Println("EMBED_API_KEY is set: /api/embed endpoints are enabled")
+	}
+	// Zero means "use OracleTimeout"; the router resolves that at registration,
+	// after OracleTimeout has been loaded below.
+	EmbedAPITimeout = 0
+	if raw := strings.TrimSpace(os.Getenv("EMBED_API_TIMEOUT")); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			log.Fatalf("EMBED_API_TIMEOUT must be a duration such as 180s: %v", err)
+		}
+		EmbedAPITimeout = parsed
 	}
 
 	// oracle — optional. Login and user features use Mongo only.

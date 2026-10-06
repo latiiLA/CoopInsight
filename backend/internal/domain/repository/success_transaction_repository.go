@@ -14,4 +14,5 @@ type SuccessTransactionRepository interface {
 		dateFrom, dateTo, channel, flow, outcome, respCode string,
 		limit int,
 	) ([]model.SuccessTransactionDetail, error)
+	GetTerminalReport(ctx context.Context, dateFrom, dateTo, channel string) ([]model.TerminalSuccessReport, error)
 }

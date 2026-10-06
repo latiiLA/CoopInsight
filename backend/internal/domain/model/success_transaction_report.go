@@ -45,6 +45,20 @@ type SuccessRateTrendReport struct {
 	Points      []SuccessRateTrendPoint `json:"points"`
 }
 
+// TerminalSuccessReport is one terminal's acquiring success-rate metrics.
+type TerminalSuccessReport struct {
+	TerminalID         string          `json:"terminalId"`
+	Channel            string          `json:"channel"`
+	TotalTransactions  int64           `json:"totalTransactions"`
+	ApprovedCount      int64           `json:"approvedCount"`
+	DeclinedCount      int64           `json:"declinedCount"`
+	SuccessRatePercent float64         `json:"successRatePercent"`
+	ApprovedAmount     float64         `json:"approvedAmount"`
+	DeclinedAmount     float64         `json:"declinedAmount"`
+	TotalAmount        float64         `json:"totalAmount"`
+	DeclineReasons     []DeclineReason `json:"declineReasons"`
+}
+
 // SuccessTransactionDetail is one shclog authorization row for browse/drill-down.
 type SuccessTransactionDetail struct {
 	ID               string  `json:"id"`
