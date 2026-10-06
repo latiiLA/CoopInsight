@@ -1,9 +1,17 @@
-export function Footer() {
+export function Footer({ credit }: { credit?: string } = {}) {
   const year = new Date().getFullYear();
 
   return (
     <footer className="mt-auto border-t px-4 py-3 text-center text-xs text-muted-foreground">
-      &copy; {year} All Rights Reserved | Designed, Built and Maintained by{" "}
+      {credit ? (
+        <>
+          &copy; {year} All Rights Reserved | {credit}{" "}
+        </>
+      ) : (
+        <>
+          &copy; {year} All Rights Reserved | Designed, Built and Maintained by{" "}
+        </>
+      )}
       <a
         href="https://latiila.vercel.app"
         target="_blank"

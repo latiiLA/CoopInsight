@@ -4,6 +4,7 @@ export type SwitchFlow = "overall" | "onus" | "offus" | "issuing";
 export type RangePreset = "today" | "yesterday" | "7d" | "30d" | "custom";
 export type EmbedTheme = "light" | "dark" | "auto";
 export type EmbedDashboard = "switch" | "card";
+export type EmbedView = "full" | "summary";
 export type CardRangePreset = "today" | "7d" | "30d" | "90d" | "12m" | "ytd";
 
 const CARD_PRESETS: CardRangePreset[] = ["today", "7d", "30d", "90d", "12m", "ytd"];
@@ -45,6 +46,10 @@ export type EmbedParams = {
   refreshSeconds: number;
   theme: EmbedTheme;
   showControls: boolean;
+  /** Compact KPI card; only implemented for switch overall. */
+  view: EmbedView;
+  /** Grafana dashboard/panel URL opened by the summary card title. */
+  panelUrl: string;
   good: number;
   warn: number;
 };
@@ -175,23 +180,119 @@ export function readEmbedParams(): EmbedParams {
   const cardPreset = (CARD_PRESETS as string[]).includes(requestedPreset ?? "")
     ? (requestedPreset as CardRangePreset)
     : "30d";
+  const view: EmbedView =
+    (params.get("view") ?? "").toLowerCase() === "summary" ? "summary" : "full";
 
   return {
     apiKey: params.get("apiKey") ?? "",
     dashboard,
     cardPreset,
     title: params.get("title") ?? "Switch success rate",
-    flows: visibleFlows,
-    initialFlow,
+    flows: view === "summary" ? ["overall"] : visibleFlows,
+    initialFlow: view === "summary" ? "overall" : initialFlow,
     preset,
     from: hasCustomRange ? from : todayIso(),
     to: hasCustomRange ? to : todayIso(),
     refreshSeconds: refresh > 0 ? Math.max(MIN_REFRESH_SECONDS, refresh) : 0,
     theme: theme === "light" || theme === "dark" ? theme : "auto",
     showControls: params.get("controls") !== "0",
+    view,
+    panelUrl: resolvePanelUrl(params),
     good: readNumber(params.get("good"), 95),
     warn: readNumber(params.get("warn"), 85),
   };
+}
+
+/**
+ * Title-link target. Prefer simple pieces so Grafana does not need a nested
+ * encoded URL (`%3A` / `%2F` showing up in the iframe src):
+ *
+ *   panel=http://localhost:3000/d/adwq86f/coophub&viewPanel=panel-1
+ *
+ * `panel` / `link` is the dashboard only (no `?` or `&`). Change `viewPanel`
+ * to point at another Grafana panel (the id from that panel’s URL, not its
+ * title). Omit `dtab` if the dashboard has no tabs; a leftover tab from the
+ * parent Grafana URL is stripped. If `panel` is omitted and the iframe is on
+ * a Grafana dashboard, the parent URL is used as the host.
+ */
+function resolvePanelUrl(params: URLSearchParams): string {
+  const viewPanel = (params.get("viewPanel") ?? params.get("gPanel") ?? "").trim();
+  const dtab = (params.get("dtab") ?? "").trim();
+  const orgId = (params.get("orgId") ?? "").trim();
+  const gDash = (params.get("gDash") ?? "").trim();
+  const gSlug = (params.get("gSlug") ?? "").trim();
+  const gHost = (params.get("gHost") ?? params.get("grafana") ?? "").trim();
+
+  const applyFocus = (url: URL) => {
+    if (viewPanel) url.searchParams.set("viewPanel", viewPanel);
+    if (orgId) url.searchParams.set("orgId", orgId);
+    if (dtab) url.searchParams.set("dtab", dtab);
+    else url.searchParams.delete("dtab");
+    return url.toString();
+  };
+
+  const explicit = readHttpUrl(params.get("panel") ?? params.get("link"));
+  if (explicit) {
+    try {
+      return applyFocus(new URL(explicit));
+    } catch {
+      return explicit;
+    }
+  }
+
+  if (gHost && gDash) {
+    try {
+      const host = new URL(gHost.includes("://") ? gHost : `http://${gHost}`);
+      if (host.protocol === "http:" || host.protocol === "https:") {
+        const path = `/d/${gDash}/${gSlug || "dashboard"}`;
+        return applyFocus(new URL(path, `${host.origin}/`));
+      }
+    } catch {
+      // fall through to the Grafana parent page
+    }
+  }
+
+  return panelUrlFromReferrer(viewPanel, dtab, orgId);
+}
+
+function panelUrlFromReferrer(
+  viewPanel: string,
+  dtab: string,
+  orgId: string,
+): string {
+  if (!viewPanel && !dtab) return "";
+  try {
+    const ref = document.referrer;
+    if (!ref) return "";
+    const url = new URL(ref);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    if (!/\/d\/[^/]+/.test(url.pathname)) return "";
+    if (viewPanel) url.searchParams.set("viewPanel", viewPanel);
+    if (orgId) url.searchParams.set("orgId", orgId);
+    if (dtab) url.searchParams.set("dtab", dtab);
+    else url.searchParams.delete("dtab");
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function readHttpUrl(raw: string | null): string {
+  const value = (raw ?? "").trim();
+  if (!value) return "";
+  try {
+    const url = new URL(decodeURIComponent(value));
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    return url.toString();
+  } catch {
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+      return url.toString();
+    } catch {
+      return "";
+    }
+  }
 }
 
 export const todayIso = () => format(startOfDay(new Date()), ISO_FORMAT);

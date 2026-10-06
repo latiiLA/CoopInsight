@@ -3,6 +3,7 @@ import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
+import { Footer } from "@/components/footer";
 import { toApiDate } from "@/lib/report-range";
 import { SuccessRateView } from "@/pages/reports/success-rate/success-rate-view";
 import type { SuccessTransactionReport } from "@/types/report";
@@ -18,6 +19,7 @@ import {
   type RangePreset,
   type SwitchFlow,
 } from "./params";
+import { SwitchOverallSummary } from "./SwitchOverallSummary";
 import { useTheme } from "./use-theme";
 
 function fetchFlow(
@@ -153,6 +155,19 @@ export function EmbedApp({ params }: { params: EmbedParams }) {
   // flashing the skeleton.
   const showLoading = loading && !report && !error;
 
+  if (params.view === "summary") {
+    return (
+      <SwitchOverallSummary
+        report={report}
+        loading={showLoading}
+        range={range}
+        href={params.panelUrl}
+        error={error}
+        onRetry={params.apiKey ? retry : undefined}
+      />
+    );
+  }
+
   const flowSwitcher =
     params.flows.length > 1 ? (
       <div className="flex rounded-md border p-0.5" role="tablist" aria-label="Flow">
@@ -180,7 +195,7 @@ export function EmbedApp({ params }: { params: EmbedParams }) {
     ) : null;
 
   return (
-    <main className="min-h-svh bg-background p-4 text-foreground">
+    <main className="flex min-h-svh flex-col bg-background p-4 text-foreground">
       {error ? (
         <EmbedErrorBanner
           error={error}
@@ -208,6 +223,7 @@ export function EmbedApp({ params }: { params: EmbedParams }) {
           </>
         }
       />
+      <Footer credit="This Page is Built by" />
     </main>
   );
 }
