@@ -75,7 +75,7 @@ type successTransactionRow struct {
 func (r *successTransactionRepository) GetReport(ctx context.Context, dateFrom, dateTo, channel, flow string) (*model.SuccessTransactionReport, error) {
 	msgTypeFilter, merchantTypeFilter, routingFilter := channelFilters(channel, flow)
 
-	metric, err := r.queryFlow(ctx, dateFrom, dateTo, msgTypeFilter, merchantTypeFilter, routingFilter)
+	metric, err := r.queryFlow(ctx, dateFrom, dateTo, channel, msgTypeFilter, merchantTypeFilter, routingFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (r *successTransactionRepository) GetTrend(
 	dateFrom, dateTo, channel, flow, granularity string,
 ) (*model.SuccessRateTrendReport, error) {
 	msgType, merchantType, routing := channelFilters(channel, flow)
-	query := successTrendQuery(msgType, merchantType, routing, periodExprFor(granularity))
+	query := successTrendQuery(channel, msgType, merchantType, routing, periodExprFor(granularity))
 
 	rows, err := r.db.QueryContext(
 		ctx,
@@ -193,9 +193,9 @@ func (r *successTransactionRepository) ListTransactions(
 	case "", "all":
 		outcomeFilter = "1=1"
 	case "approved":
-		outcomeFilter = trulyApprovedExpr()
+		outcomeFilter = trulyApprovedExpr(channel)
 	case "declined":
-		outcomeFilter = `NOT (` + trulyApprovedExpr() + `)`
+		outcomeFilter = `NOT (` + trulyApprovedExpr(channel) + `)`
 	}
 
 	var respFilter string
@@ -203,7 +203,7 @@ func (r *successTransactionRepository) ListTransactions(
 	case "":
 		respFilter = "1=1"
 	case "reversed":
-		respFilter = approvedThenReversedExpr()
+		respFilter = approvedThenReversedExpr(channel)
 	case "other":
 		respFilter = `t.respcode NOT IN (` + classifiedRespCodes + `)`
 	default:
@@ -298,6 +298,7 @@ func respCodeLabel(code, outcome string) string {
 		"61": "Approved", "62": "Approved", "65": "Approved", "67": "Approved", "75": "Approved",
 		"76": "Approved", "80": "Approved", "89": "Approved", "98": "Approved", "115": "Approved",
 		"251": "Approved", "252": "Approved", "503": "Approved", "902": "Approved", "904": "Approved",
+		"915": "Approved", "990": "Approved", "930": "Approved",
 		"4": "Do not honor", "5": "Unable to process", "8": "Issuer timeout", "9": "Issuer timeout",
 		"10": "Unable to reverse", "14": "Invalid Card", "19": "System Error Reenter",
 		"20": "No from account", "22": "No checking account", "23": "No Saving Account",
@@ -309,7 +310,7 @@ func respCodeLabel(code, outcome string) string {
 		"103": "Unable to dispense", "112": "Uncertain Dispense", "113": "Deposit Error",
 		"121": "Deposit Error", "702": "Server Declined", "801": "Clarification-Two",
 		"802": "Invalid CVV-Two", "900": "Issuer Down", "903": "Rejected Message",
-		"906": "TransfereeDown", "930": "System Up", "990": "system error",
+		"906": "TransfereeDown",
 		"3": "Invalid Merchant", "39": "No credit Account", "811": "System Security/system error",
 	}
 	if label, ok := labels[code]; ok {
@@ -334,13 +335,13 @@ type flowMetricResult struct {
 
 func (r *successTransactionRepository) queryFlow(
 	ctx context.Context,
-	dateFrom, dateTo, msgTypeFilter, merchantTypeFilter, routingFilter string,
+	dateFrom, dateTo, channel, msgTypeFilter, merchantTypeFilter, routingFilter string,
 ) (flowMetricResult, error) {
 	var row successTransactionRow
 
 	err := r.db.QueryRowContext(
 		ctx,
-		successTransactionQuery(msgTypeFilter, merchantTypeFilter, routingFilter),
+		successTransactionQuery(channel, msgTypeFilter, merchantTypeFilter, routingFilter),
 		sql.Named("date_from", dateFrom),
 		sql.Named("date_to", dateTo),
 	).Scan(
@@ -446,8 +447,6 @@ func mapFlowMetric(row successTransactionRow) flowMetricResult {
 			reason("900", "Issuer Down", row.IssuerDown),
 			reason("903", "Rejected Message", row.RejectedMessage),
 			reason("906", "TransfereeDown", row.TransfereeDown),
-			reason("930", "System Up", row.SystemUp),
-			reason("990", "system error", row.SystemError990),
 			reason("3", "Invalid Merchant", row.InvalidMerchant),
 			reason("39", "No credit Account", row.NoCreditAccount),
 			reason("811", "System Security/system error", row.SystemSecurityError),

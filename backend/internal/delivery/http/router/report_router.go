@@ -170,6 +170,18 @@ func registerReportRoutes(
 		successTransactionHandler.GetSwitchIssuing,
 	)
 	reports.GET(
+		"/switch-remote-onus-success-rate",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{
+				"report:view-switch-remote-onus-success-rate",
+				"report:view-switch-issuing-success-rate",
+				"report:view-success-transactions",
+			},
+		),
+		successTransactionHandler.GetSwitchRemoteOnus,
+	)
+	reports.GET(
 		"/success-rate-trend",
 		middleware.AuthorizeRolesOrPermissions(
 			[]string{"SUPERADMIN"},
@@ -188,6 +200,7 @@ func registerReportRoutes(
 				"report:view-switch-overall-success-rate",
 				"report:view-switch-onus-success-rate",
 				"report:view-switch-offus-success-rate",
+				"report:view-switch-remote-onus-success-rate",
 				"report:view-switch-issuing-success-rate",
 			},
 		),

@@ -27,6 +27,7 @@ type EmbedSuccessRateHandler interface {
 	GetSwitchOverall(c *gin.Context)
 	GetSwitchOnus(c *gin.Context)
 	GetSwitchOffus(c *gin.Context)
+	GetSwitchRemoteOnus(c *gin.Context)
 	GetSwitchIssuing(c *gin.Context)
 }
 
@@ -48,6 +49,10 @@ func (h *embedSuccessRateHandler) GetSwitchOnus(c *gin.Context) {
 
 func (h *embedSuccessRateHandler) GetSwitchOffus(c *gin.Context) {
 	h.write(c, "offus")
+}
+
+func (h *embedSuccessRateHandler) GetSwitchRemoteOnus(c *gin.Context) {
+	h.write(c, "remote_onus")
 }
 
 func (h *embedSuccessRateHandler) GetSwitchIssuing(c *gin.Context) {

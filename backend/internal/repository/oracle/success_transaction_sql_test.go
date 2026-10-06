@@ -25,6 +25,9 @@ func TestRoutingFilterATMFlows(t *testing.T) {
 	if got := routingFilterFor("atm", ""); got != cases["acquiring"] {
 		t.Errorf("atm/default = %s, want acquiring", got)
 	}
+	if got := routingFilterFor("atm", "remote_onus"); got != cases["issuing"] {
+		t.Errorf("atm/remote_onus should match atm issuing (remote on-us)")
+	}
 }
 
 func TestRoutingFilterPOSFlows(t *testing.T) {
@@ -55,6 +58,22 @@ func TestRoutingFilterSwitchScopesByMerchantType(t *testing.T) {
 	}
 }
 
+func TestRoutingFilterSwitchIssuingIsOnusPlusRemoteOnus(t *testing.T) {
+	atm := routingCardIssuing("atm")
+	pos := routingCardIssuing("pos")
+	want := `((t.MERCHANT_TYPE = 6011 AND (` + atm + `)) OR (t.MERCHANT_TYPE <> 6011 AND (` + pos + `)))`
+	if got := routingFilterFor("switch", "issuing"); got != want {
+		t.Errorf("switch/issuing:\n got %s\nwant %s", got, want)
+	}
+	remote := routingFilterFor("switch", "remote_onus")
+	if remote == want {
+		t.Error("switch remote on-us must not equal switch issuing")
+	}
+	if !strings.Contains(want, routingOnus("atm")) || !strings.Contains(want, routingIssuing("atm")) {
+		t.Error("switch issuing must include ATM on-us and ATM remote on-us")
+	}
+}
+
 func TestChannelFilters(t *testing.T) {
 	msg, merch, route := channelFilters("atm", "onus")
 	if msg != msgTypesATM {
@@ -79,19 +98,19 @@ func TestChannelFilters(t *testing.T) {
 }
 
 func TestApprovedRespCodesUnchanged(t *testing.T) {
-	want := `'0','2','11','12','13','17','41','42','43','44','46','51','54','55','59','61','62','65','67','75','76','80','89','98','115','251','252','503','902','904','915'`
+	want := `'0','2','11','12','13','17','41','42','43','44','46','51','54','55','59','61','62','65','67','75','76','80','89','98','115','251','252','503','902','904','915','990','930'`
 	if approvedRespCodes != want {
 		t.Error("approvedRespCodes changed — do not alter without product sign-off")
 	}
 }
 
 func TestTrulyApprovedExprFormula(t *testing.T) {
-	got := trulyApprovedExpr()
+	got := trulyApprovedExpr("atm")
 	if !strings.Contains(got, "t.respcode IN ("+approvedRespCodes+")") {
 		t.Error("trulyApproved missing approvedRespCodes list")
 	}
 	if !strings.Contains(got, "rev.refnum IS NULL") {
-		t.Error("trulyApproved must require no matching reversal")
+		t.Error("trulyApproved must require no matching reversal on acquiring")
 	}
 	if !strings.Contains(got, "t.respcode IN ('5','8')") {
 		t.Error("trulyApproved must treat offus 5/8 as approved")
@@ -99,20 +118,33 @@ func TestTrulyApprovedExprFormula(t *testing.T) {
 	if !strings.Contains(got, offusRoutingExpr()) {
 		t.Error("trulyApproved must scope 5/8 to offus routing")
 	}
+	if !strings.Contains(got, issuingRoutingExpr("atm")) {
+		t.Error("trulyApproved must count remote on-us reversed-after-approve as approved")
+	}
 
 	// Outer parens keep AND/OR safe when injected as AND <expr>.
 	want := `((t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NULL)` +
-		` OR (t.respcode IN ('5','8') AND rev.refnum IS NULL AND (` + offusRoutingExpr() + `)))`
+		` OR (t.respcode IN ('5','8') AND rev.refnum IS NULL AND (` + offusRoutingExpr() + `))` +
+		` OR (t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NOT NULL AND (` + issuingRoutingExpr("atm") + `)))`
 	if got != want {
-		t.Errorf("trulyApprovedExpr changed:\n got %s\nwant %s", got, want)
+		t.Errorf("trulyApprovedExpr(atm) changed:\n got %s\nwant %s", got, want)
+	}
+
+	pos := trulyApprovedExpr("pos")
+	if !strings.Contains(pos, issuingRoutingExpr("pos")) {
+		t.Error("trulyApprovedExpr(pos) must use POS issuing routing")
+	}
+	if issuingRoutingExpr("pos") == issuingRoutingExpr("atm") {
+		t.Error("POS and ATM issuing routing must differ")
 	}
 }
 
 func TestApprovedThenReversedExprFormula(t *testing.T) {
-	want := `((t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NOT NULL)` +
-		` OR (t.respcode IN ('5','8') AND rev.refnum IS NOT NULL AND (` + offusRoutingExpr() + `)))`
-	if got := approvedThenReversedExpr(); got != want {
-		t.Errorf("approvedThenReversedExpr changed:\n got %s\nwant %s", got, want)
+	want := `(((t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NOT NULL)` +
+		` OR (t.respcode IN ('5','8') AND rev.refnum IS NOT NULL AND (` + offusRoutingExpr() + `)))` +
+		` AND NOT (` + issuingRoutingExpr("atm") + `))`
+	if got := approvedThenReversedExpr("atm"); got != want {
+		t.Errorf("approvedThenReversedExpr(atm) changed:\n got %s\nwant %s", got, want)
 	}
 }
 
@@ -135,12 +167,12 @@ func TestReversalsCTEPads(t *testing.T) {
 }
 
 func TestSuccessTransactionQueryAssemblesSharedPieces(t *testing.T) {
-	q := successTransactionQuery(msgTypesATM, "t.MERCHANT_TYPE = 6011", routingOnus("atm"))
+	q := successTransactionQuery("atm", msgTypesATM, "t.MERCHANT_TYPE = 6011", routingOnus("atm"))
 	for _, needle := range []string{
 		"WITH rev AS (",
 		"SELECT /*+ USE_HASH(t rev) */",
-		trulyApprovedExpr(),
-		approvedThenReversedExpr(),
+		trulyApprovedExpr("atm"),
+		approvedThenReversedExpr("atm"),
 		"t.LOCAL_DATE BETWEEN TO_DATE(:date_from, 'MM-DD-YYYY') AND TO_DATE(:date_to, 'MM-DD-YYYY')",
 		"TO_DATE(:date_to, 'MM-DD-YYYY') + 2",
 		routingOnus("atm"),
@@ -153,7 +185,7 @@ func TestSuccessTransactionQueryAssemblesSharedPieces(t *testing.T) {
 
 func TestSuccessTrendQueryGroupsByPeriod(t *testing.T) {
 	period := periodExprFor("day")
-	q := successTrendQuery(msgTypesPOS, "t.MERCHANT_TYPE <> 6011", routingOffus("pos"), period)
+	q := successTrendQuery("pos", msgTypesPOS, "t.MERCHANT_TYPE <> 6011", routingOffus("pos"), period)
 	if !strings.Contains(q, "GROUP BY "+period) {
 		t.Error("trend query missing GROUP BY period")
 	}
@@ -177,8 +209,8 @@ func TestListSuccessTransactionsQueryUsesPlusOnePad(t *testing.T) {
 
 func TestSuccessRateQueriesUseExplicitNullHandling(t *testing.T) {
 	queries := []string{
-		successTransactionQuery(msgTypesATM, "t.MERCHANT_TYPE = 6011", routingOnus("atm")),
-		successTrendQuery(msgTypesPOS, "t.MERCHANT_TYPE <> 6011", routingOffus("pos"), periodExprFor("day")),
+		successTransactionQuery("atm", msgTypesATM, "t.MERCHANT_TYPE = 6011", routingOnus("atm")),
+		successTrendQuery("pos", msgTypesPOS, "t.MERCHANT_TYPE <> 6011", routingOffus("pos"), periodExprFor("day")),
 		listSuccessTransactionsQuery("atm", "onus", "1=1", "1=1", 100),
 	}
 	for _, q := range queries {
@@ -212,14 +244,14 @@ func TestSuccessRateQueriesUseExplicitNullHandling(t *testing.T) {
 
 func TestNamedRoutingHelpersMatchFilterFor(t *testing.T) {
 	for _, channel := range []string{"atm", "pos"} {
-		for _, flow := range []string{"onus", "offus", "issuing", "acquiring", "overall"} {
+		for _, flow := range []string{"onus", "offus", "issuing", "remote_onus", "acquiring", "overall"} {
 			var named string
 			switch flow {
 			case "onus":
 				named = routingOnus(channel)
 			case "offus":
 				named = routingOffus(channel)
-			case "issuing":
+			case "issuing", "remote_onus":
 				named = routingIssuing(channel)
 			case "acquiring":
 				named = routingAcquiring(channel)

@@ -48,6 +48,7 @@ func registerEmbedRoutes(
 		embed.GET("/switch/overall-success-rate", successRate.GetSwitchOverall)
 		embed.GET("/switch/onus-success-rate", successRate.GetSwitchOnus)
 		embed.GET("/switch/offus-success-rate", successRate.GetSwitchOffus)
+		embed.GET("/switch/remote-onus-success-rate", successRate.GetSwitchRemoteOnus)
 		embed.GET("/switch/issuing-success-rate", successRate.GetSwitchIssuing)
 	}
 

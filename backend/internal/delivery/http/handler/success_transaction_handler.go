@@ -26,6 +26,7 @@ type SuccessTransactionHandler interface {
 	GetSwitchOverall(c *gin.Context)
 	GetSwitchOnus(c *gin.Context)
 	GetSwitchOffus(c *gin.Context)
+	GetSwitchRemoteOnus(c *gin.Context)
 	GetSwitchIssuing(c *gin.Context)
 	GetTrend(c *gin.Context)
 	ListTransactions(c *gin.Context)
@@ -92,6 +93,10 @@ func (h *successTransactionHandler) GetSwitchOnus(c *gin.Context) {
 
 func (h *successTransactionHandler) GetSwitchOffus(c *gin.Context) {
 	h.writeReport(c, "switch", "offus")
+}
+
+func (h *successTransactionHandler) GetSwitchRemoteOnus(c *gin.Context) {
+	h.writeReport(c, "switch", "remote_onus")
 }
 
 func (h *successTransactionHandler) GetSwitchIssuing(c *gin.Context) {
@@ -251,6 +256,9 @@ func successRatePermissionFor(channel, flow string) string {
 	if flow == "" {
 		flow = "acquiring"
 	}
+	if flow == "remote_onus" {
+		flow = "remote-onus"
+	}
 	return "report:view-" + channel + "-" + flow + "-success-rate"
 }
 
@@ -277,6 +285,9 @@ func canViewSuccessRate(c *gin.Context, channel, flow string) bool {
 	required := []string{
 		successRatePermissionFor(channel, flow),
 		"report:view-success-transactions",
+	}
+	if strings.EqualFold(flow, "remote_onus") {
+		required = append(required, "report:view-switch-issuing-success-rate")
 	}
 
 	rawPermissions, ok := claims["permissions"]

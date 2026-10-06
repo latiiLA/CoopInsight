@@ -9,7 +9,7 @@ import (
 // Do not change approvedRespCodes, dest lists, or the success formula
 // unless intentionally fixing a pure formatting issue.
 
-const approvedRespCodes = `'0','2','11','12','13','17','41','42','43','44','46','51','54','55','59','61','62','65','67','75','76','80','89','98','115','251','252','503','902','904','915'`
+const approvedRespCodes = `'0','2','11','12','13','17','41','42','43','44','46','51','54','55','59','61','62','65','67','75','76','80','89','98','115','251','252','503','902','904','915','990','930'`
 
 const classifiedRespCodes = `'0','2','11','12','13','17','41','42','43','44','46','51','54','55','59','61','62','65','67','75','76','80','89','98','115','251','252','503','902','904','915','4','5','8','9','10','14','19','20','22','23','30','48','56','57','58','68','81','82','87','91','92','93','96','99','102','103','112','113','121','702','801','802','900','903','906','930','990','3','39','811'`
 
@@ -62,9 +62,10 @@ func merchantTypeFilterFor(channel string) string {
 }
 
 // ---------------------------------------------------------------------------
-// Routing filters by flow: onus / offus / issuing / acquiring / overall
+// Routing filters by flow: onus / offus / remote_onus / issuing / acquiring / overall
 // ATM on-us: acquirer 1000000011 + Cortex.
-// POS on-us: Cortex + CoopBank BIN in TXNSRC (402032); POS issuing excludes that set.
+// POS on-us: Cortex + CoopBank BIN in TXNSRC (402032); POS remote on-us excludes that set.
+// Switch issuing = on-us OR remote on-us. ATM/POS issuing still means remote on-us.
 // ---------------------------------------------------------------------------
 
 func routingOnus(channel string) string {
@@ -86,6 +87,14 @@ func routingIssuing(channel string) string {
 	return `TRIM(t.ACQUIRER) = '` + acquirerIssuing + `' AND TRIM(t.TXNDEST) = '` + destCortex + `'`
 }
 
+func routingRemoteOnus(channel string) string {
+	return routingIssuing(channel)
+}
+
+func routingCardIssuing(channel string) string {
+	return `((` + routingOnus(channel) + `) OR (` + routingIssuing(channel) + `))`
+}
+
 func routingAcquiring(channel string) string {
 	if channel == "pos" {
 		return `((` + routingOnus("pos") + `) OR (` + routingOffus("pos") + `))`
@@ -104,6 +113,11 @@ func routingOverall(channel string) string {
 // Switch = ATM rule OR POS rule, scoped by merchant type so channels do not bleed.
 func routingFilterFor(channel, flow string) string {
 	if channel == "switch" {
+		if flow == "issuing" {
+			atm := routingCardIssuing("atm")
+			pos := routingCardIssuing("pos")
+			return `((t.MERCHANT_TYPE = 6011 AND (` + atm + `)) OR (t.MERCHANT_TYPE <> 6011 AND (` + pos + `)))`
+		}
 		atm := routingFilterFor("atm", flow)
 		pos := routingFilterFor("pos", flow)
 		return `((t.MERCHANT_TYPE = 6011 AND (` + atm + `)) OR (t.MERCHANT_TYPE <> 6011 AND (` + pos + `)))`
@@ -119,7 +133,7 @@ func routingFilterFor(channel, flow string) string {
 		return routingOnus(base)
 	case "offus":
 		return routingOffus(base)
-	case "issuing":
+	case "issuing", "remote_onus":
 		return routingIssuing(base)
 	case "acquiring":
 		return routingAcquiring(base)
@@ -139,7 +153,10 @@ func channelFilters(channel, flow string) (msgType, merchantType, routing string
 // Approval / reversal predicates
 // Offus: another switch is the destination, so declines from the issuer's
 // switch (respcode 5, 8) are not our switch's fault — count as approved when offus.
-// Success = approved respcode (or offus 5/8) and no matching 410/420/430 on REFNUM.
+// Issuing (remote on-us): we already approved; a later 410/420/430 is started by
+// the other bank, so reversed-after-approve still counts as approved.
+// Success = approved respcode (or offus 5/8) and either no matching reversal,
+// or a matching reversal on issuing routing.
 // ---------------------------------------------------------------------------
 
 // offusRoutingExpr matches the shared ATM/POS off-us acquirer/dest rule.
@@ -147,18 +164,26 @@ func offusRoutingExpr() string {
 	return routingOffus("atm")
 }
 
-// trulyApprovedExpr: approved (or offus 5/8) and not reversed.
-// Outer parentheses are required so AND/OR precedence cannot let the off-us
-// 5/8 branch escape channel/date predicates when this is injected as AND <expr>.
-func trulyApprovedExpr() string {
-	return `((t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NULL)` +
-		` OR (t.respcode IN ('5','8') AND rev.refnum IS NULL AND (` + offusRoutingExpr() + `)))`
+func issuingRoutingExpr(channel string) string {
+	return routingFilterFor(channel, "remote_onus")
 }
 
-// approvedThenReversedExpr: would have been approved but has a matching reversal.
-func approvedThenReversedExpr() string {
-	return `((t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NOT NULL)` +
-		` OR (t.respcode IN ('5','8') AND rev.refnum IS NOT NULL AND (` + offusRoutingExpr() + `)))`
+// trulyApprovedExpr: approved (or offus 5/8) and not reversed, plus issuing
+// rows that were approved and then reversed by the other bank.
+// Outer parentheses are required so AND/OR precedence cannot let a branch
+// escape channel/date predicates when this is injected as AND <expr>.
+func trulyApprovedExpr(channel string) string {
+	return `((t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NULL)` +
+		` OR (t.respcode IN ('5','8') AND rev.refnum IS NULL AND (` + offusRoutingExpr() + `))` +
+		` OR (t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NOT NULL AND (` + issuingRoutingExpr(channel) + `)))`
+}
+
+// approvedThenReversedExpr: would have been approved but has a matching reversal,
+// excluding issuing (those count as approved).
+func approvedThenReversedExpr(channel string) string {
+	return `(((t.respcode IN (` + approvedRespCodes + `) AND rev.refnum IS NOT NULL)` +
+		` OR (t.respcode IN ('5','8') AND rev.refnum IS NOT NULL AND (` + offusRoutingExpr() + `)))` +
+		` AND NOT (` + issuingRoutingExpr(channel) + `))`
 }
 
 // ---------------------------------------------------------------------------
@@ -187,9 +212,9 @@ func reversalsCTE(endPadDays int) string {
 // Query assembly
 // ---------------------------------------------------------------------------
 
-func successTransactionQuery(msgTypeFilter, merchantTypeFilter, routingFilter string) string {
-	approved := trulyApprovedExpr()
-	reversed := approvedThenReversedExpr()
+func successTransactionQuery(channel, msgTypeFilter, merchantTypeFilter, routingFilter string) string {
+	approved := trulyApprovedExpr(channel)
+	reversed := approvedThenReversedExpr(channel)
 	offus := offusRoutingExpr()
 
 	var b strings.Builder
@@ -300,8 +325,8 @@ func periodExprFor(granularity string) string {
 	}
 }
 
-func successTrendQuery(msgTypeFilter, merchantTypeFilter, routingFilter, periodExpr string) string {
-	approved := trulyApprovedExpr()
+func successTrendQuery(channel, msgTypeFilter, merchantTypeFilter, routingFilter, periodExpr string) string {
+	approved := trulyApprovedExpr(channel)
 
 	var b strings.Builder
 	b.WriteString(reversalsCTE(2))
@@ -359,8 +384,8 @@ WHERE `)
 // Acquiring = on-us + offus. Groups by TERMID so each row is one terminal.
 // Channel scopes the msgtype/merchant-type filters, so pos and atm reuse this.
 func terminalSuccessQuery(channel string) string {
-	approved := trulyApprovedExpr()
-	reversed := approvedThenReversedExpr()
+	approved := trulyApprovedExpr(channel)
+	reversed := approvedThenReversedExpr(channel)
 	offus := offusRoutingExpr()
 	msgType, merchantType, routing := channelFilters(channel, "acquiring")
 
@@ -466,8 +491,8 @@ func listSuccessTransactionsQuery(
 	channel, flow, outcomeFilter, respFilter string,
 	limit int,
 ) string {
-	approved := trulyApprovedExpr()
-	reversed := approvedThenReversedExpr()
+	approved := trulyApprovedExpr(channel)
+	reversed := approvedThenReversedExpr(channel)
 	msgType, merchantType, routing := channelFilters(channel, flow)
 
 	var b strings.Builder

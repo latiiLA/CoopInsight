@@ -6,7 +6,7 @@ type DeclineReason struct {
 	Count int64  `json:"count"`
 }
 
-// SuccessTransactionReport is one channel+flow slice (onus, offus, issuing, or acquiring).
+// SuccessTransactionReport is one channel+flow slice (onus, offus, remote on-us, issuing, or acquiring).
 type SuccessTransactionReport struct {
 	DateFrom           string          `json:"dateFrom"`
 	DateTo             string          `json:"dateTo"`

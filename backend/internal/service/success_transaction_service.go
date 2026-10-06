@@ -380,6 +380,8 @@ func normalizeSuccessFlow(flow string) (string, error) {
 		return "offus", nil
 	case "issuing":
 		return "issuing", nil
+	case "remote_onus", "remote-onus", "remoteonus":
+		return "remote_onus", nil
 	case "overall":
 		return "overall", nil
 	default:
