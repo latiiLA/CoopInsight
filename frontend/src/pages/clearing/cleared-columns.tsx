@@ -46,11 +46,28 @@ export function getClearedColumns(product: ClearedProduct) {
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        Date
+        {product === "VISACBS" ? "Conv Date" : "Date"}
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
   }),
+  ...(product === "VISACBS"
+    ? [
+        columnHelper.accessor("txnDate", {
+          header: ({ column }) => (
+            <Button
+              variant="ghost"
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === "asc")
+              }
+            >
+              Txn Date
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          ),
+        }),
+      ]
+    : []),
   columnHelper.accessor("time", {
     header: "Time",
   }),
@@ -63,7 +80,7 @@ export function getClearedColumns(product: ClearedProduct) {
   columnHelper.accessor("stan", {
     header: "Trace no.",
   }),
-  ...(product === "VISA"
+  ...(product === "VISA" || product === "VISACBS"
     ? [
         columnHelper.accessor("txnId", {
           header: "Txn ID",

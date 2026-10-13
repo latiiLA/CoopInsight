@@ -85,7 +85,10 @@ export const fetchUnsettled = createAsyncThunk<
           dateFrom,
           dateTo,
           page,
-          pageSize: CLEARING_PAGE_SIZE,
+          pageSize:
+            product === "VISA" || product === "VISACBS"
+              ? 2000
+              : CLEARING_PAGE_SIZE,
         },
         signal: thunkAPI.signal,
         timeout: 180_000,

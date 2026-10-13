@@ -1,6 +1,7 @@
 export type ClearedTransaction = {
   id: number;
   date: string;
+  txnDate: string;
   time: string;
   msgType: number;
   procCode: number;
@@ -16,4 +17,5 @@ export type ClearedTransaction = {
   txnDest: string;
   issuerAcquirer: string;
   posAtm: string;
+  txnId: string;
 };

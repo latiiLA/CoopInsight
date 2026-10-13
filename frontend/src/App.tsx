@@ -528,6 +528,21 @@ function App() {
             }
           />
           <Route
+            path="/uncleared-visa-cybersource"
+            element={
+              <RequirePermission
+                permissions={["clearing:view-uncleared-visa-cybersource"]}
+              >
+                <Uncleared
+                  key="VISA Cybersource"
+                  product="VISACBS"
+                  title="Uncleared VISA Cybersource"
+                  description="Approved Visa Cybersource transactions that still need clearing."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
             path="/unsettled-visa-cybersource"
             element={
               <RequirePermission
@@ -592,6 +607,24 @@ function App() {
                   product="VISA"
                   title="Cleared VISA"
                   description="Approved Visa POS purchases that have been posted for clearing."
+                />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/cleared-visa-cybersource"
+            element={
+              <RequirePermission
+                permissions={[
+                  "clearing:view-cleared-visa-cybersource",
+                  "clearing:view-uncleared-visa-cybersource",
+                ]}
+              >
+                <Cleared
+                  key="cleared-VISA-Cybersource"
+                  product="VISACBS"
+                  title="Cleared VISA Cybersource"
+                  description="Visa Cybersource transactions that Oracle has not marked as settled. Settlement files are not applied."
                 />
               </RequirePermission>
             }
@@ -704,18 +737,7 @@ function App() {
           />
           <Route
             path="/settled-mastercard"
-            element={
-              <RequirePermission
-                permissions={["settlement:view-settled-mastercard"]}
-              >
-                <Settled
-                  key="settled-MDS"
-                  product="MDS"
-                  title="Settled Mastercard"
-                  description="Mastercard POS purchases that have been cleared and settled."
-                />
-              </RequirePermission>
-            }
+            element={<Navigate to="/mastercard-ipm" replace />}
           />
           <Route
             path="/cards-per-status"

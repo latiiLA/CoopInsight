@@ -514,6 +514,15 @@ const data: {
           permissions: ["clearing:view-cleared-visa"],
         },
         {
+          title: "Cleared VISA Cybersource",
+          url: "cleared-visa-cybersource",
+          icon: VisaIcon,
+          permissions: [
+            "clearing:view-cleared-visa-cybersource",
+            "clearing:view-uncleared-visa-cybersource",
+          ],
+        },
+        {
           title: "Cleared Mastercard",
           url: "cleared-mastercard",
           icon: MastercardIcon,
@@ -557,12 +566,6 @@ const data: {
         },
         {
           title: "Settled Mastercard",
-          url: "settled-mastercard",
-          icon: MastercardIcon,
-          permissions: ["settlement:view-settled-mastercard"],
-        },
-        {
-          title: "Mastercard IPM",
           url: "mastercard-ipm",
           icon: MastercardIcon,
           permissions: ["settlement:view-settled-mastercard"],
@@ -602,6 +605,7 @@ const data: {
           title: "Analytics",
           url: "analytics",
           icon: ChartNoAxesGantt,
+          permissions: ["analytics:view"],
         },
         {
           title: "Activity Log",

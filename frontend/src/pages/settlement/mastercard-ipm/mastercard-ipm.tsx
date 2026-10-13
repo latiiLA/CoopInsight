@@ -212,7 +212,7 @@ export default function MastercardIPM() {
     <div className="container mx-auto">
       <div className="py-1">
         <h3 className="text-lg font-semibold tracking-tight">
-          Mastercard IPM
+          Settled Mastercard
         </h3>
         <p className="text-sm text-muted-foreground">
           Process a Mastercard IPM clearing and settlement file, then review the
