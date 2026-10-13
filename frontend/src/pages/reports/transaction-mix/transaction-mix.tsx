@@ -46,11 +46,9 @@ function formatAmount(value: number) {
   });
 }
 
-function getLastSevenDays(): DateRange {
+function getTodayRange(): DateRange {
   const today = new Date();
-  const from = new Date(today);
-  from.setDate(from.getDate() - 6);
-  return { from, to: today };
+  return { from: today, to: today };
 }
 
 const detailAxes: { key: TransactionMixAxis; label: string; noun: string }[] = [
@@ -73,7 +71,7 @@ export default function TransactionMix() {
     (state: RootState) => state.report,
   );
 
-  const todayRange = useMemo(() => getLastSevenDays(), []);
+  const todayRange = useMemo(() => getTodayRange(), []);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(todayRange);
   const [channel, setChannel] = useState<SuccessChannel>("switch");
 
