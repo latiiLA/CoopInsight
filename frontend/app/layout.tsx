@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   isSidebarOpenByCookie,
@@ -13,6 +14,18 @@ import { Navigate, NavLink, Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "./store/store";
 import { useAccessTokenRefresh } from "@/hooks/use-access-token-refresh";
+
+function MainFallback() {
+  return (
+    <div
+      className="flex min-h-[40vh] w-full items-center justify-center bg-background"
+      aria-busy="true"
+      aria-label="Loading page"
+    >
+      <div className="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-primary" />
+    </div>
+  );
+}
 
 function AppBrand() {
   const { state, isMobile } = useSidebar();
@@ -45,7 +58,7 @@ export default function Layout() {
   return (
     <SidebarProvider defaultOpen={isSidebarOpenByCookie(false)} className="overflow-x-hidden">
       <AppSidebar />
-      <main className="flex min-h-svh min-w-0 flex-1 flex-col overflow-x-hidden">
+      <main className="flex min-h-svh min-w-0 flex-1 flex-col overflow-x-hidden bg-background">
         <div className="flex h-12 w-full items-center justify-between px-2">
           <div className="flex items-center gap-2.5">
             <SidebarTrigger />
@@ -54,8 +67,10 @@ export default function Layout() {
           <ModeToggle />
         </div>
         <Separator/>
-        <div className="p-2">
-          <Outlet />
+        <div className="flex-1 bg-background p-2">
+          <Suspense fallback={<MainFallback />}>
+            <Outlet />
+          </Suspense>
         </div>
         <Footer />
       </main>

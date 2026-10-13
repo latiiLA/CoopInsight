@@ -1,63 +1,152 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
 import Layout from "../app/layout";
-import Home from "./pages/Home";
 import LoginPage from "./pages/Login";
-import RequestAccountPage from "./pages/request-account";
-import Transaction from "./pages/transaction/Transaction";
-import DepositPerTerminal from "./pages/reports/deposit-per-terminal";
-import SuccessRate from "./pages/reports/success-rate/success-rate";
-import SuccessRateTrends from "./pages/reports/success-rate/success-rate-trends";
-import TerminalSuccessRate from "./pages/reports/success-rate/terminal-success-rate";
-import EbirrCardlessWithdrawal from "./pages/reports/ebirr-cardless-withdrawal/ebirr-cardless-withdrawal";
-import TransactionMix from "./pages/reports/transaction-mix/transaction-mix";
-import VisaCyberSource from "./pages/settlement/visa-cybersource/visa-cybersource";
-import MastercardIPM from "./pages/settlement/mastercard-ipm/mastercard-ipm";
-import ManageUsers from "./pages/system administrations/users/manage-users";
-import CreateUser from "./pages/system administrations/users/create-user";
-import ManageAccountRequests from "./pages/system administrations/users/manage-account-requests";
-import ViewUser from "./pages/system administrations/users/view-user";
-import EditUser from "./pages/system administrations/users/edit-user";
-import ManageRoles from "./pages/system administrations/roles/manage-roles";
-import CreateRole from "./pages/system administrations/roles/create-role";
-import EditRole from "./pages/system administrations/roles/edit-role";
-import ViewRole from "./pages/system administrations/roles/view-role";
-import ManagePermissions from "./pages/system administrations/permissions/manage-permissions";
-import CreatePermission from "./pages/system administrations/permissions/create-permission";
-import EditPermission from "./pages/system administrations/permissions/edit-permission";
-import ViewPermission from "./pages/system administrations/permissions/view-permission";
-import ManageActivityLog from "./pages/system administrations/activity-log/manage-activity-log";
-import OnusMonitoring from "./pages/monitoring/onus/onus-monitoring";
-import OffusMonitoring from "./pages/monitoring/offus/offus-monitoring";
-import MastercardDebitMonitoring from "./pages/monitoring/mastercard-debit/mastercard-debit-monitoring";
-import MastercardCreditMonitoring from "./pages/monitoring/mastercard-credit/mastercard-credit-monitoring";
-import VisaMonitoring from "./pages/monitoring/visa/visa-monitoring";
-import IstMonitoring, {
-  AtmFleetCard,
-} from "./pages/monitoring/ist/ist-monitoring";
-import AtmTerminals from "./pages/dashboards/atm-terminals/atm-terminals";
-import AtmDashboard from "./pages/dashboards/atm-terminals/atm-dashboard";
-import PosTerminals from "./pages/dashboards/pos-terminals/pos-terminals";
-import PosDashboard from "./pages/dashboards/pos-terminals/pos-dashboard";
-import TerminalTransactions from "./pages/dashboards/terminal-transactions/terminal-transactions";
-import TerminalComparison from "./pages/dashboards/terminal-comparison/terminal-comparison";
-import Account from "./pages/account/account";
-import Analytics from "./pages/Analytics";
-import Uncleared from "./pages/clearing/uncleared";
-import Cleared from "./pages/clearing/cleared";
-import Unsettled from "./pages/settlement/unsettled";
-import Settled from "./pages/settlement/settled";
-import NotFound from "./pages/not-found";
 import { RequirePermission } from "./components/require-permission";
-import CardPerStatus from "./pages/card/card-per-status";
-import CardActivityPage from "./pages/card/card-activity-page";
+
+const RequestAccountPage = lazy(() => import("./pages/request-account"));
+const Home = lazy(() => import("./pages/Home"));
+const Transaction = lazy(() => import("./pages/transaction/Transaction"));
+const DepositPerTerminal = lazy(
+  () => import("./pages/reports/deposit-per-terminal"),
+);
+const SuccessRate = lazy(
+  () => import("./pages/reports/success-rate/success-rate"),
+);
+const SuccessRateTrends = lazy(
+  () => import("./pages/reports/success-rate/success-rate-trends"),
+);
+const TerminalSuccessRate = lazy(
+  () => import("./pages/reports/success-rate/terminal-success-rate"),
+);
+const EbirrCardlessWithdrawal = lazy(
+  () => import("./pages/reports/ebirr-cardless-withdrawal/ebirr-cardless-withdrawal"),
+);
+const TransactionMix = lazy(
+  () => import("./pages/reports/transaction-mix/transaction-mix"),
+);
+const VisaCyberSource = lazy(
+  () => import("./pages/settlement/visa-cybersource/visa-cybersource"),
+);
+const MastercardIPM = lazy(
+  () => import("./pages/settlement/mastercard-ipm/mastercard-ipm"),
+);
+const ManageUsers = lazy(
+  () => import("./pages/system administrations/users/manage-users"),
+);
+const CreateUser = lazy(
+  () => import("./pages/system administrations/users/create-user"),
+);
+const ManageAccountRequests = lazy(
+  () => import("./pages/system administrations/users/manage-account-requests"),
+);
+const ViewUser = lazy(
+  () => import("./pages/system administrations/users/view-user"),
+);
+const EditUser = lazy(
+  () => import("./pages/system administrations/users/edit-user"),
+);
+const ManageRoles = lazy(
+  () => import("./pages/system administrations/roles/manage-roles"),
+);
+const CreateRole = lazy(
+  () => import("./pages/system administrations/roles/create-role"),
+);
+const EditRole = lazy(
+  () => import("./pages/system administrations/roles/edit-role"),
+);
+const ViewRole = lazy(
+  () => import("./pages/system administrations/roles/view-role"),
+);
+const ManagePermissions = lazy(
+  () => import("./pages/system administrations/permissions/manage-permissions"),
+);
+const CreatePermission = lazy(
+  () => import("./pages/system administrations/permissions/create-permission"),
+);
+const EditPermission = lazy(
+  () => import("./pages/system administrations/permissions/edit-permission"),
+);
+const ViewPermission = lazy(
+  () => import("./pages/system administrations/permissions/view-permission"),
+);
+const ManageActivityLog = lazy(
+  () => import("./pages/system administrations/activity-log/manage-activity-log"),
+);
+const OnusMonitoring = lazy(
+  () => import("./pages/monitoring/onus/onus-monitoring"),
+);
+const OffusMonitoring = lazy(
+  () => import("./pages/monitoring/offus/offus-monitoring"),
+);
+const MastercardDebitMonitoring = lazy(
+  () => import("./pages/monitoring/mastercard-debit/mastercard-debit-monitoring"),
+);
+const MastercardCreditMonitoring = lazy(
+  () => import("./pages/monitoring/mastercard-credit/mastercard-credit-monitoring"),
+);
+const VisaMonitoring = lazy(
+  () => import("./pages/monitoring/visa/visa-monitoring"),
+);
+const IstMonitoring = lazy(
+  () => import("./pages/monitoring/ist/ist-monitoring"),
+);
+const SafMonitoring = lazy(
+  () => import("./pages/monitoring/saf/saf-monitoring"),
+);
+const AtmTerminals = lazy(
+  () => import("./pages/dashboards/atm-terminals/atm-terminals"),
+);
+const AtmDashboard = lazy(
+  () => import("./pages/dashboards/atm-terminals/atm-dashboard"),
+);
+const PosTerminals = lazy(
+  () => import("./pages/dashboards/pos-terminals/pos-terminals"),
+);
+const PosDashboard = lazy(
+  () => import("./pages/dashboards/pos-terminals/pos-dashboard"),
+);
+const TerminalTransactions = lazy(
+  () => import("./pages/dashboards/terminal-transactions/terminal-transactions"),
+);
+const TerminalComparison = lazy(
+  () => import("./pages/dashboards/terminal-comparison/terminal-comparison"),
+);
+const Account = lazy(() => import("./pages/account/account"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Uncleared = lazy(() => import("./pages/clearing/uncleared"));
+const Cleared = lazy(() => import("./pages/clearing/cleared"));
+const Unsettled = lazy(() => import("./pages/settlement/unsettled"));
+const Settled = lazy(() => import("./pages/settlement/settled"));
+const NotFound = lazy(() => import("./pages/not-found"));
+const CardPerStatus = lazy(() => import("./pages/card/card-per-status"));
+const CardActivityPage = lazy(() => import("./pages/card/card-activity-page"));
+
+function PageFallback() {
+  return (
+    <div
+      className="flex min-h-svh w-full items-center justify-center bg-background"
+      aria-busy="true"
+      aria-label="Loading page"
+    >
+      <div className="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-primary" />
+    </div>
+  );
+}
 
 function App() {
   return (
-    <>
-      <Routes>
+    <Routes>
         <Route path="/" element={<LoginPage />} />
-        <Route path="/request-account" element={<RequestAccountPage />} />
+        <Route
+          path="/request-account"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <RequestAccountPage />
+            </Suspense>
+          }
+        />
 
         <Route element={<Layout />}>
           <Route path="/home" element={<Home />} />
@@ -401,14 +490,14 @@ function App() {
               </RequirePermission>
             }
           />
-          {/* <Route
-            path="/ist-monitoring"
+          <Route
+            path="/saf-monitoring"
             element={
-              <RequirePermission permissions={["monitoring:view-ist"]}>
-                <AtmFleetCard {} />
+              <RequirePermission permissions={["monitoring:view-saf"]}>
+                <SafMonitoring />
               </RequirePermission>
             }
-          /> */}
+          />
           <Route
             path="/atm-dashboard"
             element={
@@ -624,7 +713,7 @@ function App() {
                   key="cleared-VISA-Cybersource"
                   product="VISACBS"
                   title="Cleared VISA Cybersource"
-                  description="Visa Cybersource transactions that Oracle has not marked as settled. Settlement files are not applied."
+                  description="Visa Cybersource transactions that are still marked unsettled in clearing. Settlement files are not applied."
                 />
               </RequirePermission>
             }
@@ -875,7 +964,6 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
-    </>
   );
 }
 

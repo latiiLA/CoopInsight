@@ -340,14 +340,14 @@ export default function IstMonitoring() {
               sub={`${atmOffline} offline`}
             />
             <Stat
-              label="Oracle DB"
+              label="Switch DB"
               icon={Database}
               tone={snapshot.oraclePingOk ? "ok" : "bad"}
               value={snapshot.oraclePingOk ? "Reachable" : "Unreachable"}
               sub={
                 snapshot.oraclePingOk
-                  ? `TNS ping ${snapshot.oraclePingMs} ms`
-                  : "TNS ping failed"
+                  ? `Ping ${snapshot.oraclePingMs} ms`
+                  : "Ping failed"
               }
             />
             <Stat

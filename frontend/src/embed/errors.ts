@@ -16,7 +16,7 @@ export function describeFailure(status: number, serverMessage?: string) {
     case 429:
       return "Too many requests — slow the panel refresh";
     case 503:
-      return "Report database (Oracle) is unavailable — try again shortly";
+      return "Report database is unavailable — try again shortly";
     case 504:
       return "Report query timed out";
     default:

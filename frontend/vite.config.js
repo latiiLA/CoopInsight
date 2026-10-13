@@ -22,6 +22,27 @@ export default defineConfig({
         main: path.resolve(__dirname, "index.html"),
         embed: path.resolve(__dirname, "embed.html"),
       },
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) {
+            return;
+          }
+          if (id.includes("xlsx")) {
+            return "xlsx";
+          }
+          if (id.includes("recharts") || id.includes("/d3-")) {
+            return "charts";
+          }
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom") ||
+            id.includes("node_modules/react-router") ||
+            id.includes("node_modules/scheduler")
+          ) {
+            return "react-vendor";
+          }
+        },
+      },
     },
   },
   server: {

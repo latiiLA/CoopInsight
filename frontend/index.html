@@ -4,15 +4,46 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/switch-hub-favicon.png?v=2" />
     <link rel="apple-touch-icon" href="/switch-hub-favicon.png?v=2" />
-    <meta name="theme-color" content="#141414" />
-    <!-- Google Fonts link to Montserrat -->
+    <meta name="theme-color" content="#000000" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Switch Hub</title>
+    <!-- Apply theme before paint so :root light vars never flash white. -->
+    <script>
+      (function () {
+        try {
+          var key = "vite-ui-theme";
+          var stored = localStorage.getItem(key) || "dark";
+          var dark =
+            stored === "dark" ||
+            (stored === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          var root = document.documentElement;
+          root.classList.add(dark ? "dark" : "light");
+          root.style.backgroundColor = dark ? "#000" : "#fcfcfc";
+          root.style.colorScheme = dark ? "dark" : "light";
+        } catch (_) {
+          document.documentElement.classList.add("dark");
+          document.documentElement.style.backgroundColor = "#000";
+          document.documentElement.style.colorScheme = "dark";
+        }
+      })();
+    </script>
+    <style>
+      html,
+      body,
+      #root {
+        background-color: #000;
+      }
+      html.light,
+      html.light body,
+      html.light #root {
+        background-color: #fcfcfc;
+      }
+    </style>
     <link
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap"
       rel="stylesheet"
     />
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Switch Hub</title>
   </head>
   <body>
     <div id="root"></div>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useLayoutEffect, useState } from "react"
 
 type Theme = "dark" | "light" | "system"
 
@@ -20,6 +20,27 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
+function resolveTheme(theme: Theme): "dark" | "light" {
+  if (theme === "system") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light"
+  }
+  return theme
+}
+
+function applyThemeClass(theme: Theme) {
+  const root = window.document.documentElement
+  const resolved = resolveTheme(theme)
+  const opposite = resolved === "dark" ? "light" : "dark"
+
+  // Avoid remove-both-then-add, which briefly exposes :root light (white flash).
+  root.classList.add(resolved)
+  root.classList.remove(opposite)
+  root.style.backgroundColor = resolved === "dark" ? "#000" : "#fcfcfc"
+  root.style.colorScheme = resolved
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "system",
@@ -30,29 +51,16 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   )
 
-  useEffect(() => {
-    const root = window.document.documentElement
-
-    root.classList.remove("light", "dark")
-
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light"
-
-      root.classList.add(systemTheme)
-      return
-    }
-
-    root.classList.add(theme)
+  useLayoutEffect(() => {
+    applyThemeClass(theme)
   }, [theme])
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
-      setTheme(theme)
+    setTheme: (next: Theme) => {
+      localStorage.setItem(storageKey, next)
+      applyThemeClass(next)
+      setTheme(next)
     },
   }
 

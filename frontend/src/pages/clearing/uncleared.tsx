@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { DataTable } from "@/components/data-table";
 import { DatePickerWithRange } from "@/components/date-picker";
+import { LoadingMoreBanner } from "@/components/loading-more-banner";
 import { CLEARING_MAX_AUTO_PAGES } from "@/features/clearing_constants";
 import {
   clearUncleared,
@@ -103,9 +104,6 @@ export default function Uncleared({
         <div className="min-w-0 flex-1">
           <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
           <p className="text-sm text-muted-foreground">{description}</p>
-          {loadingMore ? (
-            <p className="text-xs text-muted-foreground">Loading more…</p>
-          ) : null}
           {truncated ? (
             <p className="text-xs text-amber-700 dark:text-amber-400">
               Showing the first {rows.length.toLocaleString()} rows — narrow the
@@ -116,10 +114,13 @@ export default function Uncleared({
         <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
       </div>
 
+      {loadingMore ? <LoadingMoreBanner loadedCount={rows.length} /> : null}
+
       <DataTable
         columns={columns}
         data={rows}
         loading={loading}
+        enableExport={!loadingMore}
         searchPlaceholder="Search uncleared transactions..."
         exportFileName={title.replace(/\s+/g, "")}
       />

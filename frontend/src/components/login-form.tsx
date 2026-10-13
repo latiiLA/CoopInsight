@@ -66,7 +66,7 @@ export function LoginForm({
     }
 
     if (loginUser.rejected.match(result)) {
-      toast.error(result.payload || "Invalid username or password");
+      toast.error(result.payload || "Login failed. Please try again.");
     }
   };
 

@@ -373,6 +373,12 @@ const data: {
           permissions: ["monitoring:view-ist"],
         },
         {
+          title: "Advice Message",
+          icon: Inbox,
+          url: "saf-monitoring",
+          permissions: ["monitoring:view-saf"],
+        },
+        {
           title: "ATM monitoring",
           icon: AtmIcon,
           url: "atm-monitoring",

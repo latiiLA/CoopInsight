@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/data-table";
+import { LoadingMoreBanner } from "@/components/loading-more-banner";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -192,7 +193,6 @@ export function CardDetailSheet({
               : error
                 ? error
                 : `${items.length.toLocaleString()} card${items.length === 1 ? "" : "s"}`}
-            {loadingMore ? " · loading more…" : ""}
           </span>
           <div className="flex items-center gap-2">
             {stopReached ? (
@@ -223,10 +223,12 @@ export function CardDetailSheet({
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-4 pb-4">
+          {loadingMore ? <LoadingMoreBanner loadedCount={items.length} /> : null}
           <DataTable
             loading={loading}
             columns={columns}
             data={items}
+            enableExport={!loadingMore}
             searchPlaceholder="Search card, product, status, branch..."
             exportFileName={`cards-${metric}`}
             exportValueByColumn={exportValueByColumn}
