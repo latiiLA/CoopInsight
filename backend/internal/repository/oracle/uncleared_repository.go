@@ -36,16 +36,17 @@ const unclearedCybersourceQuery = `
 SELECT` + clearingSelectColumnsSub + `
 FROM (
 	SELECT` + clearingSelectColumns + `,
+		t.ROWID AS order_rowid,
 		ROW_NUMBER() OVER (
 			PARTITION BY t.TR_ARF
-			ORDER BY t.TR_CONV_DATE DESC, t.TR_TIME DESC, t.TR_TRACE DESC
+			ORDER BY t.TR_CONV_DATE DESC, t.TR_TIME DESC, t.TR_TRACE DESC, t.ROWID DESC
 		) AS rn
 	FROM clearing.trans_log t
 	` + unclearedBaseWhere + `
 		AND t.TR_SOURCE_BIN = :source_bin
 		AND t.TR_DEST_BIN = :dest_bin
 ) sub
-WHERE sub.rn = 2
+WHERE sub.rn = 1
 ` + clearingOrderBySub + clearingPageClause
 
 type unclearedRepository struct {

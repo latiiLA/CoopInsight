@@ -83,6 +83,7 @@ var Catalog = []permissionSeed{
 
 	{Name: "clearing:view-cleared-eth", Resource: "clearing", Action: "view-cleared-eth", Description: "View cleared ETH (domestic) clearing items"},
 	{Name: "clearing:view-cleared-visa", Resource: "clearing", Action: "view-cleared-visa", Description: "View cleared VISA clearing items"},
+	{Name: "clearing:view-cleared-visa-cybersource", Resource: "clearing", Action: "view-cleared-visa-cybersource", Description: "View cleared VISA Cybersource clearing items"},
 	{Name: "clearing:view-cleared-mastercard", Resource: "clearing", Action: "view-cleared-mastercard", Description: "View cleared Mastercard (MDS) clearing items"},
 
 	{Name: "settlement:view-unsettled-eth", Resource: "settlement", Action: "view-unsettled-eth", Description: "View unsettled ETH (domestic) settlement items"},

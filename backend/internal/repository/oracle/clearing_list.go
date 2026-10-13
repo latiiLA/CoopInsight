@@ -25,16 +25,18 @@ const clearingAdviceNotExists = `
 	)
 `
 
-// Stable order required for OFFSET/FETCH pagination.
+// Stable order required for OFFSET/FETCH pagination. TRACE collides, so the
+// unique log id is the last key — without it the same search can return a
+// different page of rows on each request.
 const clearingOrderBy = `
-ORDER BY t.TR_CONV_DATE DESC, t.TR_TIME DESC, t.TR_TRACE DESC
+ORDER BY t.TR_CONV_DATE DESC, t.TR_TIME DESC, t.TR_TRACE DESC, NVL(t.TRANS_LOG_ID, t.ID) DESC, t.ROWID DESC
 `
 
 // clearingOrderBySub is used when the FROM clause is a subquery (e.g. Cybersource
 // dedup) and the table alias t is not available. References the subquery's output
 // column aliases instead.
 const clearingOrderBySub = `
-ORDER BY tr_conv_date DESC, tr_time DESC, stan DESC
+ORDER BY tr_conv_date DESC, tr_time DESC, stan DESC, id DESC, order_rowid DESC
 `
 
 // clearingSelectColumnsSub is the outer SELECT column list for queries that wrap
@@ -81,7 +83,7 @@ const clearingSelectColumns = `
 	t.TR_TXNDEST AS txn_dest,
 	t.ISS_ACQ AS issuer_acquirer,
 	t.POS_ATM AS pos_atm,
-	TO_CHAR(t.TR_TRANS_ID) AS txn_id
+	TRIM(TO_CHAR(t.TR_TRANS_ID)) AS txn_id
 `
 
 func normalizeClearingPage(page, pageSize int) (int, int) {

@@ -14,6 +14,7 @@ import (
 type ClearedHandler interface {
 	ListETH(c *gin.Context)
 	ListVisa(c *gin.Context)
+	ListVisaCybersource(c *gin.Context)
 	ListMastercard(c *gin.Context)
 }
 
@@ -31,6 +32,10 @@ func (h *clearedHandler) ListETH(c *gin.Context) {
 
 func (h *clearedHandler) ListVisa(c *gin.Context) {
 	h.list(c, h.service.ListVisa)
+}
+
+func (h *clearedHandler) ListVisaCybersource(c *gin.Context) {
+	h.list(c, h.service.ListVisaCybersource)
 }
 
 func (h *clearedHandler) ListMastercard(c *gin.Context) {

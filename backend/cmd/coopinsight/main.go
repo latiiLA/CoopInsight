@@ -249,14 +249,15 @@ func main() {
 				posTerminalRepo,
 			),
 		)
+		unclearedRepo := oracle.NewUnclearedRepository(oracleDB)
 		unclearedHandler = handler.NewUnclearedHandler(
-			service.NewUnclearedService(oracle.NewUnclearedRepository(oracleDB)),
+			service.NewUnclearedService(unclearedRepo),
 		)
 		clearedHandler = handler.NewClearedHandler(
-			service.NewClearedService(oracle.NewClearedRepository(oracleDB)),
+			service.NewClearedService(oracle.NewClearedRepository(oracleDB), unclearedRepo),
 		)
 		unsettledHandler = handler.NewUnsettledHandler(
-			service.NewUnsettledService(oracle.NewUnsettledRepository(oracleDB), visaSettlementRepo, oracle.NewUnclearedRepository(oracleDB), mastercardIPMRepo),
+			service.NewUnsettledService(oracle.NewUnsettledRepository(oracleDB), visaSettlementRepo, unclearedRepo, mastercardIPMRepo),
 		)
 		settledHandler = handler.NewSettledHandler(
 			service.NewSettledService(oracle.NewSettledRepository(oracleDB)),
@@ -277,7 +278,7 @@ func main() {
 			service.NewTerminalTransactionService(nil, atmTerminalRepo, posTerminalRepo),
 		)
 		unclearedHandler = handler.NewUnclearedHandler(service.NewUnclearedService(nil))
-		clearedHandler = handler.NewClearedHandler(service.NewClearedService(nil))
+		clearedHandler = handler.NewClearedHandler(service.NewClearedService(nil, nil))
 		unsettledHandler = handler.NewUnsettledHandler(service.NewUnsettledService(nil, nil, nil, nil))
 		settledHandler = handler.NewSettledHandler(service.NewSettledService(nil))
 		cardSvc = service.NewCardService(nil)

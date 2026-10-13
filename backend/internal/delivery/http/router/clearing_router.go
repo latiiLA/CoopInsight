@@ -63,6 +63,17 @@ func registerClearingRoutes(
 		clearedHandler.ListVisa,
 	)
 	clearing.GET(
+		"/cleared/visacybersource",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{
+				"clearing:view-cleared-visa-cybersource",
+				"clearing:view-uncleared-visa-cybersource",
+			},
+		),
+		clearedHandler.ListVisaCybersource,
+	)
+	clearing.GET(
 		"/cleared/mastercard",
 		middleware.AuthorizeRolesOrPermissions(
 			[]string{},

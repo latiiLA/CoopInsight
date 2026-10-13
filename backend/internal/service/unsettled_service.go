@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
@@ -52,10 +53,14 @@ func (s *unsettledService) ListETH(
 	return s.list(ctx, 210, dateFrom, dateTo, unsettledSourceBinETH, unsettledDestBinETH, page, pageSize)
 }
 
-// ListVisa returns unsettled Visa transactions, excluding any that have already
-// been settled. Matching is done on both:
-//   - txnId (Oracle TR_TRANS_ID) = transaction_id (MongoDB)
-//   - txnDate (Oracle TR_DATE) = transaction_date (MongoDB)
+// ListVisa returns unsettled Visa transactions, excluding any whose Oracle
+// TR_TRANS_ID already exists as a Visa settlement transaction_id.
+//
+// Settlement-file transaction_date is derived from the file header / purchase
+// MMDD and often does not match Oracle TR_DATE, so exclusion is by id only.
+// Matching runs over the full date-range set (up to visaUnsettledMaxPages)
+// before paging so settled rows are not left in later pages, and so the same
+// search does not return a different subset on each request.
 func (s *unsettledService) ListVisa(
 	ctx context.Context,
 	dateFrom, dateTo string,
@@ -77,60 +82,24 @@ func (s *unsettledService) ListVisa(
 	}
 	empty.Page, empty.PageSize = page, pageSize
 
-	// Fetch unsettled transactions from Oracle (no SQL-level exclusion)
-	rows, hasMore, err := s.repository.List(ctx, 210, from, to, unsettledVisaBin, unsettledVisaBin, page, pageSize)
-	if err != nil {
-		return empty, err
-	}
-	if rows == nil {
-		rows = []model.UnsettledTransaction{}
+	all, hasMoreBeyondCap, listErr := collectUnsettledMatchPages(func(p, ps int) ([]model.UnsettledTransaction, bool, error) {
+		return s.repository.List(ctx, 210, from, to, unsettledVisaBin, unsettledVisaBin, p, ps)
+	})
+	if listErr != nil {
+		return empty, listErr
 	}
 
-	// Filter out settled transactions by matching txnId = transaction_id
-	// AND txnDate = transaction_date
-	if s.settlementRepo != nil && len(rows) > 0 {
-		// Extract unique txnIds
-		txnIDSet := make(map[string]struct{})
-		for _, r := range rows {
-			if r.TxnID != "" {
-				txnIDSet[r.TxnID] = struct{}{}
-			}
+	if s.settlementRepo != nil && len(all) > 0 {
+		settledIDs, settledErr := s.settlementRepo.FindSettledTransactionIDsByIDs(ctx, uniqueTxnIDs(all))
+		if settledErr != nil {
+			return empty, settledErr
 		}
-		txnIDs := make([]string, 0, len(txnIDSet))
-		for id := range txnIDSet {
-			txnIDs = append(txnIDs, id)
-		}
-
-		// Fetch matching settlement records
-		settledRecords, err := s.settlementRepo.FindSettledTransactionsByIDs(ctx, txnIDs)
-		if err != nil {
-			return empty, err
-		}
-
-		// Build a map of settled txnId -> transaction_date
-		settledMap := make(map[string]time.Time)
-		for _, rec := range settledRecords {
-			settledMap[rec.TransactionID] = rec.TransactionDate
-		}
-
-		// Filter out transactions whose txnId AND txnDate both match settlement
-		filtered := make([]model.UnsettledTransaction, 0, len(rows))
-		for _, r := range rows {
-			if settledDate, ok := settledMap[r.TxnID]; ok {
-				// Check if dates match (same year, month, day)
-				if !isSameDate(parseOracleDate(r.TxnDate), settledDate) {
-					filtered = append(filtered, r)
-				}
-				// else: settled, skip it
-			} else {
-				filtered = append(filtered, r)
-			}
-		}
-		rows = filtered
+		all = excludeSettledByTxnID(all, settledIDs)
 	}
 
+	pageRows, hasMore := sliceClearingPage(all, page, pageSize, hasMoreBeyondCap)
 	return ClearingPageResult[model.UnsettledTransaction]{
-		Items:    rows,
+		Items:    pageRows,
 		Page:     page,
 		PageSize: pageSize,
 		HasMore:  hasMore,
@@ -138,7 +107,14 @@ func (s *unsettledService) ListVisa(
 }
 
 // Cap matching work to the same volume the UI auto-fetches (500 × 20).
-const mastercardMatchMaxPages = 20
+// Collect in 2000-row Oracle pages so a typical Visa search is one FETCH of
+// the full set; OFFSET windows of 500 were not unique and shuffled each search.
+const (
+	mastercardMatchMaxPages      = 20
+	visaUnsettledMatchLimit      = 10000
+	visaUnsettledCollectPageSize = 2000
+	visaUnsettledMaxPages        = visaUnsettledMatchLimit / visaUnsettledCollectPageSize
+)
 
 // ListMastercard returns Mastercard clearing rows annotated with nearest-day
 // IPM settlement amount match status (see mastercard_unsettled_match.go).
@@ -261,10 +237,8 @@ func mastercardMatchWindow(dateFrom, dateTo string, rows []model.UnsettledTransa
 }
 
 // ListVisaCybersource returns unsettled Visa Cybersource transactions.
-// It fetches uncleared transactions (TR_POSTED = 0) and excludes any that
-// have already been settled. Matching is done on both:
-//   - txnId (Oracle TR_TRANS_ID) = transaction_id (MongoDB)
-//   - txnDate (Oracle TR_DATE) = transaction_date (MongoDB)
+// It fetches uncleared transactions (TR_POSTED = 0) and excludes any whose
+// TR_TRANS_ID already exists in the Visa settlement register (id only — see ListVisa).
 func (s *unsettledService) ListVisaCybersource(
 	ctx context.Context,
 	dateFrom, dateTo string,
@@ -286,99 +260,143 @@ func (s *unsettledService) ListVisaCybersource(
 	}
 	empty.Page, empty.PageSize = page, pageSize
 
-	// Fetch uncleared transactions from Oracle
-	unclearedRows, hasMore, err := s.unclearedRepo.List(ctx, 230, from, to, 408158, 9444444444, page, pageSize)
-	if err != nil {
-		return empty, err
-	}
-
-	// Convert to UnsettledTransaction
-	converted := make([]model.UnsettledTransaction, 0, len(unclearedRows))
-	for _, u := range unclearedRows {
-		converted = append(converted, model.UnsettledTransaction{
-			ID:             u.ID,
-			Date:           u.Date,
-			TxnDate:        u.TxnDate,
-			Time:           u.Time,
-			MsgType:        u.MsgType,
-			ProcCode:       u.ProcCode,
-			RRN:            u.RRN,
-			STAN:           u.STAN,
-			RespCode:       u.RespCode,
-			Amount:         u.Amount,
-			Currency:       u.Currency,
-			TerminalID:     u.TerminalID,
-			Merchant:       u.Merchant,
-			CardProduct:    u.CardProduct,
-			TxnSource:      u.TxnSource,
-			TxnDest:        u.TxnDest,
-			IssuerAcquirer: u.IssuerAcquirer,
-			PosAtm:         u.PosAtm,
-			TxnID:          u.TxnID,
-		})
-	}
-
-	// Filter out settled transactions by matching txnId = transaction_id
-	// AND txnDate = transaction_date
-	if s.settlementRepo != nil && len(converted) > 0 {
-		// Extract unique txnIds
-		txnIDSet := make(map[string]struct{})
-		for _, u := range unclearedRows {
-			if u.TxnID != "" {
-				txnIDSet[u.TxnID] = struct{}{}
-			}
-		}
-		txnIDs := make([]string, 0, len(txnIDSet))
-		for id := range txnIDSet {
-			txnIDs = append(txnIDs, id)
-		}
-
-		// Fetch matching settlement records
-		settledRecords, err := s.settlementRepo.FindSettledTransactionsByIDs(ctx, txnIDs)
+	all, hasMoreBeyondCap, listErr := collectUnsettledMatchPages(func(p, ps int) ([]model.UnsettledTransaction, bool, error) {
+		unclearedRows, more, err := s.unclearedRepo.List(ctx, 230, from, to, 408158, 9444444444, p, ps)
 		if err != nil {
-			return empty, err
+			return nil, false, err
 		}
-
-		// Build a map of settled txnId -> transaction_date
-		settledMap := make(map[string]time.Time)
-		for _, rec := range settledRecords {
-			settledMap[rec.TransactionID] = rec.TransactionDate
+		out := make([]model.UnsettledTransaction, 0, len(unclearedRows))
+		for _, u := range unclearedRows {
+			out = append(out, unclearedToUnsettled(u))
 		}
-
-		// Filter out transactions whose txnId AND txnDate both match settlement
-		filtered := make([]model.UnsettledTransaction, 0, len(converted))
-		for i, u := range converted {
-			unclearedTxnDate := parseOracleDate(unclearedRows[i].TxnDate)
-			if settledDate, ok := settledMap[unclearedRows[i].TxnID]; ok {
-				// Check if dates match (same year, month, day)
-				if !isSameDate(unclearedTxnDate, settledDate) {
-					filtered = append(filtered, u)
-				}
-				// else: settled, skip it
-			} else {
-				filtered = append(filtered, u)
-			}
-		}
-		converted = filtered
+		return out, more, nil
+	})
+	if listErr != nil {
+		return empty, listErr
 	}
 
+	if s.settlementRepo != nil && len(all) > 0 {
+		settledIDs, settledErr := s.settlementRepo.FindSettledTransactionIDsByIDs(ctx, uniqueTxnIDs(all))
+		if settledErr != nil {
+			return empty, settledErr
+		}
+		all = excludeSettledByTxnID(all, settledIDs)
+	}
+
+	pageRows, hasMore := sliceClearingPage(all, page, pageSize, hasMoreBeyondCap)
 	return ClearingPageResult[model.UnsettledTransaction]{
-		Items:    converted,
+		Items:    pageRows,
 		Page:     page,
 		PageSize: pageSize,
 		HasMore:  hasMore,
 	}, nil
 }
 
+func unclearedToUnsettled(u model.UnclearedTransaction) model.UnsettledTransaction {
+	return model.UnsettledTransaction{
+		ID:             u.ID,
+		Date:           u.Date,
+		TxnDate:        u.TxnDate,
+		Time:           u.Time,
+		MsgType:        u.MsgType,
+		ProcCode:       u.ProcCode,
+		RRN:            u.RRN,
+		STAN:           u.STAN,
+		RespCode:       u.RespCode,
+		Amount:         u.Amount,
+		Currency:       u.Currency,
+		TerminalID:     u.TerminalID,
+		Merchant:       u.Merchant,
+		CardProduct:    u.CardProduct,
+		TxnSource:      u.TxnSource,
+		TxnDest:        u.TxnDest,
+		IssuerAcquirer: u.IssuerAcquirer,
+		PosAtm:         u.PosAtm,
+		TxnID:          u.TxnID,
+	}
+}
+
+func collectUnsettledMatchPages(
+	list func(page, pageSize int) ([]model.UnsettledTransaction, bool, error),
+) ([]model.UnsettledTransaction, bool, error) {
+	all := make([]model.UnsettledTransaction, 0, visaUnsettledCollectPageSize)
+	hasMoreBeyondCap := false
+	for p := 1; p <= visaUnsettledMaxPages; p++ {
+		chunk, more, err := list(p, visaUnsettledCollectPageSize)
+		if err != nil {
+			return nil, false, err
+		}
+		if chunk != nil {
+			all = append(all, chunk...)
+		}
+		if !more {
+			return all, false, nil
+		}
+		if p == visaUnsettledMaxPages {
+			hasMoreBeyondCap = true
+		}
+	}
+	return all, hasMoreBeyondCap, nil
+}
+
+func uniqueTxnIDs(rows []model.UnsettledTransaction) []string {
+	seen := make(map[string]struct{}, len(rows))
+	ids := make([]string, 0, len(rows))
+	for _, r := range rows {
+		id := strings.TrimSpace(r.TxnID)
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func excludeSettledByTxnID(rows []model.UnsettledTransaction, settledIDs []string) []model.UnsettledTransaction {
+	if len(settledIDs) == 0 {
+		return rows
+	}
+	settled := make(map[string]struct{}, len(settledIDs))
+	for _, id := range settledIDs {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		settled[id] = struct{}{}
+	}
+	filtered := make([]model.UnsettledTransaction, 0, len(rows))
+	for _, r := range rows {
+		if _, ok := settled[strings.TrimSpace(r.TxnID)]; ok {
+			continue
+		}
+		filtered = append(filtered, r)
+	}
+	return filtered
+}
+
+func sliceClearingPage[T any](all []T, page, pageSize int, hasMoreBeyondCap bool) ([]T, bool) {
+	startIdx := (page - 1) * pageSize
+	if startIdx < 0 {
+		startIdx = 0
+	}
+	if startIdx > len(all) {
+		startIdx = len(all)
+	}
+	endIdx := startIdx + pageSize
+	if endIdx > len(all) {
+		endIdx = len(all)
+	}
+	return all[startIdx:endIdx], endIdx < len(all) || hasMoreBeyondCap
+}
+
 // parseOracleDate parses a date string from Oracle (YYYY-MM-DD) to time.Time.
 func parseOracleDate(dateStr string) time.Time {
 	t, _ := time.Parse("2006-01-02", dateStr)
 	return t
-}
-
-// isSameDate checks if two dates fall on the same calendar day.
-func isSameDate(a, b time.Time) bool {
-	return a.Year() == b.Year() && a.Month() == b.Month() && a.Day() == b.Day()
 }
 
 func (s *unsettledService) list(
