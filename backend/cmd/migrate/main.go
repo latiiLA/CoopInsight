@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/latiiLA/CoopInsight/backend/configs"
 	"github.com/latiiLA/CoopInsight/backend/db"
 	_ "github.com/latiiLA/CoopInsight/backend/db/migrations"
 	_ "github.com/latiiLA/CoopInsight/backend/db/seeds"
@@ -77,7 +77,9 @@ func run(ctx context.Context, command string, databaseHandle *mongo.Database) er
 }
 
 func loadMongoEnv() (mongoURL, dbName string) {
-	if err := godotenv.Load(); err != nil {
+	// Same BOM-tolerant loader as the API; plain godotenv.Load fails on
+	// UTF-8 BOM files that Windows editors often write.
+	if err := configs.LoadDotEnv(); err != nil {
 		log.Println("No .env file found or couldn't load it, relying on environment variables")
 	}
 

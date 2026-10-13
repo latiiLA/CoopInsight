@@ -628,9 +628,9 @@ func LoadConfig() {
 }
 
 
-// loadDotEnv loads .env with the same semantics as godotenv.Load, but strips a
+// LoadDotEnv loads .env with the same semantics as godotenv.Load, but strips a
 // leading UTF-8 BOM (EF BB BF) that some Windows editors leave on the file.
-func loadDotEnv() error {
+func LoadDotEnv() error {
 	data, err := os.ReadFile(".env")
 	if err != nil {
 		return err
@@ -648,6 +648,10 @@ func loadDotEnv() error {
 		}
 	}
 	return nil
+}
+
+func loadDotEnv() error {
+	return LoadDotEnv()
 }
 
 func parseIntEnv(key string, fallback int) int {

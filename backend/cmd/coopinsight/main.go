@@ -229,6 +229,7 @@ func main() {
 	var cardHandler handler.CardHandler
 	var cardSvc service.CardService
 	var transactionMixHandler handler.TransactionMixHandler
+	var safHandler handler.SafHandler
 	if oracleDB != nil {
 		testHandler = handler.NewTestHandler(
 			service.NewTestService(oracle.NewTestRepository(oracleDB)),
@@ -267,6 +268,9 @@ func main() {
 		transactionMixHandler = handler.NewTransactionMixHandler(
 			service.NewTransactionMixService(oracle.NewTransactionMixRepository(oracleDB)),
 		)
+		safHandler = handler.NewSafHandler(
+			service.NewSafService(oracle.NewSafRepository(oracleDB)),
+		)
 	} else {
 		testHandler = handler.NewTestHandler(service.NewTestService(nil))
 		successTransactionSvc = service.NewSuccessTransactionService(nil, posTerminalRepo, atmTerminalRepo)
@@ -286,6 +290,7 @@ func main() {
 		transactionMixHandler = handler.NewTransactionMixHandler(
 			service.NewTransactionMixService(nil),
 		)
+		safHandler = handler.NewSafHandler(service.NewSafService(nil))
 	}
 
 	// The embed handler reuses the same success-rate service as the dashboard, so
@@ -425,6 +430,7 @@ func main() {
 		MastercardCreditMonitoring: mastercardCreditHandler,
 		VisaMonitoring:             visaHandler,
 		ISTMonitoring:              istHandler,
+		Saf:                        safHandler,
 		SwitchCommand:              switchCommandHandler,
 		Uncleared:                  unclearedHandler,
 		Cleared:                    clearedHandler,

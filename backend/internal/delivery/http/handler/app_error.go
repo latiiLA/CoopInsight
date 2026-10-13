@@ -97,6 +97,13 @@ var appErrors = []struct {
 }
 
 func writeAppError(c *gin.Context, err error) {
+	writeAppErrorMessage(c, err, "")
+}
+
+// writeAppErrorMessage maps err to an HTTP status like writeAppError, but lets
+// the caller set the user-facing message. Leave userMessage empty to keep the
+// generic client copy (never echo raw DB/driver text as message).
+func writeAppErrorMessage(c *gin.Context, err error, userMessage string) {
 	status := http.StatusInternalServerError
 	message := "An unexpected error occurred. Please try again later."
 
@@ -105,6 +112,10 @@ func writeAppError(c *gin.Context, err error) {
 			status = mapped.status
 			break
 		}
+	}
+
+	if userMessage != "" {
+		message = userMessage
 	}
 
 	logrus.WithError(err).Log(logLevelForStatus(status), message)

@@ -68,6 +68,7 @@ var Catalog = []permissionSeed{
 	{Name: "monitoring:view-mastercard-credit", Resource: "monitoring", Action: "view-mastercard-credit", Description: "View Mastercard credit monitoring"},
 	{Name: "monitoring:view-visa", Resource: "monitoring", Action: "view-visa", Description: "View Visa monitoring"},
 	{Name: "monitoring:view-ist", Resource: "monitoring", Action: "view-ist", Description: "View IST switch health monitoring"},
+	{Name: "monitoring:view-saf", Resource: "monitoring", Action: "view-saf", Description: "View advice message queue summary"},
 	{Name: "monitoring:run-switch", Resource: "monitoring", Action: "run-switch", Description: "Run switch commands such as load_atm"},
 
 	{Name: "terminal:view-atm", Resource: "terminal", Action: "view-atm", Description: "View ATM fleet and dashboard"},

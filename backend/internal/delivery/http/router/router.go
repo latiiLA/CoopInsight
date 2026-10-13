@@ -28,6 +28,7 @@ type Handlers struct {
 	MastercardCreditMonitoring handler.OnusMonitoringHandler
 	VisaMonitoring             handler.OnusMonitoringHandler
 	ISTMonitoring              handler.ISTMonitoringHandler
+	Saf                        handler.SafHandler
 	SwitchCommand              handler.SwitchCommandHandler
 	Uncleared                  handler.UnclearedHandler
 	Cleared                    handler.ClearedHandler
@@ -175,6 +176,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	)
 	registerClearingRoutes(oracleProtected, handlers.Uncleared, handlers.Cleared)
 	registerSettlementRoutes(oracleProtected, handlers.Unsettled, handlers.Settled)
+	registerSafRoutes(oracleProtected, handlers.Saf)
 
 	live := api.Group("")
 	live.Use(middleware.JwtAuthMiddleware())
