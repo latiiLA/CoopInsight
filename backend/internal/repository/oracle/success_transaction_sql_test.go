@@ -9,12 +9,14 @@ import (
 // cannot silently change which rows count for each channel/flow.
 
 func TestRoutingFilterATMFlows(t *testing.T) {
+	offus := `((TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')) OR (TRIM(t.ACQUIRER) IN ('04', '05') AND TRIM(t.TXNDEST) = TRIM(t.ACQUIRER) AND TRIM(t.TXNSRC) = '402032'))`
+	issuing := `((TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX') OR (TRIM(t.TXNSRC) IN ('04', '05') AND TRIM(t.TXNDEST) = 'CBOBCORTEX'))`
 	cases := map[string]string{
 		"onus":      `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'`,
-		"offus":     `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')`,
-		"issuing":   `TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'`,
+		"offus":     offus,
+		"issuing":   issuing,
 		"acquiring": `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('CBOBCORTEX', '8888888888', '04', '05')`,
-		"overall":   `((TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('CBOBCORTEX', '8888888888', '04', '05')) OR (TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX'))`,
+		"overall":   `((TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('CBOBCORTEX', '8888888888', '04', '05')) OR (` + issuing + `))`,
 	}
 	for flow, want := range cases {
 		if got := routingFilterFor("atm", flow); got != want {
@@ -32,8 +34,8 @@ func TestRoutingFilterATMFlows(t *testing.T) {
 
 func TestRoutingFilterPOSFlows(t *testing.T) {
 	onus := `TRIM(t.TXNDEST) = 'CBOBCORTEX' AND TRIM(t.TXNSRC) = '402032'`
-	offus := `TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')`
-	issuing := `TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX' AND TRIM(t.TXNSRC) <> '402032'`
+	offus := `((TRIM(t.ACQUIRER) = '1000000011' AND TRIM(t.TXNDEST) IN ('8888888888', '04', '05')) OR (TRIM(t.ACQUIRER) IN ('04', '05') AND TRIM(t.TXNDEST) = TRIM(t.ACQUIRER) AND TRIM(t.TXNSRC) = '402032'))`
+	issuing := `((TRIM(t.ACQUIRER) = '1000000010' AND TRIM(t.TXNDEST) = 'CBOBCORTEX' AND TRIM(t.TXNSRC) <> '402032') OR (TRIM(t.TXNSRC) IN ('04', '05') AND TRIM(t.TXNDEST) = 'CBOBCORTEX'))`
 
 	cases := map[string]string{
 		"onus":      onus,

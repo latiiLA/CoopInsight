@@ -22,6 +22,9 @@ const (
 	destCortex       = "CBOBCORTEX"
 	destOffusSQLList = "'8888888888', '04', '05'"
 	destAcquiringSQL = "'CBOBCORTEX', '8888888888', '04', '05'"
+	// Visa (04) / Mastercard (05): POS acquiring often stamps ACQUIRER = TXNDEST
+	// instead of the ATM acquirer id 1000000011.
+	destVisaMCSQLList = "'04', '05'"
 )
 
 // ---------------------------------------------------------------------------
@@ -66,6 +69,8 @@ func merchantTypeFilterFor(channel string) string {
 // ATM on-us: acquirer 1000000011 + Cortex.
 // POS on-us: Cortex + CoopBank BIN in TXNSRC (402032); POS remote on-us excludes that set.
 // Switch issuing = on-us OR remote on-us. ATM/POS issuing still means remote on-us.
+// Scheme remote on-us: TXNSRC 04/05 (Visa/MC) into CBOBCORTEX — our card on the scheme
+// (incl. abroad). Not part of acquiring.
 // ---------------------------------------------------------------------------
 
 func routingOnus(channel string) string {
@@ -75,16 +80,34 @@ func routingOnus(channel string) string {
 	return `TRIM(t.ACQUIRER) = '` + acquirerATM + `' AND TRIM(t.TXNDEST) = '` + destCortex + `'`
 }
 
+// routingVisaMCOffus matches Coop POS Visa/Mastercard acquiring where the
+// scheme id is stamped on both ACQUIRER and TXNDEST (04=Visa, 05=MC) instead
+// of ACQUIRER=1000000011. Without this, rows like REFNUM 628320000044 are
+// omitted from off-us / acquiring / overall success rates.
+func routingVisaMCOffus() string {
+	return `TRIM(t.ACQUIRER) IN (` + destVisaMCSQLList + `) AND TRIM(t.TXNDEST) = TRIM(t.ACQUIRER) AND TRIM(t.TXNSRC) = '` + coopPOSTxnSrcBIN + `'`
+}
+
 func routingOffus(channel string) string {
 	_ = channel // ATM and POS off-us share the same acquirer/dest rule.
-	return `TRIM(t.ACQUIRER) = '` + acquirerATM + `' AND TRIM(t.TXNDEST) IN (` + destOffusSQLList + `)`
+	classic := `TRIM(t.ACQUIRER) = '` + acquirerATM + `' AND TRIM(t.TXNDEST) IN (` + destOffusSQLList + `)`
+	return `((` + classic + `) OR (` + routingVisaMCOffus() + `))`
+}
+
+// routingSchemeIssuing matches Visa/MC inbound to our issuer (remote on-us):
+// TXNSRC scheme id + TXNDEST Cortex. Seen with ACQUIRER='4' (not 1000000010).
+func routingSchemeIssuing() string {
+	return `TRIM(t.TXNSRC) IN (` + destVisaMCSQLList + `) AND TRIM(t.TXNDEST) = '` + destCortex + `'`
 }
 
 func routingIssuing(channel string) string {
+	var classic string
 	if channel == "pos" {
-		return `TRIM(t.ACQUIRER) = '` + acquirerIssuing + `' AND TRIM(t.TXNDEST) = '` + destCortex + `' AND TRIM(t.TXNSRC) <> '` + coopPOSTxnSrcBIN + `'`
+		classic = `TRIM(t.ACQUIRER) = '` + acquirerIssuing + `' AND TRIM(t.TXNDEST) = '` + destCortex + `' AND TRIM(t.TXNSRC) <> '` + coopPOSTxnSrcBIN + `'`
+	} else {
+		classic = `TRIM(t.ACQUIRER) = '` + acquirerIssuing + `' AND TRIM(t.TXNDEST) = '` + destCortex + `'`
 	}
-	return `TRIM(t.ACQUIRER) = '` + acquirerIssuing + `' AND TRIM(t.TXNDEST) = '` + destCortex + `'`
+	return `((` + classic + `) OR (` + routingSchemeIssuing() + `))`
 }
 
 func routingRemoteOnus(channel string) string {
@@ -106,7 +129,7 @@ func routingOverall(channel string) string {
 	if channel == "pos" {
 		return `((` + routingOnus("pos") + `) OR (` + routingOffus("pos") + `) OR (` + routingIssuing("pos") + `))`
 	}
-	return `((TRIM(t.ACQUIRER) = '` + acquirerATM + `' AND TRIM(t.TXNDEST) IN (` + destAcquiringSQL + `)) OR (TRIM(t.ACQUIRER) = '` + acquirerIssuing + `' AND TRIM(t.TXNDEST) = '` + destCortex + `'))`
+	return `((TRIM(t.ACQUIRER) = '` + acquirerATM + `' AND TRIM(t.TXNDEST) IN (` + destAcquiringSQL + `)) OR (` + routingIssuing("atm") + `))`
 }
 
 // routingFilterFor returns the flow predicate for atm, pos, or switch.
