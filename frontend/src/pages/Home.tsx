@@ -112,40 +112,8 @@ export default function Home() {
     "report:view-atm-overall-success-rate",
     "report:view-success-transactions",
   ]);
-  const canViewAtmAcquiring = hasPermission([
-    "report:view-atm-acquiring-success-rate",
-    "report:view-success-transactions",
-  ]);
-  const canViewAtmOnus = hasPermission([
-    "report:view-atm-onus-success-rate",
-    "report:view-success-transactions",
-  ]);
-  const canViewAtmOffus = hasPermission([
-    "report:view-atm-offus-success-rate",
-    "report:view-success-transactions",
-  ]);
-  const canViewAtmIssuing = hasPermission([
-    "report:view-atm-issuing-success-rate",
-    "report:view-success-transactions",
-  ]);
   const canViewPosOverall = hasPermission([
     "report:view-pos-overall-success-rate",
-    "report:view-success-transactions",
-  ]);
-  const canViewPosAcquiring = hasPermission([
-    "report:view-pos-acquiring-success-rate",
-    "report:view-success-transactions",
-  ]);
-  const canViewPosOnus = hasPermission([
-    "report:view-pos-onus-success-rate",
-    "report:view-success-transactions",
-  ]);
-  const canViewPosOffus = hasPermission([
-    "report:view-pos-offus-success-rate",
-    "report:view-success-transactions",
-  ]);
-  const canViewPosIssuing = hasPermission([
-    "report:view-pos-issuing-success-rate",
     "report:view-success-transactions",
   ]);
   const canViewHomeSuccess = canViewSwitchOverall || canViewAtmOverall;
@@ -229,47 +197,6 @@ export default function Home() {
       ]),
     },
     {
-      title: "Switch On-us Success Rate",
-      description: "CoopBank cards on CoopBank ATM and POS terminals",
-      to: "/switch-onus-success-rate",
-      icon: Percent,
-      show: hasPermission([
-        "report:view-switch-onus-success-rate",
-        "report:view-success-transactions",
-      ]),
-    },
-    {
-      title: "Switch Off-us Success Rate",
-      description: "Other bank cards on CoopBank ATM and POS terminals",
-      to: "/switch-offus-success-rate",
-      icon: Percent,
-      show: hasPermission([
-        "report:view-switch-offus-success-rate",
-        "report:view-success-transactions",
-      ]),
-    },
-    {
-      title: "Switch Remote On-us Success Rate",
-      description: "CoopBank cards on other bank ATM and POS terminals",
-      to: "/switch-remote-onus-success-rate",
-      icon: Percent,
-      show: hasPermission([
-        "report:view-switch-remote-onus-success-rate",
-        "report:view-switch-issuing-success-rate",
-        "report:view-success-transactions",
-      ]),
-    },
-    {
-      title: "Switch Issuing Success Rate",
-      description: "On-us and remote on-us across ATM and POS",
-      to: "/switch-issuing-success-rate",
-      icon: Percent,
-      show: hasPermission([
-        "report:view-switch-issuing-success-rate",
-        "report:view-success-transactions",
-      ]),
-    },
-    {
       title: "ATM Overall Success Rate",
       description: "On-us, off-us, and remote on-us ATM authorizations",
       to: "/atm-overall-success-rate",
@@ -277,67 +204,11 @@ export default function Home() {
       show: canViewAtmOverall,
     },
     {
-      title: "ATM Acquiring Success Rate",
-      description: "On-us and off-us ATM authorizations",
-      to: "/atm-acquiring-success-rate",
-      icon: Percent,
-      show: canViewAtmAcquiring,
-    },
-    {
-      title: "ATM On-us Success Rate",
-      description: "CoopBank cards on CoopBank ATMs",
-      to: "/atm-onus-success-rate",
-      icon: Percent,
-      show: canViewAtmOnus,
-    },
-    {
-      title: "ATM Off-us Success Rate",
-      description: "Other bank cards on CoopBank ATMs",
-      to: "/atm-offus-success-rate",
-      icon: Percent,
-      show: canViewAtmOffus,
-    },
-    {
-      title: "ATM Remote On-us Success Rate",
-      description: "CoopBank cards on other bank ATMs",
-      to: "/atm-issuing-success-rate",
-      icon: Percent,
-      show: canViewAtmIssuing,
-    },
-    {
       title: "POS Overall Success Rate",
       description: "On-us, off-us, and remote on-us POS authorizations",
       to: "/pos-overall-success-rate",
       icon: Percent,
       show: canViewPosOverall,
-    },
-    {
-      title: "POS Acquiring Success Rate",
-      description: "On-us and off-us POS authorizations",
-      to: "/pos-acquiring-success-rate",
-      icon: Percent,
-      show: canViewPosAcquiring,
-    },
-    {
-      title: "POS On-us Success Rate",
-      description: "CoopBank cards on CoopBank POS terminals",
-      to: "/pos-onus-success-rate",
-      icon: Percent,
-      show: canViewPosOnus,
-    },
-    {
-      title: "POS Off-us Success Rate",
-      description: "Other bank cards on CoopBank POS terminals",
-      to: "/pos-offus-success-rate",
-      icon: Percent,
-      show: canViewPosOffus,
-    },
-    {
-      title: "POS Remote On-us Success Rate",
-      description: "CoopBank cards on other bank POS terminals",
-      to: "/pos-issuing-success-rate",
-      icon: Percent,
-      show: canViewPosIssuing,
     },
     {
       title: "Deposit per Terminal",
