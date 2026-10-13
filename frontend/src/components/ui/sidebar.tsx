@@ -27,6 +27,15 @@ import {
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+
+/** Reads the persisted sidebar open state from the cookie written by SidebarProvider. */
+function isSidebarOpenByCookie(defaultOpen = true): boolean {
+  if (typeof document === "undefined") return defaultOpen
+  const match = document.cookie.match(
+    new RegExp(`(?:^|;\\s*)${SIDEBAR_COOKIE_NAME}=([^;]*)`)
+  )
+  return match ? match[1] === "true" : defaultOpen
+}
 const SIDEBAR_WIDTH = "17.5rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
@@ -705,6 +714,7 @@ function SidebarMenuSubButton({
 }
 
 export {
+  isSidebarOpenByCookie,
   Sidebar,
   SidebarContent,
   SidebarFooter,

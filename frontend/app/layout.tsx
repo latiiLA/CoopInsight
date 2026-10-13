@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import {
+  isSidebarOpenByCookie,
   SidebarProvider,
   SidebarTrigger,
   useSidebar,
@@ -42,7 +43,7 @@ export default function Layout() {
   }
 
   return (
-    <SidebarProvider defaultOpen={false} className="overflow-x-hidden">
+    <SidebarProvider defaultOpen={isSidebarOpenByCookie(false)} className="overflow-x-hidden">
       <AppSidebar />
       <main className="flex min-h-svh min-w-0 flex-1 flex-col overflow-x-hidden">
         <div className="flex h-12 w-full items-center justify-between px-2">
