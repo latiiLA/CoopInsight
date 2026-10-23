@@ -12,6 +12,9 @@ func registerReportRoutes(
 	ebirrCardlessHandler handler.EbirrCardlessWithdrawalHandler,
 	terminalTransactionHandler handler.TerminalTransactionHandler,
 	transactionMixHandler handler.TransactionMixHandler,
+	cortexTransactionSearchHandler handler.CortexTransactionSearchHandler,
+	switchTransactionSearchHandler handler.SwitchTransactionSearchHandler,
+	terminalReconExportHandler handler.TerminalReconExportHandler,
 ) {
 	reports := protected.Group("/reports")
 
@@ -275,6 +278,54 @@ func registerReportRoutes(
 			[]string{"report:view-transaction-mix"},
 		),
 		transactionMixHandler.GetMix,
+	)
+	reports.GET(
+		"/cortex-transactions/search",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:search-cortex-transactions"},
+		),
+		cortexTransactionSearchHandler.Search,
+	)
+	reports.GET(
+		"/cortex-transactions/:tlogId",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:search-cortex-transactions"},
+		),
+		cortexTransactionSearchHandler.GetByID,
+	)
+	reports.GET(
+		"/switch-transactions/search",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:search-switch-transactions"},
+		),
+		switchTransactionSearchHandler.Search,
+	)
+	reports.GET(
+		"/switch-transactions/:rowId",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:search-switch-transactions"},
+		),
+		switchTransactionSearchHandler.GetByRowID,
+	)
+	reports.GET(
+		"/terminal-recon/chunk",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:export-terminal-recon"},
+		),
+		terminalReconExportHandler.Chunk,
+	)
+	reports.GET(
+		"/terminal-recon/export",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:export-terminal-recon"},
+		),
+		terminalReconExportHandler.Export,
 	)
 	reports.GET(
 		"/pos-terminal-comparison",

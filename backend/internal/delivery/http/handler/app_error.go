@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -70,6 +71,21 @@ var appErrors = []struct {
 	{common.ErrInvalidCardGroupBy, http.StatusBadRequest},
 	{common.ErrInvalidCardDateField, http.StatusBadRequest},
 	{common.ErrInvalidCardProductID, http.StatusBadRequest},
+	{common.ErrInvalidPrepaidVisaProduct, http.StatusBadRequest},
+	{common.ErrInvalidPrepaidVisaCardID, http.StatusBadRequest},
+	{common.ErrPrepaidVisaCardNotFound, http.StatusNotFound},
+	{common.ErrPrepaidVisaSearchNeedsCriteria, http.StatusBadRequest},
+	{common.ErrInvalidPrepaidVisaSearchKind, http.StatusBadRequest},
+	{common.ErrCortexTxnSearchNeedsCriteria, http.StatusBadRequest},
+	{common.ErrInvalidCortexTlogID, http.StatusBadRequest},
+	{common.ErrSwitchTxnSearchNeedsCriteria, http.StatusBadRequest},
+	{common.ErrInvalidSwitchRowID, http.StatusBadRequest},
+	{common.ErrSwitchTxnNotFound, http.StatusNotFound},
+	{common.ErrInvalidTerminalReconSource, http.StatusBadRequest},
+	{common.ErrInvalidTerminalReconFormat, http.StatusBadRequest},
+	{common.ErrTerminalReconRangeTooLong, http.StatusBadRequest},
+	{common.ErrTerminalReconChunkMustBeOneDay, http.StatusBadRequest},
+	{common.ErrCortexTransactionNotFound, http.StatusNotFound},
 	{common.ErrInvalidCardExpiryWindow, http.StatusBadRequest},
 	{common.ErrMixRangeTooLarge, http.StatusBadRequest},
 	{common.ErrInvalidDateRange, http.StatusBadRequest},
@@ -111,6 +127,14 @@ func writeAppErrorMessage(c *gin.Context, err error, userMessage string) {
 		if errors.Is(err, mapped.err) {
 			status = mapped.status
 			break
+		}
+	}
+
+	// Client abort / request deadline — not an application failure.
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		status = http.StatusGatewayTimeout
+		if userMessage == "" {
+			message = "The request timed out. Try a shorter date range."
 		}
 	}
 

@@ -9,6 +9,7 @@ import (
 func registerCardRoutes(
 	protected *gin.RouterGroup,
 	cardHandler handler.CardHandler,
+	prepaidVisaHandler handler.PrepaidVisaHandler,
 ) {
 	clearing := protected.Group("/card")
 
@@ -19,6 +20,64 @@ func registerCardRoutes(
 			[]string{"card:view-number-of-cards-per-status"},
 		),
 		cardHandler.CountCardPerStatus,
+	)
+
+	prepaid := clearing.Group("/prepaid-visa")
+	prepaid.GET(
+		"/dashboard",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"card:view-prepaid-visa"},
+		),
+		prepaidVisaHandler.Dashboard,
+	)
+	prepaid.GET(
+		"/top-ups",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"card:view-prepaid-visa"},
+		),
+		prepaidVisaHandler.TopUps,
+	)
+	prepaid.GET(
+		"/unloads",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"card:view-prepaid-visa"},
+		),
+		prepaidVisaHandler.Unloads,
+	)
+	prepaid.GET(
+		"/transactions",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"card:view-prepaid-visa"},
+		),
+		prepaidVisaHandler.Transactions,
+	)
+	prepaid.GET(
+		"/search",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"card:view-prepaid-visa"},
+		),
+		prepaidVisaHandler.Search,
+	)
+	prepaid.GET(
+		"/reconciliation",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"card:view-prepaid-visa"},
+		),
+		prepaidVisaHandler.Reconciliation,
+	)
+	prepaid.GET(
+		"/cards/:cardId/activity",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{},
+			[]string{"card:view-prepaid-visa"},
+		),
+		prepaidVisaHandler.CardActivity,
 	)
 
 	clearing.GET(

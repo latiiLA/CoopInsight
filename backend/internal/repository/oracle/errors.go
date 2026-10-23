@@ -9,5 +9,7 @@ func wrapError(sentinel error, err error) error {
 		return sentinel
 	}
 
-	return fmt.Errorf("%w: %v", sentinel, err)
+	// Wrap both so callers can detect the sentinel and the root cause
+	// (e.g. context.Canceled / DeadlineExceeded) with errors.Is.
+	return fmt.Errorf("%w: %w", sentinel, err)
 }

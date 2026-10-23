@@ -61,6 +61,9 @@ var Catalog = []permissionSeed{
 	{Name: "report:browse-success-transactions", Resource: "report", Action: "browse-success-transactions", Description: "Browse individual transactions from success-rate reports"},
 	{Name: "report:view-ebirr-cardless-withdrawal", Resource: "report", Action: "view-ebirr-cardless-withdrawal", Description: "View Ebirr cardless withdrawal report"},
 	{Name: "report:view-transaction-mix", Resource: "report", Action: "view-transaction-mix", Description: "View the switch transaction mix report (scheme, routing, and message type breakdown with percentages)"},
+	{Name: "report:search-cortex-transactions", Resource: "report", Action: "search-cortex-transactions", Description: "Search Cortex log transactions by RRN, card, merchant, and related criteria"},
+	{Name: "report:search-switch-transactions", Resource: "report", Action: "search-switch-transactions", Description: "Search IST switch log transactions by RRN, card, route, and related criteria"},
+	{Name: "report:export-terminal-recon", Resource: "report", Action: "export-terminal-recon", Description: "Export approved Switch or Cortex transactions as CSV or XLSX"},
 
 	{Name: "monitoring:view-onus", Resource: "monitoring", Action: "view-onus", Description: "View on-us live monitoring"},
 	{Name: "monitoring:view-offus", Resource: "monitoring", Action: "view-offus", Description: "View off-us live monitoring"},
@@ -100,6 +103,7 @@ var Catalog = []permissionSeed{
 	{Name: "card:view-activity-dashboard", Resource: "card", Action: "view-activity-dashboard", Description: "View daily card requested, issued, and activated activity dashboard"},
 	{Name: "card:view-card-details", Resource: "card", Action: "view-card-details", Description: "View individual card records behind the card activity counts"},
 	{Name: "card:view-cardholder-name", Resource: "card", Action: "view-cardholder-name", Description: "Include the cardholder name in card detail records"},
+	{Name: "card:view-prepaid-visa", Resource: "card", Action: "view-prepaid-visa", Description: "View international prepaid Visa (401/402) top-ups, transactions, and dashboard"},
 
 	{Name: "activity:view", Resource: "activity", Action: "view", Description: "View activity log"},
 }

@@ -228,7 +228,11 @@ func main() {
 	var settledHandler handler.SettledHandler
 	var cardHandler handler.CardHandler
 	var cardSvc service.CardService
+	var prepaidVisaHandler handler.PrepaidVisaHandler
 	var transactionMixHandler handler.TransactionMixHandler
+	var cortexTransactionSearchHandler handler.CortexTransactionSearchHandler
+	var switchTransactionSearchHandler handler.SwitchTransactionSearchHandler
+	var terminalReconExportHandler handler.TerminalReconExportHandler
 	var safHandler handler.SafHandler
 	if oracleDB != nil {
 		testHandler = handler.NewTestHandler(
@@ -265,8 +269,20 @@ func main() {
 		)
 		cardSvc = service.NewCardService(oracle.NewCardRepository(oracleDB))
 		cardHandler = handler.NewCardHandler(cardSvc)
+		prepaidVisaHandler = handler.NewPrepaidVisaHandler(
+			service.NewPrepaidVisaService(oracle.NewPrepaidVisaRepository(oracleDB)),
+		)
 		transactionMixHandler = handler.NewTransactionMixHandler(
 			service.NewTransactionMixService(oracle.NewTransactionMixRepository(oracleDB)),
+		)
+		cortexTransactionSearchHandler = handler.NewCortexTransactionSearchHandler(
+			service.NewCortexTransactionSearchService(oracle.NewCortexTransactionSearchRepository(oracleDB)),
+		)
+		switchTransactionSearchHandler = handler.NewSwitchTransactionSearchHandler(
+			service.NewSwitchTransactionSearchService(oracle.NewSwitchTransactionSearchRepository(oracleDB)),
+		)
+		terminalReconExportHandler = handler.NewTerminalReconExportHandler(
+			service.NewTerminalReconExportService(oracle.NewTerminalReconExportRepository(oracleDB)),
 		)
 		safHandler = handler.NewSafHandler(
 			service.NewSafService(oracle.NewSafRepository(oracleDB)),
@@ -287,8 +303,20 @@ func main() {
 		settledHandler = handler.NewSettledHandler(service.NewSettledService(nil))
 		cardSvc = service.NewCardService(nil)
 		cardHandler = handler.NewCardHandler(cardSvc)
+		prepaidVisaHandler = handler.NewPrepaidVisaHandler(
+			service.NewPrepaidVisaService(nil),
+		)
 		transactionMixHandler = handler.NewTransactionMixHandler(
 			service.NewTransactionMixService(nil),
+		)
+		cortexTransactionSearchHandler = handler.NewCortexTransactionSearchHandler(
+			service.NewCortexTransactionSearchService(nil),
+		)
+		switchTransactionSearchHandler = handler.NewSwitchTransactionSearchHandler(
+			service.NewSwitchTransactionSearchService(nil),
+		)
+		terminalReconExportHandler = handler.NewTerminalReconExportHandler(
+			service.NewTerminalReconExportService(nil),
 		)
 		safHandler = handler.NewSafHandler(service.NewSafService(nil))
 	}
@@ -437,7 +465,11 @@ func main() {
 		Unsettled:                  unsettledHandler,
 		Settled:                    settledHandler,
 		Card:                       cardHandler,
+		PrepaidVisa:                prepaidVisaHandler,
 		TransactionMix:             transactionMixHandler,
+		CortexTransactionSearch:    cortexTransactionSearchHandler,
+		SwitchTransactionSearch:    switchTransactionSearchHandler,
+		TerminalReconExport:        terminalReconExportHandler,
 		VisaSettlement:             visaSettlementHandler,
 		MastercardIPM:              mastercardIPMHandler,
 	})

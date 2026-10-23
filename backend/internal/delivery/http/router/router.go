@@ -35,7 +35,11 @@ type Handlers struct {
 	Unsettled                  handler.UnsettledHandler
 	Settled                    handler.SettledHandler
 	Card                       handler.CardHandler
+	PrepaidVisa                handler.PrepaidVisaHandler
 	TransactionMix             handler.TransactionMixHandler
+	CortexTransactionSearch    handler.CortexTransactionSearchHandler
+	SwitchTransactionSearch    handler.SwitchTransactionSearchHandler
+	TerminalReconExport        handler.TerminalReconExportHandler
 	VisaSettlement             handler.VisaSettlementHandler
 	MastercardIPM              handler.MastercardIPMHandler
 	EmbedSuccessRate           handler.EmbedSuccessRateHandler
@@ -173,6 +177,9 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 		handlers.EbirrCardlessWithdrawal,
 		handlers.TerminalTransaction,
 		handlers.TransactionMix,
+		handlers.CortexTransactionSearch,
+		handlers.SwitchTransactionSearch,
+		handlers.TerminalReconExport,
 	)
 	registerClearingRoutes(oracleProtected, handlers.Uncleared, handlers.Cleared)
 	registerSettlementRoutes(oracleProtected, handlers.Unsettled, handlers.Settled)
@@ -194,6 +201,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	registerCardRoutes(
 		oracleProtected,
 		handlers.Card,
+		handlers.PrepaidVisa,
 	)
 
 	registerVisaSettlementRoutes(

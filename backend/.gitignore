@@ -8,6 +8,7 @@ coopinsight.exe
 migrate
 credentials/
 cmd/explorer
+cmd/tmp
 
 air.*
 
