@@ -15,6 +15,9 @@ import settledReducer from "@/features/settled_slice";
 import cardReducer from "@/features/card_slice";
 import cardActivityReducer from "@/features/card_activity_slice";
 import cardDetailReducer from "@/features/card_detail_slice";
+import prepaidVisaReducer from "@/features/prepaid_visa_slice";
+import cortexTxnSearchReducer from "@/features/cortex_transaction_search_slice";
+import switchTxnSearchReducer from "@/features/switch_transaction_search_slice";
 import visaSettlementReducer from "@/features/visa_settlement_slice";
 import mastercardIPMReducer from "@/features/mastercard_ipm_slice";
 
@@ -36,6 +39,9 @@ export const store = configureStore({
     card: cardReducer,
     cardActivity: cardActivityReducer,
     cardDetail: cardDetailReducer,
+    prepaidVisa: prepaidVisaReducer,
+    cortexTxnSearch: cortexTxnSearchReducer,
+    switchTxnSearch: switchTxnSearchReducer,
     visaSettlement: visaSettlementReducer,
     mastercardIPM: mastercardIPMReducer,
   },

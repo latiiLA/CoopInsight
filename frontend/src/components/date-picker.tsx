@@ -13,24 +13,27 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 interface DatePickerWithRangeProps {
   date: DateRange | undefined
   onDateChange: (date: DateRange | undefined) => void
+  className?: string
 }
 
 export function DatePickerWithRange({
   date,
   onDateChange,
+  className,
 }: DatePickerWithRangeProps) {
   return (
-    <Field className="w-60 shrink-0">
+    <Field className={cn("w-60 shrink-0", className)}>
       <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             id="date-picker-range"
-            className="justify-start px-2.5 font-normal"
+            className="w-full justify-start px-2.5 font-normal"
           >
             <CalendarIcon data-icon="inline-start" />
 

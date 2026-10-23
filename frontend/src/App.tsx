@@ -26,6 +26,22 @@ const EbirrCardlessWithdrawal = lazy(
 const TransactionMix = lazy(
   () => import("./pages/reports/transaction-mix/transaction-mix"),
 );
+const CortexTransactionSearch = lazy(
+  () =>
+    import(
+      "./pages/reports/cortex-transaction-search/cortex-transaction-search"
+    ),
+);
+const SwitchTransactionSearch = lazy(
+  () =>
+    import(
+      "./pages/reports/switch-transaction-search/switch-transaction-search"
+    ),
+);
+const TerminalReconExport = lazy(
+  () =>
+    import("./pages/reports/terminal-recon-export/terminal-recon-export"),
+);
 const VisaCyberSource = lazy(
   () => import("./pages/settlement/visa-cybersource/visa-cybersource"),
 );
@@ -122,6 +138,24 @@ const Settled = lazy(() => import("./pages/settlement/settled"));
 const NotFound = lazy(() => import("./pages/not-found"));
 const CardPerStatus = lazy(() => import("./pages/card/card-per-status"));
 const CardActivityPage = lazy(() => import("./pages/card/card-activity-page"));
+const PrepaidVisaDashboard = lazy(
+  () => import("./pages/card/prepaid-visa/prepaid-visa-dashboard"),
+);
+const PrepaidVisaTopUps = lazy(
+  () => import("./pages/card/prepaid-visa/prepaid-visa-top-ups"),
+);
+const PrepaidVisaUnloads = lazy(
+  () => import("./pages/card/prepaid-visa/prepaid-visa-unloads"),
+);
+const PrepaidVisaTransactions = lazy(
+  () => import("./pages/card/prepaid-visa/prepaid-visa-transactions"),
+);
+const PrepaidVisaReconciliation = lazy(
+  () => import("./pages/card/prepaid-visa/prepaid-visa-reconciliation"),
+);
+const PrepaidVisaSearch = lazy(
+  () => import("./pages/card/prepaid-visa/prepaid-visa-search"),
+);
 
 function PageFallback() {
   return (
@@ -435,6 +469,36 @@ function App() {
             element={
               <RequirePermission permissions={["report:view-transaction-mix"]}>
                 <TransactionMix />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/cortex-transaction-search"
+            element={
+              <RequirePermission
+                permissions={["report:search-cortex-transactions"]}
+              >
+                <CortexTransactionSearch />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/switch-transaction-search"
+            element={
+              <RequirePermission
+                permissions={["report:search-switch-transactions"]}
+              >
+                <SwitchTransactionSearch />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/terminal-recon-export"
+            element={
+              <RequirePermission
+                permissions={["report:export-terminal-recon"]}
+              >
+                <TerminalReconExport />
               </RequirePermission>
             }
           />
@@ -846,6 +910,54 @@ function App() {
             element={
               <RequirePermission permissions={["card:view-activity-dashboard"]}>
                 <CardActivityPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/prepaid-visa"
+            element={
+              <RequirePermission permissions={["card:view-prepaid-visa"]}>
+                <PrepaidVisaDashboard />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/prepaid-visa/search"
+            element={
+              <RequirePermission permissions={["card:view-prepaid-visa"]}>
+                <PrepaidVisaSearch />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/prepaid-visa/top-ups"
+            element={
+              <RequirePermission permissions={["card:view-prepaid-visa"]}>
+                <PrepaidVisaTopUps />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/prepaid-visa/unloads"
+            element={
+              <RequirePermission permissions={["card:view-prepaid-visa"]}>
+                <PrepaidVisaUnloads />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/prepaid-visa/transactions"
+            element={
+              <RequirePermission permissions={["card:view-prepaid-visa"]}>
+                <PrepaidVisaTransactions />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/prepaid-visa/reconciliation"
+            element={
+              <RequirePermission permissions={["card:view-prepaid-visa"]}>
+                <PrepaidVisaReconciliation />
               </RequirePermission>
             }
           />

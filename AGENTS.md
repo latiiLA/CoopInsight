@@ -6,6 +6,7 @@ Instructions for Cursor (and similar) agents verifying this repo. Prefer these s
 
 - **Do not** start a second `air` / API process if the user already has one running (check terminals / `netstat` for `:8088`).
 - **Do not** commit `.env`, certificates, or `frontend/` + `backend/` in the same commit.
+- **Do not** put backend/DB internals in the UI (table/column names, SQL jargon). See `.cursor/rules/ui-no-backend-internals.mdc`.
 - Prefer smoke checks below after UI/API changes that affect login, routing, or nginx.
 
 ## Local services

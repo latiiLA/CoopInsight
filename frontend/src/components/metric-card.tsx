@@ -20,6 +20,8 @@ type MetricCardProps = {
   onClick?: () => void;
   /** Rendered under the hint, only when the card is interactive. */
   drillHint?: string;
+  /** Shorter padding and value size — same card look, less height. */
+  compact?: boolean;
 };
 
 /**
@@ -37,13 +39,14 @@ export function MetricCard({
   loading = false,
   onClick,
   drillHint,
+  compact = false,
 }: MetricCardProps) {
   const interactive = Boolean(onClick);
 
   return (
     <Card
       className={cn(
-        "gap-3 py-4",
+        compact ? "gap-1.5 py-2.5" : "gap-3 py-4",
         interactive &&
           "cursor-pointer transition-colors hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
       )}
@@ -62,21 +65,44 @@ export function MetricCard({
       tabIndex={interactive ? 0 : undefined}
       aria-label={interactive ? `View cards behind ${label}` : undefined}
     >
-      <CardHeader className="px-4">
-        <div className="flex items-start justify-between gap-3">
-          <CardDescription>{label}</CardDescription>
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Icon className="size-4" />
+      <CardHeader className={cn(compact ? "gap-1 px-3" : "px-4")}>
+        <div className="flex items-start justify-between gap-2">
+          <CardDescription className={compact ? "text-xs" : undefined}>
+            {label}
+          </CardDescription>
+          <div
+            className={cn(
+              "flex shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary",
+              compact ? "size-6" : "size-8",
+            )}
+          >
+            <Icon className={compact ? "size-3.5" : "size-4"} />
           </div>
         </div>
         {loading ? (
-          <Skeleton className="h-8 w-20" />
+          <Skeleton className={cn(compact ? "h-6 w-16" : "h-8 w-20")} />
         ) : (
-          <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
+          <CardTitle
+            className={cn(
+              "tabular-nums",
+              compact ? "text-lg leading-tight" : "text-2xl",
+            )}
+          >
+            {value}
+          </CardTitle>
         )}
       </CardHeader>
-      <CardContent className="px-4 text-sm text-muted-foreground">
-        {loading ? <Skeleton className="h-4 w-28" /> : hint}
+      <CardContent
+        className={cn(
+          "text-muted-foreground",
+          compact ? "px-3 text-xs leading-snug" : "px-4 text-sm",
+        )}
+      >
+        {loading ? (
+          <Skeleton className={cn(compact ? "h-3 w-24" : "h-4 w-28")} />
+        ) : (
+          hint
+        )}
         {!loading && drillHint ? (
           <div className="mt-1 text-xs text-primary/80">{drillHint}</div>
         ) : null}

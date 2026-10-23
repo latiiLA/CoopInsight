@@ -66,6 +66,9 @@ interface DataTableProps<TData extends RowData> {
   onDateChange?: (date: DateRange | undefined) => void;
   defaultDate?: DateRange;
 
+  /** Fired when a data row is clicked (ignores clicks on buttons/inputs/checkboxes). */
+  onRowClick?: (row: TData) => void;
+
   /**
    * Optional per-column override for the value written to CSV/XLSX, keyed by
    * column id.
@@ -102,6 +105,7 @@ export function DataTable<TData extends RowData>({
   enablePagination = true,
   onDateChange,
   defaultDate,
+  onRowClick,
   exportValueByColumn,
   initialColumnVisibility,
 }: DataTableProps<TData>) {
@@ -349,6 +353,26 @@ export function DataTable<TData extends RowData>({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() ? "selected" : undefined}
+                    className={
+                      onRowClick
+                        ? "cursor-pointer hover:bg-muted/50"
+                        : undefined
+                    }
+                    onClick={
+                      onRowClick
+                        ? (event) => {
+                            const target = event.target as HTMLElement | null;
+                            if (
+                              target?.closest(
+                                "button, a, input, label, [role='checkbox'], [data-no-row-click]",
+                              )
+                            ) {
+                              return;
+                            }
+                            onRowClick(row.original);
+                          }
+                        : undefined
+                    }
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
