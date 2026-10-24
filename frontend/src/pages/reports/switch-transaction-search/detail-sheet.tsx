@@ -8,8 +8,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { formatMoneyWithCurrency, isoCurrencyLabel } from "@/lib/iso-currency";
+import { msgTypeDisplay } from "@/lib/msg-type";
 import { cn } from "@/lib/utils";
 import type { SwitchTransactionDetail } from "@/types/switch-transaction-search";
+import { hasPermission } from "../../../../utility/has-permission";
 
 type Props = {
   open: boolean;
@@ -82,6 +85,8 @@ export function SwitchTransactionDetailSheet({
   loading,
   error,
 }: Props) {
+  const canViewAlphaResponse = hasPermission(["report:view-alpha-response"]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
@@ -119,7 +124,12 @@ export function SwitchTransactionDetailSheet({
                     value={detail.approved ? "Approved" : "Declined"}
                   />
                   <Field label="Response code" value={detail.rspCode} />
-                  <Field label="Alpha response" value={detail.alphaRspCode} />
+                  {canViewAlphaResponse ? (
+                    <Field
+                      label="Alpha response"
+                      value={detail.alphaRspCode}
+                    />
+                  ) : null}
                   <Field label="Approval code" value={detail.authNum} />
                   <Field label="Reason code" value={detail.reasonCode} />
                   <Field label="Reversal code" value={detail.revCode} />
@@ -199,8 +209,14 @@ export function SwitchTransactionDetailSheet({
 
               <Section title="Message">
                 <Grid>
-                  <Field label="Message type" value={detail.msgType} />
-                  <Field label="Original message" value={detail.origMsgType} />
+                  <Field
+                    label="Message type"
+                    value={msgTypeDisplay(detail.msgType) || "-"}
+                  />
+                  <Field
+                    label="Original message"
+                    value={msgTypeDisplay(detail.origMsgType) || "-"}
+                  />
                   <Field label="Processing code" value={detail.txnCode} />
                   <Field label="Txn type" value={detail.txnType} />
                 </Grid>
@@ -210,23 +226,40 @@ export function SwitchTransactionDetailSheet({
                 <Grid>
                   <Field
                     label="Amount (issuer currency)"
-                    value={`${money(detail.amount)} (${detail.issuerCurrency || "-"})`}
+                    value={formatMoneyWithCurrency(
+                      detail.amount,
+                      detail.issuerCurrency,
+                    )}
                   />
                   <Field
                     label="Acquirer currency"
-                    value={detail.acquirerCurrency}
+                    value={
+                      isoCurrencyLabel(detail.acquirerCurrency) ||
+                      detail.acquirerCurrency ||
+                      "-"
+                    }
                   />
                   <Field
                     label="Txn amount"
-                    value={`${money(detail.txnAmount)} (${detail.txnCurrency || "-"})`}
+                    value={formatMoneyWithCurrency(
+                      detail.txnAmount,
+                      detail.txnCurrency,
+                    )}
                   />
                   <Field
                     label="Cardholder currency"
-                    value={detail.cardholderCurrency}
+                    value={
+                      isoCurrencyLabel(detail.cardholderCurrency) ||
+                      detail.cardholderCurrency ||
+                      "-"
+                    }
                   />
                   <Field
                     label="Settlement"
-                    value={`${money(detail.settlementAmount)} (${detail.settlementCurrency || "-"})`}
+                    value={formatMoneyWithCurrency(
+                      detail.settlementAmount,
+                      detail.settlementCurrency,
+                    )}
                   />
                   <Field label="Cashback" value={money(detail.cashback)} />
                   <Field label="Fee" value={money(detail.fee)} />

@@ -76,6 +76,7 @@ function toParams(args: CortexTransactionSearchArgs) {
     ...(args.acquiringCountry?.trim()
       ? { acquiringCountry: args.acquiringCountry.trim() }
       : {}),
+    ...(args.msgType?.trim() ? { msgType: args.msgType.trim() } : {}),
     ...(args.result ? { result: args.result } : {}),
     ...(args.reversal ? { reversal: args.reversal } : {}),
     ...(args.amountMin != null && !Number.isNaN(args.amountMin)

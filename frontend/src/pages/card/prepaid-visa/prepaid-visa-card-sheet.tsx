@@ -17,6 +17,7 @@ import type {
 
 import {
   formatMerchantLabel,
+  currencyLabel,
   formatUsd,
   isReversalMsgType,
   txnResultLabel,
@@ -139,7 +140,7 @@ export function PrepaidVisaCardSheet({
               <div className="grid grid-cols-3 divide-x border-t bg-background">
                 <div className="px-3 py-2.5">
                   <p className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                    Available amt
+                    Avail amt
                   </p>
                   <p className="mt-0.5 text-sm font-semibold tabular-nums tracking-tight">
                     {formatUsd(
@@ -164,7 +165,7 @@ export function PrepaidVisaCardSheet({
                 </div>
                 <div className="px-3 py-2.5">
                   <p className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                    From available
+                    From avail
                   </p>
                   <p className="mt-0.5 text-sm font-semibold tabular-nums tracking-tight">
                     {formatUsd(card.fromAvailable)}
@@ -173,7 +174,8 @@ export function PrepaidVisaCardSheet({
               </div>
               {card.accountCurrency ? (
                 <p className="border-t px-4 py-1.5 text-[11px] text-muted-foreground">
-                  Currency {card.accountCurrency}
+                  Currency{" "}
+                  {currencyLabel(card.accountCurrency) || card.accountCurrency}
                   {card.blockedBalance
                     ? " · Blocked holds pending clearing"
                     : ""}

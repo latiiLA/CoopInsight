@@ -42,11 +42,12 @@ const TerminalReconExport = lazy(
   () =>
     import("./pages/reports/terminal-recon-export/terminal-recon-export"),
 );
-const VisaCyberSource = lazy(
-  () => import("./pages/settlement/visa-cybersource/visa-cybersource"),
+const EJTransactionSearch = lazy(
+  () =>
+    import("./pages/reports/ej-transaction-search/ej-transaction-search"),
 );
-const MastercardIPM = lazy(
-  () => import("./pages/settlement/mastercard-ipm/mastercard-ipm"),
+const EJCoverage = lazy(
+  () => import("./pages/reports/ej-coverage/ej-coverage"),
 );
 const ManageUsers = lazy(
   () => import("./pages/system administrations/users/manage-users"),
@@ -131,10 +132,8 @@ const TerminalComparison = lazy(
 );
 const Account = lazy(() => import("./pages/account/account"));
 const Analytics = lazy(() => import("./pages/Analytics"));
-const Uncleared = lazy(() => import("./pages/clearing/uncleared"));
-const Cleared = lazy(() => import("./pages/clearing/cleared"));
-const Unsettled = lazy(() => import("./pages/settlement/unsettled"));
-const Settled = lazy(() => import("./pages/settlement/settled"));
+const ClearingHub = lazy(() => import("./pages/clearing/clearing-hub"));
+const SettlementHub = lazy(() => import("./pages/settlement/settlement-hub"));
 const NotFound = lazy(() => import("./pages/not-found"));
 const CardPerStatus = lazy(() => import("./pages/card/card-per-status"));
 const CardActivityPage = lazy(() => import("./pages/card/card-activity-page"));
@@ -503,6 +502,36 @@ function App() {
             }
           />
           <Route
+            path="/ej-finder"
+            element={
+              <RequirePermission
+                permissions={["report:search-ej-transactions"]}
+              >
+                <EJTransactionSearch />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/ej-transaction-search"
+            element={
+              <RequirePermission
+                permissions={["report:search-ej-transactions"]}
+              >
+                <EJTransactionSearch />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/ej-coverage"
+            element={
+              <RequirePermission
+                permissions={["report:search-ej-transactions"]}
+              >
+                <EJCoverage />
+              </RequirePermission>
+            }
+          />
+          <Route
             path="/onus-monitoring"
             element={
               <RequirePermission permissions={["monitoring:view-onus"]}>
@@ -655,242 +684,168 @@ function App() {
             }
           />
           <Route
+            path="/clearing/uncleared"
+            element={
+              <RequirePermission
+                permissions={[
+                  "clearing:view-uncleared-eth",
+                  "clearing:view-uncleared-visa",
+                  "clearing:view-uncleared-visa-cybersource",
+                  "clearing:view-uncleared-mastercard",
+                ]}
+              >
+                <ClearingHub stage="uncleared" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/clearing/cleared"
+            element={
+              <RequirePermission
+                permissions={[
+                  "clearing:view-cleared-eth",
+                  "clearing:view-cleared-visa",
+                  "clearing:view-cleared-visa-cybersource",
+                  "clearing:view-uncleared-visa-cybersource",
+                  "clearing:view-cleared-mastercard",
+                ]}
+              >
+                <ClearingHub stage="cleared" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/settlement/unsettled"
+            element={
+              <RequirePermission
+                permissions={[
+                  "settlement:view-unsettled-eth",
+                  "settlement:view-unsettled-visa",
+                  "settlement:view-unsettled-visa-cybersource",
+                  "settlement:view-unsettled-mastercard",
+                ]}
+              >
+                <SettlementHub stage="unsettled" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/settlement/settled"
+            element={
+              <RequirePermission
+                permissions={[
+                  "settlement:view-settled-eth",
+                  "settlement:view-settled-visa",
+                  "settlement:view-settled-mastercard",
+                ]}
+              >
+                <SettlementHub stage="settled" />
+              </RequirePermission>
+            }
+          />
+          <Route
             path="/uncleared-eth"
             element={
-              <RequirePermission permissions={["clearing:view-uncleared-eth"]}>
-                <Uncleared
-                  key="ETB"
-                  product="ETB"
-                  title="Uncleared ETH"
-                  description="Approved domestic POS purchases that still need clearing."
-                />
-              </RequirePermission>
+              <Navigate to="/clearing/uncleared?scheme=eth" replace />
             }
           />
           <Route
             path="/uncleared-visa"
             element={
-              <RequirePermission permissions={["clearing:view-uncleared-visa"]}>
-                <Uncleared
-                  key="VISA"
-                  product="VISA"
-                  title="Uncleared VISA"
-                  description="Approved Visa POS purchases that still need clearing."
-                />
-              </RequirePermission>
+              <Navigate to="/clearing/uncleared?scheme=visa" replace />
             }
           />
           <Route
             path="/uncleared-visa-cybersource"
             element={
-              <RequirePermission
-                permissions={["clearing:view-uncleared-visa-cybersource"]}
-              >
-                <Uncleared
-                  key="VISA Cybersource"
-                  product="VISACBS"
-                  title="Uncleared VISA Cybersource"
-                  description="Approved Visa Cybersource transactions that still need clearing."
-                />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/unsettled-visa-cybersource"
-            element={
-              <RequirePermission
-                permissions={["settlement:view-unsettled-visa-cybersource"]}
-              >
-                <Unsettled
-                  key="VISA Cybersource"
-                  product="VISACBS"
-                  title="Unsettled VISA Cybersource"
-                  description="Approved Visa Cybersource transactions that still need settlement."
-                />
-              </RequirePermission>
+              <Navigate to="/clearing/uncleared?scheme=visacbs" replace />
             }
           />
           <Route
             path="/uncleared-mastercard"
             element={
-              <RequirePermission
-                permissions={["clearing:view-uncleared-mastercard"]}
-              >
-                <Uncleared
-                  key="MDS"
-                  product="MDS"
-                  title="Uncleared Mastercard"
-                  description="Approved Mastercard POS purchases that still need clearing."
-                />
-              </RequirePermission>
+              <Navigate to="/clearing/uncleared?scheme=mastercard" replace />
             }
           />
           <Route
             path="/uncleared"
             element={
-              <RequirePermission permissions={["clearing:view-uncleared-eth"]}>
-                <Uncleared
-                  key="ETB-alias"
-                  product="ETB"
-                  title="Uncleared ETH"
-                  description="Approved domestic POS purchases that still need clearing."
-                />
-              </RequirePermission>
+              <Navigate to="/clearing/uncleared?scheme=eth" replace />
             }
           />
           <Route
             path="/cleared-eth"
-            element={
-              <RequirePermission permissions={["clearing:view-cleared-eth"]}>
-                <Cleared
-                  key="cleared-ETB"
-                  product="ETB"
-                  title="Cleared ETH"
-                  description="Approved domestic POS purchases that have been posted for clearing."
-                />
-              </RequirePermission>
-            }
+            element={<Navigate to="/clearing/cleared?scheme=eth" replace />}
           />
           <Route
             path="/cleared-visa"
-            element={
-              <RequirePermission permissions={["clearing:view-cleared-visa"]}>
-                <Cleared
-                  key="cleared-VISA"
-                  product="VISA"
-                  title="Cleared VISA"
-                  description="Approved Visa POS purchases that have been posted for clearing."
-                />
-              </RequirePermission>
-            }
+            element={<Navigate to="/clearing/cleared?scheme=visa" replace />}
           />
           <Route
             path="/cleared-visa-cybersource"
             element={
-              <RequirePermission
-                permissions={[
-                  "clearing:view-cleared-visa-cybersource",
-                  "clearing:view-uncleared-visa-cybersource",
-                ]}
-              >
-                <Cleared
-                  key="cleared-VISA-Cybersource"
-                  product="VISACBS"
-                  title="Cleared VISA Cybersource"
-                  description="Visa Cybersource transactions that are still marked unsettled in clearing. Settlement files are not applied."
-                />
-              </RequirePermission>
+              <Navigate to="/clearing/cleared?scheme=visacbs" replace />
             }
           />
           <Route
             path="/cleared-mastercard"
             element={
-              <RequirePermission
-                permissions={["clearing:view-cleared-mastercard"]}
-              >
-                <Cleared
-                  key="cleared-MDS"
-                  product="MDS"
-                  title="Cleared Mastercard"
-                  description="Approved Mastercard POS purchases that have been posted for clearing."
-                />
-              </RequirePermission>
+              <Navigate to="/clearing/cleared?scheme=mastercard" replace />
             }
           />
           <Route
             path="/unsettled-eth"
             element={
-              <RequirePermission
-                permissions={["settlement:view-unsettled-eth"]}
-              >
-                <Unsettled
-                  key="unsettled-ETB"
-                  product="ETB"
-                  title="Unsettled ETH"
-                  description="Domestic POS purchases that have been cleared but are not yet settled."
-                />
-              </RequirePermission>
+              <Navigate to="/settlement/unsettled?scheme=eth" replace />
             }
           />
           <Route
             path="/unsettled-visa"
             element={
-              <RequirePermission
-                permissions={["settlement:view-unsettled-visa"]}
-              >
-                <Unsettled
-                  key="unsettled-VISA"
-                  product="VISA"
-                  title="Unsettled VISA"
-                  description="Visa POS purchases that have been cleared but are not yet settled."
-                />
-              </RequirePermission>
+              <Navigate to="/settlement/unsettled?scheme=visa" replace />
+            }
+          />
+          <Route
+            path="/unsettled-visa-cybersource"
+            element={
+              <Navigate to="/settlement/unsettled?scheme=visacbs" replace />
             }
           />
           <Route
             path="/unsettled-mastercard"
             element={
-              <RequirePermission
-                permissions={["settlement:view-unsettled-mastercard"]}
-              >
-                <Unsettled
-                  key="unsettled-MDS"
-                  product="MDS"
-                  title="Unsettled Mastercard"
-                  description="Mastercard POS clearing vs nearest-day IPM settlement totals. Matched = settlement found; No settlement = no nearby settlement amount."
-                />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/visa-settlement"
-            element={
-              <RequirePermission
-                permissions={["settlement:view-settled-visa"]}
-              >
-                <VisaCyberSource />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/mastercard-ipm"
-            element={
-              <RequirePermission
-                permissions={["settlement:view-settled-mastercard"]}
-              >
-                <MastercardIPM />
-              </RequirePermission>
+              <Navigate to="/settlement/unsettled?scheme=mastercard" replace />
             }
           />
           <Route
             path="/settled-eth"
             element={
-              <RequirePermission permissions={["settlement:view-settled-eth"]}>
-                <Settled
-                  key="settled-ETB"
-                  product="ETB"
-                  title="Settled ETH"
-                  description="Domestic POS purchases that have been cleared and settled."
-                />
-              </RequirePermission>
+              <Navigate to="/settlement/settled?scheme=eth" replace />
             }
           />
           <Route
             path="/settled-visa"
             element={
-              <RequirePermission permissions={["settlement:view-settled-visa"]}>
-                <Settled
-                  key="settled-VISA"
-                  product="VISA"
-                  title="Settled VISA"
-                  description="Visa POS purchases that have been cleared and settled."
-                />
-              </RequirePermission>
+              <Navigate to="/settlement/settled?scheme=visa" replace />
+            }
+          />
+          <Route
+            path="/visa-settlement"
+            element={
+              <Navigate to="/settlement/settled?scheme=visa" replace />
+            }
+          />
+          <Route
+            path="/mastercard-ipm"
+            element={
+              <Navigate to="/settlement/settled?scheme=mastercard" replace />
             }
           />
           <Route
             path="/settled-mastercard"
-            element={<Navigate to="/mastercard-ipm" replace />}
+            element={
+              <Navigate to="/settlement/settled?scheme=mastercard" replace />
+            }
           />
           <Route
             path="/cards-per-status"

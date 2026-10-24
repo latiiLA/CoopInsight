@@ -3,6 +3,8 @@ import { ArrowUpDown } from "lucide-react";
 
 import { type DataTableFeatures } from "@/components/data-table-features";
 import { Button } from "@/components/ui/button";
+import { formatMoneyWithCurrency } from "@/lib/iso-currency";
+import { isReversalMsgType, msgTypeLabel } from "@/lib/msg-type";
 import type { SwitchTransaction } from "@/types/switch-transaction-search";
 
 const columnHelper = createColumnHelper<DataTableFeatures, SwitchTransaction>();
@@ -26,19 +28,35 @@ function sortableHeader(label: string) {
   );
 }
 
-function formatAmount(value: number) {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
 export const switchTxnSearchColumns = columnHelper.columns([
   columnHelper.accessor("date", {
     header: sortableHeader("Date"),
   }),
   columnHelper.accessor("time", {
     header: "Time",
+  }),
+  columnHelper.accessor("msgType", {
+    header: "Type",
+    size: 88,
+    maxSize: 100,
+    cell: ({ getValue }) => {
+      const code = (getValue() || "").trim();
+      if (!code) return "-";
+      const label = msgTypeLabel(code);
+      const reversal = isReversalMsgType(code);
+      return (
+        <span
+          className={
+            reversal
+              ? "text-xs text-amber-700 dark:text-amber-400"
+              : "text-xs text-muted-foreground"
+          }
+          title={code}
+        >
+          {label}
+        </span>
+      );
+    },
   }),
   columnHelper.accessor("rrn", {
     header: sortableHeader("RRN"),
@@ -69,17 +87,11 @@ export const switchTxnSearchColumns = columnHelper.columns([
   }),
   columnHelper.accessor("amount", {
     header: sortableHeader("Amount"),
-    cell: ({ row, getValue }) => {
-      const currency = row.original.issuerCurrency?.trim();
-      return (
-        <span className="tabular-nums">
-          {formatAmount(getValue())}
-          {currency ? (
-            <span className="ml-1 text-muted-foreground">{currency}</span>
-          ) : null}
-        </span>
-      );
-    },
+    cell: ({ row, getValue }) => (
+      <span className="tabular-nums">
+        {formatMoneyWithCurrency(getValue(), row.original.issuerCurrency)}
+      </span>
+    ),
   }),
   columnHelper.accessor("txnSrc", {
     header: sortableHeader("Source"),

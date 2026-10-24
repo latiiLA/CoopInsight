@@ -1,6 +1,8 @@
+import { isoCurrencyLabel } from "@/lib/iso-currency";
+
 export function formatUsd(value: number | undefined | null): string {
   if (value == null || Number.isNaN(value)) {
-    return "—";
+    return "-";
   }
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -9,16 +11,23 @@ export function formatUsd(value: number | undefined | null): string {
   }).format(value);
 }
 
+/** Maps numeric ISO currency codes (e.g. 840) to short alpha labels (USD). */
+export function currencyLabel(
+  code: string | number | null | undefined,
+): string {
+  return isoCurrencyLabel(code);
+}
+
 export function formatCount(value: number | undefined | null): string {
   if (value == null || Number.isNaN(value)) {
-    return "—";
+    return "-";
   }
   return value.toLocaleString();
 }
 
 export function formatPct(value: number | undefined | null): string {
   if (value == null || Number.isNaN(value)) {
-    return "—";
+    return "-";
   }
   return `${value.toFixed(1)}%`;
 }

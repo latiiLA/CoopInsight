@@ -199,7 +199,7 @@ export default function PrepaidVisaDashboard() {
           />
           <MetricCard
             compact
-            label="Available balance"
+            label="Avail bal"
             value={formatUsd(dashboard?.fleetAvailableBal)}
             hint="Wallet balance"
             icon={Wallet}
@@ -207,7 +207,7 @@ export default function PrepaidVisaDashboard() {
           />
           <MetricCard
             compact
-            label="Available amount"
+            label="Avail amt"
             value={formatUsd(dashboard?.fleetAvailableAmount)}
             hint="Spendable after holds and overrides"
             icon={Wallet}
@@ -223,7 +223,7 @@ export default function PrepaidVisaDashboard() {
           />
           <MetricCard
             compact
-            label="From available"
+            label="From avail"
             value={formatUsd(dashboard?.fleetFromAvailable)}
             hint="Taken from available (ledger)"
             icon={Scale}
@@ -470,7 +470,7 @@ export default function PrepaidVisaDashboard() {
                     </p>
                     <div className="mt-1 grid grid-cols-3 gap-2 text-sm">
                       <div>
-                        <p className="text-muted-foreground">Available amt</p>
+                        <p className="text-muted-foreground">Avail amt</p>
                         <p className="font-medium tabular-nums">
                           {formatUsd(p.availableAmount)}
                         </p>
@@ -489,14 +489,14 @@ export default function PrepaidVisaDashboard() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">From available</p>
+                        <p className="text-muted-foreground">From avail</p>
                         <p className="font-medium tabular-nums">
                           {formatUsd(p.fromAvailable)}
                         </p>
                       </div>
                     </div>
                     <p className="mt-1.5 text-[11px] text-muted-foreground">
-                      Available amt + blocked + from available{" "}
+                      Avail + blocked + from avail{" "}
                       <span className="font-medium tabular-nums text-foreground">
                         {formatUsd(
                           (p.availableAmount || 0) +

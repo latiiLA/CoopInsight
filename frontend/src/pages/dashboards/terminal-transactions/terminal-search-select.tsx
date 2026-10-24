@@ -20,11 +20,14 @@ export function TerminalSearchSelect({
   value,
   onChange,
   placeholder = "Select a terminal",
+  triggerClassName,
 }: {
   options: TerminalOption[];
   value: string;
   onChange: (terminalId: string) => void;
   placeholder?: string;
+  /** Override default min-width so the control can sit in dense filter grids. */
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -60,7 +63,10 @@ export function TerminalSearchSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full min-w-72 justify-between font-normal lg:w-96"
+          className={cn(
+            "w-full min-w-72 justify-between font-normal lg:w-96",
+            triggerClassName,
+          )}
         >
           <span className="truncate">
             {selected?.label || placeholder}

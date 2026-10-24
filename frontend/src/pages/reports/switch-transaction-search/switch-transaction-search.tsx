@@ -250,17 +250,14 @@ export default function SwitchTransactionSearchPage() {
 
   return (
     <div className="container mx-auto space-y-4 pb-6">
-      <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className="text-lg font-semibold tracking-tight">
-            Switch transaction search
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Look up IST switch log rows by RRN, card, trace, route, and related
-            criteria. Results appear after you search.
-          </p>
-        </div>
-        <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+      <div className="space-y-1 pt-1">
+        <h3 className="text-lg font-semibold tracking-tight">
+          Switch transaction search
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Look up IST switch log rows by date, RRN, card, trace, route, and
+          related criteria. Results appear after you search.
+        </p>
       </div>
 
       <form
@@ -271,6 +268,14 @@ export default function SwitchTransactionSearchPage() {
         }}
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-1">
+            <Label>Date range</Label>
+            <DatePickerWithRange
+              className="w-full min-w-0 shrink"
+              date={dateRange}
+              onDateChange={setDateRange}
+            />
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="sw-product">Product</Label>
             <Input
@@ -467,7 +472,7 @@ export default function SwitchTransactionSearchPage() {
             <Label htmlFor="sw-msgtype">Message type</Label>
             <Input
               id="sw-msgtype"
-              placeholder="e.g. 210"
+              placeholder="e.g. 210 or 410"
               value={form.msgType}
               onChange={(e) => setField("msgType", e.target.value)}
             />

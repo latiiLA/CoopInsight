@@ -8,6 +8,7 @@ import {
   CreditCard,
   CreditCardIcon,
   Download,
+  FileSearch,
   FileUp,
   Home,
   Inbox,
@@ -106,6 +107,14 @@ type NavHome = {
   url: string;
 };
 
+/** Top-level leaf links (same row style as Home, not under a collapsible group). */
+type NavLinkItem = {
+  title: string;
+  icon?: NavIcon;
+  url: string;
+  permissions?: string[];
+};
+
 function canSeeNavItem(item: NavSubItem, granted: string[]) {
   if (!item.url || item.url === "#") {
     return false;
@@ -130,6 +139,7 @@ const data: {
     avatar: string;
   };
   navHome: NavHome;
+  navLinks: NavLinkItem[];
   navMain: NavItem[];
 } = {
   versions: ["1.0.1"],
@@ -145,6 +155,8 @@ const data: {
     url: "/home",
     icon: Home,
   },
+
+  navLinks: [],
 
   navMain: [
     {
@@ -523,102 +535,79 @@ const data: {
       ],
     },
     {
-      title: "Clearing and Settlement",
-      icon: Scale,
-      url: "clearing-and-settlement",
+      title: "EJ",
+      icon: FileSearch,
+      url: "#",
       items: [
         {
-          title: "Uncleared ETH",
-          url: "uncleared-eth",
-          icon: Wallet,
-          permissions: ["clearing:view-uncleared-eth"],
+          title: "Finder",
+          icon: Search,
+          url: "ej-finder",
+          permissions: ["report:search-ej-transactions"],
         },
         {
-          title: "Uncleared VISA",
-          url: "uncleared-visa",
-          icon: VisaIcon,
-          permissions: ["clearing:view-uncleared-visa"],
+          title: "Coverage",
+          icon: ChartBar,
+          url: "ej-coverage",
+          permissions: ["report:search-ej-transactions"],
         },
+      ],
+    },
+    {
+      title: "Clearing",
+      icon: Scale,
+      url: "#",
+      items: [
         {
-          title: "Uncleared VISA Cybersource",
-          url: "uncleared-visa-cybersource",
-          icon: VisaIcon,
-          permissions: ["clearing:view-uncleared-visa-cybersource"],
-        },
-        {
-          title: "Uncleared Mastercard",
-          url: "uncleared-mastercard",
-          icon: MastercardIcon,
-          permissions: ["clearing:view-uncleared-mastercard"],
-        },
-        {
-          title: "Cleared ETH",
-          url: "cleared-eth",
-          icon: Wallet,
-          permissions: ["clearing:view-cleared-eth"],
-        },
-        {
-          title: "Cleared VISA",
-          url: "cleared-visa",
-          icon: VisaIcon,
-          permissions: ["clearing:view-cleared-visa"],
-        },
-        {
-          title: "Cleared VISA Cybersource",
-          url: "cleared-visa-cybersource",
-          icon: VisaIcon,
+          title: "Uncleared",
+          url: "clearing/uncleared",
+          icon: Inbox,
           permissions: [
-            "clearing:view-cleared-visa-cybersource",
+            "clearing:view-uncleared-eth",
+            "clearing:view-uncleared-visa",
             "clearing:view-uncleared-visa-cybersource",
+            "clearing:view-uncleared-mastercard",
           ],
         },
         {
-          title: "Cleared Mastercard",
-          url: "cleared-mastercard",
-          icon: MastercardIcon,
-          permissions: ["clearing:view-cleared-mastercard"],
+          title: "Cleared",
+          url: "clearing/cleared",
+          icon: Scale,
+          permissions: [
+            "clearing:view-cleared-eth",
+            "clearing:view-cleared-visa",
+            "clearing:view-cleared-visa-cybersource",
+            "clearing:view-uncleared-visa-cybersource",
+            "clearing:view-cleared-mastercard",
+          ],
+        },
+      ],
+    },
+    {
+      title: "Settlement",
+      icon: Wallet,
+      url: "#",
+      items: [
+        {
+          title: "Unsettled",
+          url: "settlement/unsettled",
+          icon: Inbox,
+          permissions: [
+            "settlement:view-unsettled-eth",
+            "settlement:view-unsettled-visa",
+            "settlement:view-unsettled-visa-cybersource",
+            "settlement:view-unsettled-mastercard",
+          ],
         },
         {
-          title: "Unsettled ETH",
-          url: "unsettled-eth",
+          title: "Settled",
+          url: "settlement/settled",
           icon: Wallet,
-          permissions: ["settlement:view-unsettled-eth"],
-        },
-        {
-          title: "Unsettled VISA",
-          url: "unsettled-visa",
-          icon: VisaIcon,
-          permissions: ["settlement:view-unsettled-visa"],
-        },
-        {
-          title: "Unsettled VISA Cybersource",
-          url: "unsettled-visa-cybersource",
-          icon: VisaIcon,
-          permissions: ["settlement:view-unsettled-visa-cybersource"],
-        },
-        {
-          title: "Unsettled Mastercard",
-          url: "unsettled-mastercard",
-          icon: MastercardIcon,
-          permissions: ["settlement:view-unsettled-mastercard"],
-        },
-        {
-          title: "Settled ETH",
-          url: "settled-eth",
-          icon: Wallet,
-          permissions: ["settlement:view-settled-eth"],
-        },
-        {
-          title: "Settled VISA",
-          url: "visa-settlement",
-          icon: VisaIcon,
-          permissions: ["settlement:view-settled-visa"],
-        },
-        {
-          title: "Settled Mastercard",
-          url: "mastercard-ipm",
-          icon: MastercardIcon,
-          permissions: ["settlement:view-settled-mastercard"],
+          permissions: [
+            "settlement:view-settled-eth",
+            "settlement:view-settled-visa",
+            "settlement:view-settled-mastercard",
+          ],
         },
       ],
     },
@@ -745,6 +734,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     (state: RootState) => state.user,
   );
   const HomeIcon = data.navHome.icon;
+  const navLinks = data.navLinks.filter((item) =>
+    canSeeNavItem(item, permissions),
+  );
   const navMain = data.navMain
     .map((item) => ({
       ...item,
@@ -775,6 +767,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
+              {navLinks.map((item) => {
+                const LinkIcon = item.icon;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild tooltip={item.title}>
+                      <NavLink to={item.url}>
+                        {LinkIcon ? <LinkIcon /> : null}
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
 
               {navMain.map((item) => (
                 <NavMainItem key={item.title} item={item} />

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableFeatures } from "@/components/data-table-features";
 import type { UnsettledProduct } from "@/features/unsettled_slice";
+import { formatMoneyWithCurrency } from "@/lib/iso-currency";
 import { UnsettledTransaction } from "@/types/unsettled";
 
 const columnHelper = createColumnHelper<
@@ -12,16 +13,9 @@ const columnHelper = createColumnHelper<
   UnsettledTransaction
 >();
 
-function formatAmount(value: number) {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
 function MatchStatusCell({ row }: { row: { original: UnsettledTransaction } }) {
   const status = row.original.matchStatus;
-  if (!status) return <span>{"\u2014"}</span>;
+  if (!status) return <span>-</span>;
   const matched = status === "matched";
   return (
     <span
@@ -44,7 +38,7 @@ function MatchedSettlAmountCell({
 }) {
   const tx = row.original;
   if (tx.matchStatus !== "matched" || tx.matchedAmount == null) {
-    return <span>{"\u2014"}</span>;
+    return <span>-</span>;
   }
   const isSum = tx.matchMode === "sum";
   // Primary = settlement amount that matched (txn-level for 1:1, subset total
@@ -53,20 +47,21 @@ function MatchedSettlAmountCell({
     tx.matchedClearingAmount != null
       ? tx.matchedClearingAmount
       : Math.abs(tx.amount);
+  const money = (n: number) => formatMoneyWithCurrency(n, tx.currency);
   const titleParts = [
     tx.matchNote,
     isSum
-      ? `Subset settlement total; this txn ${formatAmount(clearing)}`
+      ? `Subset settlement total; this txn ${money(clearing)}`
       : "Txn-level settlement match",
     tx.matchedAmountField ? `PDS ${tx.matchedAmountField}` : "",
     tx.matchedFunctionCode ? `IPM ${tx.matchedFunctionCode}` : "",
   ].filter(Boolean);
   return (
-    <span title={titleParts.join(" — ")} className="tabular-nums">
-      {formatAmount(tx.matchedAmount)}
+    <span title={titleParts.join(". ")} className="tabular-nums">
+      {money(tx.matchedAmount)}
       {isSum ? (
         <span className="ml-1 text-xs text-muted-foreground">
-          (txn {formatAmount(clearing)})
+          (txn {money(clearing)})
         </span>
       ) : null}
     </span>
@@ -80,19 +75,30 @@ function FinancialPositionCell({
 }) {
   const tx = row.original;
   if (tx.financialPositionTotal == null) {
-    return <span>{"\u2014"}</span>;
+    return <span>-</span>;
   }
   const field = tx.financialPositionField
     ? ` (PDS ${tx.financialPositionField})`
     : "";
   return (
     <span title={`685 Financial position${field}`} className="tabular-nums">
-      {formatAmount(tx.financialPositionTotal)}
+      {formatMoneyWithCurrency(tx.financialPositionTotal, tx.currency)}
     </span>
   );
 }
 
+function formatSettlementAmount(row: UnsettledTransaction) {
+  const amount = row.settlementAmount;
+  const currency = row.settlementCurrency;
+  if ((!amount || amount === 0) && (!currency || currency === 0)) {
+    return "-";
+  }
+  return formatMoneyWithCurrency(amount, currency);
+}
+
 export function getUnsettledColumns(product: UnsettledProduct) {
+  const showSettlement = product === "MDS";
+
   return columnHelper.columns([
     columnHelper.display({
       id: "select",
@@ -140,17 +146,11 @@ export function getUnsettledColumns(product: UnsettledProduct) {
     columnHelper.accessor("time", {
       header: "Time",
     }),
-    // columnHelper.accessor("msgType", {
-    //   header: "Type",
-    // }),
     columnHelper.accessor("rrn", {
       header: "Reference no.",
     }),
     columnHelper.accessor("stan", {
       header: "Trace no.",
-    }),
-    columnHelper.accessor("respCode", {
-      header: "Response",
     }),
     columnHelper.accessor("amount", {
       header: ({ column }) => (
@@ -158,12 +158,28 @@ export function getUnsettledColumns(product: UnsettledProduct) {
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Amount
+          {showSettlement ? "Source amount" : "Amount"}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ getValue }) => formatAmount(getValue()),
+      cell: ({ row, getValue }) => (
+        <span className="tabular-nums">
+          {formatMoneyWithCurrency(getValue(), row.original.currency)}
+        </span>
+      ),
     }),
+    ...(showSettlement
+      ? [
+          columnHelper.accessor("settlementAmount", {
+            header: "Settlement amount",
+            cell: ({ row }) => (
+              <span className="tabular-nums">
+                {formatSettlementAmount(row.original)}
+              </span>
+            ),
+          }),
+        ]
+      : []),
     ...(product === "MDS"
       ? [
           columnHelper.accessor("matchStatus", {
@@ -172,7 +188,7 @@ export function getUnsettledColumns(product: UnsettledProduct) {
           }),
           columnHelper.accessor("matchedSettlementDate", {
             header: "Matched settl. date",
-            cell: ({ getValue }) => getValue() || "\u2014",
+            cell: ({ getValue }) => getValue() || "-",
           }),
           columnHelper.accessor("matchedAmount", {
             header: "Matched settl. amount",
@@ -193,11 +209,14 @@ export function getUnsettledColumns(product: UnsettledProduct) {
         const value = getValue() || "";
         return value.length > 36
           ? `${value.slice(0, 36)}\u2026`
-          : value || "\u2014";
+          : value || "-";
       },
     }),
     columnHelper.accessor("cardProduct", {
       header: "Card product",
+    }),
+    columnHelper.accessor("respCode", {
+      header: "Response",
     }),
     columnHelper.accessor("procCode", {
       header: "Processing code",

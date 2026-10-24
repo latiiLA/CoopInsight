@@ -52,6 +52,7 @@ type FormState = {
   currency: string;
   mcc: string;
   acquiringCountry: string;
+  msgType: string;
   result: CortexTxnResultFilter;
   reversal: CortexTxnReversalFilter;
   amountMin: string;
@@ -76,6 +77,7 @@ const emptyForm = (): FormState => ({
   currency: "",
   mcc: "",
   acquiringCountry: "",
+  msgType: "",
   result: "",
   reversal: "",
   amountMin: "",
@@ -158,6 +160,7 @@ export default function CortexTransactionSearchPage() {
         currency: form.currency || undefined,
         mcc: form.mcc || undefined,
         acquiringCountry: form.acquiringCountry || undefined,
+        msgType: form.msgType || undefined,
         result: form.result || undefined,
         reversal: form.reversal || undefined,
         amountMin,
@@ -258,17 +261,14 @@ export default function CortexTransactionSearchPage() {
 
   return (
     <div className="container mx-auto space-y-4 pb-6">
-      <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className="text-lg font-semibold tracking-tight">
-            Cortex transaction search
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Look up Cortex log rows by RRN, card, STAN, log id, and related
-            criteria. Results appear after you search.
-          </p>
-        </div>
-        <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+      <div className="space-y-1 pt-1">
+        <h3 className="text-lg font-semibold tracking-tight">
+          Cortex transaction search
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Look up Cortex log rows by date, RRN, card, STAN, log id, and related
+          criteria. Results appear after you search.
+        </p>
       </div>
 
       <form
@@ -279,6 +279,14 @@ export default function CortexTransactionSearchPage() {
         }}
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-1">
+            <Label>Date range</Label>
+            <DatePickerWithRange
+              className="w-full min-w-0 shrink"
+              date={dateRange}
+              onDateChange={setDateRange}
+            />
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="ctx-product">Product</Label>
             <Input
@@ -433,6 +441,15 @@ export default function CortexTransactionSearchPage() {
               placeholder="Country code"
               value={form.acquiringCountry}
               onChange={(e) => setField("acquiringCountry", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ctx-msgtype">Message type</Label>
+            <Input
+              id="ctx-msgtype"
+              placeholder="e.g. 210 or 410"
+              value={form.msgType}
+              onChange={(e) => setField("msgType", e.target.value)}
             />
           </div>
           <div className="space-y-1.5">

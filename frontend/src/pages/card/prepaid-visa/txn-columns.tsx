@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { PrepaidVisaTransaction } from "@/types/prepaid-visa";
 
 import {
+  currencyLabel,
   formatMerchantLabel,
   formatUsd,
   isReversalMsgType,
@@ -91,10 +92,11 @@ export const txnColumns = columnHelper.columns([
       const bill = getValue();
       const txn = row.original.amountTxn;
       const txnCur = row.original.txnCurrency?.trim();
+      const txnCurLabel = currencyLabel(txnCur);
       const showTxn =
         typeof txn === "number" &&
         txnCur &&
-        txnCur !== "840" &&
+        txnCurLabel !== "USD" &&
         Math.abs(txn - bill) > 0.009;
       return (
         <div className="tabular-nums">
@@ -105,7 +107,7 @@ export const txnColumns = columnHelper.columns([
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}{" "}
-              ({txnCur})
+              {txnCurLabel || txnCur}
             </div>
           ) : null}
         </div>
@@ -141,7 +143,7 @@ export const txnColumns = columnHelper.columns([
     header: sortableHeader("Terminal"),
   }),
   columnHelper.accessor("availableAmount", {
-    header: sortableHeader("Available amt"),
+    header: sortableHeader("Avail amt"),
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("blockedBalance", {
@@ -149,7 +151,7 @@ export const txnColumns = columnHelper.columns([
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("fromAvailable", {
-    header: sortableHeader("From available"),
+    header: sortableHeader("From avail"),
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("branchName", {

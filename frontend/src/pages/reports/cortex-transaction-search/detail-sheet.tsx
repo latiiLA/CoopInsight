@@ -8,6 +8,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { formatMoneyWithCurrency } from "@/lib/iso-currency";
+import { msgTypeDisplay } from "@/lib/msg-type";
 import { cn } from "@/lib/utils";
 import type { CortexTransactionDetail } from "@/types/cortex-transaction-search";
 
@@ -228,7 +230,10 @@ export function CortexTransactionDetailSheet({
 
               <Section title="Message">
                 <Grid>
-                  <Field label="Message class" value={detail.msgClass} />
+                  <Field
+                    label="Message class"
+                    value={msgTypeDisplay(detail.msgClass) || "-"}
+                  />
                   <Field label="Message function" value={detail.msgFunction} />
                   <Field label="Txn code" value={detail.txnCode} />
                   <Field label="Sub txn code" value={detail.subTxnCode} />
@@ -245,11 +250,17 @@ export function CortexTransactionDetailSheet({
                 <Grid>
                   <Field
                     label="Billing amount (card)"
-                    value={`${money(detail.amount)} (${detail.currency || "-"})`}
+                    value={formatMoneyWithCurrency(
+                      detail.amount,
+                      detail.currency,
+                    )}
                   />
                   <Field
                     label="Txn amount (merchant)"
-                    value={`${money(detail.amountTxn)} (${detail.txnCurrency || "-"})`}
+                    value={formatMoneyWithCurrency(
+                      detail.amountTxn,
+                      detail.txnCurrency,
+                    )}
                   />
                   <Field
                     label="Original amount"
@@ -271,7 +282,10 @@ export function CortexTransactionDetailSheet({
                   />
                   <Field
                     label="Settlement"
-                    value={`${money(detail.amountSettlement)} (${detail.settlementCurrency || "-"})`}
+                    value={formatMoneyWithCurrency(
+                      detail.amountSettlement,
+                      detail.settlementCurrency,
+                    )}
                   />
                   <Field
                     label="Settlement rate"

@@ -385,7 +385,7 @@ export default function TerminalReconExportPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+          <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-1">
             <Label>Terminal</Label>
             <TerminalSearchSelect
               options={terminalOptions}
@@ -396,9 +396,10 @@ export default function TerminalReconExportPage() {
               placeholder={
                 fleetLoading ? "Loading terminals..." : "All terminals"
               }
+              triggerClassName="min-w-0 w-full lg:w-full"
             />
           </div>
-          <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+          <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-1 xl:col-span-1">
             <Label>Date range</Label>
             <DatePickerWithRange
               className="w-full min-w-0 shrink"

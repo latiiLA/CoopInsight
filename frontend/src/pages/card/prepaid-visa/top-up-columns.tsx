@@ -83,7 +83,7 @@ export const topUpColumns = columnHelper.columns([
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("availableAmount", {
-    header: sortableHeader("Available amt"),
+    header: sortableHeader("Avail amt"),
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("blockedBalance", {
@@ -91,7 +91,7 @@ export const topUpColumns = columnHelper.columns([
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("fromAvailable", {
-    header: sortableHeader("From available"),
+    header: sortableHeader("From avail"),
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("description", {

@@ -10,6 +10,8 @@ export type ClearedTransaction = {
   respCode: string;
   amount: number;
   currency: number;
+  settlementAmount: number;
+  settlementCurrency: number;
   terminalId: string;
   merchant: string;
   cardProduct: string;

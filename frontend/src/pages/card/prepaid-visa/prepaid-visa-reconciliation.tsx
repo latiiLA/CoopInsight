@@ -109,8 +109,8 @@ export default function PrepaidVisaReconciliation() {
           Prepaid Visa reconciliation
         </h3>
         <p className="text-sm text-muted-foreground">
-          Per wallet: top-ups should equal available amount + blocked + from
-          available. Cards that share an account are rolled into one row. Click
+          Per wallet: top-ups should equal avail amt + blocked + from avail.
+          Cards that share an account are rolled into one row. Click
           a row to inspect activity.
         </p>
       </div>

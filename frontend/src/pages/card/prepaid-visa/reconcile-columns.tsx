@@ -74,11 +74,11 @@ export const prepaidVisaReconcileColumns = () => [
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("availableAmount", {
-    header: sortableHeader("Available amt"),
+    header: sortableHeader("Avail amt"),
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("availableBalance", {
-    header: sortableHeader("Available bal"),
+    header: sortableHeader("Avail bal"),
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("blockedBalance", {
@@ -86,7 +86,7 @@ export const prepaidVisaReconcileColumns = () => [
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("fromAvailable", {
-    header: sortableHeader("From available"),
+    header: sortableHeader("From avail"),
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("unloaded", {

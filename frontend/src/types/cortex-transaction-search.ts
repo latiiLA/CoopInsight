@@ -48,6 +48,7 @@ export type CortexTransactionSearchArgs = {
   currency?: string;
   mcc?: string;
   acquiringCountry?: string;
+  msgType?: string;
   result?: CortexTxnResultFilter;
   reversal?: CortexTxnReversalFilter;
   amountMin?: number;

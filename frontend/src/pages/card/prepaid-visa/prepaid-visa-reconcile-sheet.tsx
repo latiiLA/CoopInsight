@@ -339,11 +339,11 @@ export function PrepaidVisaReconcileSheet({
                   <Field label="Top-ups" value={formatUsd(card.topUpAmount)} />
                   <Field label="Expected" value={formatUsd(card.expected)} />
                   <Field
-                    label="Available amount"
+                    label="Avail amt"
                     value={formatUsd(card.availableAmount)}
                   />
                   <Field
-                    label="Available balance"
+                    label="Avail bal"
                     value={formatUsd(card.availableBalance)}
                   />
                   <Field
@@ -351,7 +351,7 @@ export function PrepaidVisaReconcileSheet({
                     value={formatUsd(card.blockedBalance)}
                   />
                   <Field
-                    label="From available"
+                    label="From avail"
                     value={formatUsd(card.fromAvailable)}
                   />
                   <Field
@@ -365,7 +365,7 @@ export function PrepaidVisaReconcileSheet({
                   />
                 </div>
                 <p className="mt-2 text-[11px] text-muted-foreground">
-                  Expected = available amount + blocked + from available +
+                  Expected = avail amt + blocked + from avail +
                   unloaded
                   {(card.linkedCards ?? 1) > 1
                     ? ` · ${card.linkedCards} cards share this wallet (amounts are combined)`
@@ -491,7 +491,7 @@ export function PrepaidVisaReconcileSheet({
                                   "font-medium text-amber-700 dark:text-amber-400",
                               )}
                             >
-                              From available {formatSigned(r.availableDelta)}
+                              From avail {formatSigned(r.availableDelta)}
                               {Math.abs(r.blockedDelta) > 0.009
                                 ? ` · Blocked ${formatSigned(r.blockedDelta)}`
                                 : ""}

@@ -77,7 +77,7 @@ export const unloadColumns = columnHelper.columns([
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("availableAmount", {
-    header: sortableHeader("Available amt"),
+    header: sortableHeader("Avail amt"),
     cell: ({ getValue }) => formatUsd(getValue()),
   }),
   columnHelper.accessor("description", {
