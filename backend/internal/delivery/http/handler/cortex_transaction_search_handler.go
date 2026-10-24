@@ -118,6 +118,7 @@ func parseCortexTxnSearchRequest(c *gin.Context) (model.CortexTransactionSearchR
 		Currency:         strings.TrimSpace(c.Query("currency")),
 		MCC:              strings.TrimSpace(c.Query("mcc")),
 		AcquiringCountry: strings.TrimSpace(c.Query("acquiringCountry")),
+		MsgType:          strings.TrimSpace(c.Query("msgType")),
 		Result:           strings.TrimSpace(c.Query("result")),
 		Reversal:         strings.TrimSpace(c.Query("reversal")),
 		AmountMin:        amtMin,

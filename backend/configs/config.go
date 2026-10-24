@@ -22,7 +22,13 @@ var (
 	SourceMongoConnected bool
 	SourceDBName         string
 	SourceMongoURL       string
-	Timeout              time.Duration
+	// EJ search uses the same Mongo client as DB_NAME, but a separate database.
+	EJEnabled       bool
+	EJDBName        string
+	EJRoot          string
+	EJWatcherEnabled bool
+	EJPollInterval  time.Duration
+	Timeout         time.Duration
 	FileUploadPath       string
 	LogLevel             string
 
@@ -488,6 +494,51 @@ func LoadConfig() {
 		}
 	} else {
 		log.Print("Source Mongo is disabled; TMS report features that need coop_tms_db will be unavailable")
+	}
+
+	// EJ search Mongo — same MONGO_URL client, separate database name.
+	EJDBName = strings.TrimSpace(os.Getenv("EJ_DB_NAME"))
+	EJRoot = strings.TrimSpace(os.Getenv("EJ_ROOT"))
+	explicitEJ, ejEnabled := parseBoolEnv("EJ_ENABLED")
+	if explicitEJ {
+		EJEnabled = ejEnabled
+	} else {
+		EJEnabled = EJDBName != ""
+	}
+
+	EJPollInterval = 2 * time.Minute
+	if raw := strings.TrimSpace(os.Getenv("EJ_POLL_INTERVAL")); raw != "" {
+		d, err := time.ParseDuration(raw)
+		if err != nil {
+			log.Fatalf("EJ_POLL_INTERVAL is invalid: %v", err)
+		}
+		if d < 15*time.Second {
+			log.Fatal("EJ_POLL_INTERVAL must be at least 15s")
+		}
+		EJPollInterval = d
+	}
+
+	explicitEJWatcher, ejWatcher := parseBoolEnv("EJ_WATCHER_ENABLED")
+	if explicitEJWatcher {
+		EJWatcherEnabled = ejWatcher
+	} else {
+		// Default on when EJ is enabled and a root is configured (Linux/Windows).
+		EJWatcherEnabled = EJEnabled && EJRoot != ""
+	}
+
+	if EJEnabled {
+		if EJDBName == "" {
+			log.Fatal("EJ_DB_NAME is required when EJ search is enabled")
+		}
+		if EJRoot == "" {
+			log.Print("EJ_ROOT is empty; EJ indexer/watcher will have no source folder until it is set")
+		}
+		if EJWatcherEnabled && EJRoot == "" {
+			log.Print("EJ_WATCHER_ENABLED is on but EJ_ROOT is empty; watcher will stay idle")
+		}
+	} else {
+		log.Print("EJ search Mongo is disabled; set EJ_DB_NAME (and EJ_ROOT for indexing) to enable")
+		EJWatcherEnabled = false
 	}
 
 	explicitSSHEnabled, sshEnabled := parseBoolEnv("SSH_SWITCH_ENABLED")

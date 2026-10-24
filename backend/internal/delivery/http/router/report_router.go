@@ -336,3 +336,63 @@ func registerReportRoutes(
 		terminalTransactionHandler.GetPosComparison,
 	)
 }
+
+// registerEJTransactionSearchRoutes is Mongo-backed (separate EJ_DB_NAME) and
+// lives on the default protected group rather than the Oracle timeout group.
+func registerEJTransactionSearchRoutes(
+	protected *gin.RouterGroup,
+	ejTransactionSearchHandler handler.EJTransactionSearchHandler,
+) {
+	if ejTransactionSearchHandler == nil {
+		return
+	}
+	reports := protected.Group("/reports")
+	reports.GET(
+		"/ej-coverage",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:search-ej-transactions"},
+		),
+		ejTransactionSearchHandler.GetCoverage,
+	)
+	reports.GET(
+		"/ej-transactions/search",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:search-ej-transactions"},
+		),
+		ejTransactionSearchHandler.Search,
+	)
+	reports.GET(
+		"/ej-transactions/:id/journal",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:search-ej-transactions"},
+		),
+		ejTransactionSearchHandler.GetJournal,
+	)
+	reports.GET(
+		"/ej-transactions/:id/journal-file",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:search-ej-transactions"},
+		),
+		ejTransactionSearchHandler.GetJournalFile,
+	)
+	reports.GET(
+		"/ej-transactions/:id/journal-file/download",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:search-ej-transactions"},
+		),
+		ejTransactionSearchHandler.DownloadJournalFile,
+	)
+	reports.GET(
+		"/ej-transactions/:id",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:search-ej-transactions"},
+		),
+		ejTransactionSearchHandler.GetByID,
+	)
+}

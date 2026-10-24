@@ -63,7 +63,9 @@ var Catalog = []permissionSeed{
 	{Name: "report:view-transaction-mix", Resource: "report", Action: "view-transaction-mix", Description: "View the switch transaction mix report (scheme, routing, and message type breakdown with percentages)"},
 	{Name: "report:search-cortex-transactions", Resource: "report", Action: "search-cortex-transactions", Description: "Search Cortex log transactions by RRN, card, merchant, and related criteria"},
 	{Name: "report:search-switch-transactions", Resource: "report", Action: "search-switch-transactions", Description: "Search IST switch log transactions by RRN, card, route, and related criteria"},
+	{Name: "report:view-alpha-response", Resource: "report", Action: "view-alpha-response", Description: "View alphabetic response descriptions on Switch transaction detail"},
 	{Name: "report:export-terminal-recon", Resource: "report", Action: "export-terminal-recon", Description: "Export approved Switch or Cortex transactions as CSV or XLSX"},
+	{Name: "report:search-ej-transactions", Resource: "report", Action: "search-ej-transactions", Description: "Search ATM electronic journal transactions by card first4/last4, terminal, and auth number"},
 
 	{Name: "monitoring:view-onus", Resource: "monitoring", Action: "view-onus", Description: "View on-us live monitoring"},
 	{Name: "monitoring:view-offus", Resource: "monitoring", Action: "view-offus", Description: "View off-us live monitoring"},

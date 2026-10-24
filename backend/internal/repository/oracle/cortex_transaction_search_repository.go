@@ -337,6 +337,11 @@ func cortexTxnSearchFilterClause(req model.CortexTransactionSearchRequest, inclu
 		parts = append(parts, `UPPER(TRIM(NVL(t.ACQCOUNTRY, ' '))) LIKE :acq_ctry_like`)
 		args = append(args, sql.Named("acq_ctry_like", acqCountry+"%"))
 	}
+	msgType := cortexTxnSanitizeDigits(req.MsgType, 6)
+	if msgType != "" {
+		parts = append(parts, `TRIM(TO_CHAR(t.MSGCLS)) = :msg_type_exact`)
+		args = append(args, sql.Named("msg_type_exact", msgType))
+	}
 	switch strings.ToLower(strings.TrimSpace(req.Result)) {
 	case "approved":
 		parts = append(parts, `TRIM(t.RSPCODE) = '00'`)

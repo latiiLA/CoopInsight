@@ -12,6 +12,8 @@ type SettledTransaction struct {
 	RespCode       string  `json:"respCode"`
 	Amount         float64 `json:"amount"`
 	Currency       int64   `json:"currency"`
+	SettlementAmount   float64 `json:"settlementAmount"`
+	SettlementCurrency int64   `json:"settlementCurrency"`
 	TerminalID     string  `json:"terminalId"`
 	Merchant       string  `json:"merchant"`
 	CardProduct    string  `json:"cardProduct"`

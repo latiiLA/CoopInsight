@@ -8,9 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
 	"github.com/latiiLA/CoopInsight/backend/internal/common/response"
+	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/middleware"
 	"github.com/latiiLA/CoopInsight/backend/internal/domain/model"
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
 )
+
+// alphaResponsePermission unlocks alphabetic host response text on Switch detail.
+const alphaResponsePermission = "report:view-alpha-response"
 
 type SwitchTransactionSearchHandler interface {
 	Search(c *gin.Context)
@@ -65,6 +69,9 @@ func (h *switchTransactionSearchHandler) GetByRowID(c *gin.Context) {
 	if err != nil {
 		writeAppError(c, err)
 		return
+	}
+	if detail != nil && !middleware.HasPermission(c, alphaResponsePermission) {
+		detail.AlphaRspCode = ""
 	}
 
 	c.JSON(http.StatusOK, response.Status{

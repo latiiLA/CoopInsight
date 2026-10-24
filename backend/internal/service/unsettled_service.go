@@ -305,6 +305,8 @@ func unclearedToUnsettled(u model.UnclearedTransaction) model.UnsettledTransacti
 		RespCode:       u.RespCode,
 		Amount:         u.Amount,
 		Currency:       u.Currency,
+		SettlementAmount:   u.SettlementAmount,
+		SettlementCurrency: u.SettlementCurrency,
 		TerminalID:     u.TerminalID,
 		Merchant:       u.Merchant,
 		CardProduct:    u.CardProduct,

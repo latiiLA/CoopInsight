@@ -24,6 +24,7 @@ type CortexTransactionSearchRequest struct {
 	Currency         string   `json:"currency,omitempty"`
 	MCC              string   `json:"mcc,omitempty"`
 	AcquiringCountry string   `json:"acquiringCountry,omitempty"`
+	MsgType          string   `json:"msgType,omitempty"`  // MSGCLS exact, e.g. 210 or 410
 	Result           string   `json:"result,omitempty"`   // "" | approved | declined
 	Reversal         string   `json:"reversal,omitempty"` // "" | exclude | only
 	AmountMin        *float64 `json:"amountMin,omitempty"`

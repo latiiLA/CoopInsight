@@ -17,6 +17,7 @@ import (
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func main() {
@@ -79,6 +80,41 @@ func main() {
 
 	if err := mongodb.EnsureActivityLogIndexes(ctx, db); err != nil {
 		logrus.WithError(err).Warn("Could not create activity log indexes")
+	}
+
+	var ejDB *mongo.Database
+	if configs.EJEnabled && configs.EJDBName != "" {
+		ejDB = mongoClient.Database(configs.EJDBName)
+		if err := database.PingDatabase(ctx, ejDB); err != nil {
+			logrus.WithError(err).WithField("database", configs.EJDBName).
+				Warn("EJ Mongo database ping failed; EJ search will be unavailable")
+			ejDB = nil
+		} else if err := mongodb.EnsureEJIndexes(ctx, ejDB); err != nil {
+			logrus.WithError(err).Warn("Could not create EJ indexes")
+		} else {
+			logrus.WithField("database", ejDB.Name()).Info("EJ Mongo database ready")
+		}
+	} else {
+		logrus.Info("EJ search Mongo is disabled; skipping EJ database")
+	}
+
+	if ejDB != nil && configs.EJWatcherEnabled && configs.EJRoot != "" {
+		ejIndexer := service.NewEJIndexerService(
+			mongodb.NewEJFileRepository(ejDB),
+			mongodb.NewEJTransactionRepository(ejDB),
+		)
+		ejWatcher := service.NewEJWatcherService(
+			ejIndexer,
+			configs.EJRoot,
+			configs.EJPollInterval,
+		)
+		go ejWatcher.Start(context.Background())
+		logrus.WithFields(logrus.Fields{
+			"root":     configs.EJRoot,
+			"interval": configs.EJPollInterval.String(),
+		}).Info("EJ file poller running in background")
+	} else if configs.EJEnabled {
+		logrus.Info("EJ watcher is off; set EJ_ROOT and EJ_WATCHER_ENABLED=true to poll for new journal data")
 	}
 
 	sourceClient, tmsDB, sourceErr := database.OpenSourceMongo(ctx, mongoClient)
@@ -233,6 +269,22 @@ func main() {
 	var cortexTransactionSearchHandler handler.CortexTransactionSearchHandler
 	var switchTransactionSearchHandler handler.SwitchTransactionSearchHandler
 	var terminalReconExportHandler handler.TerminalReconExportHandler
+	var ejTransactionSearchHandler handler.EJTransactionSearchHandler
+	if ejDB != nil {
+		ejFileRepo := mongodb.NewEJFileRepository(ejDB)
+		ejTransactionSearchHandler = handler.NewEJTransactionSearchHandler(
+			service.NewEJTransactionSearchService(
+				mongodb.NewEJTransactionRepository(ejDB),
+				ejFileRepo,
+			),
+			service.NewEJCoverageService(ejFileRepo, atmTerminalRepo),
+		)
+	} else {
+		ejTransactionSearchHandler = handler.NewEJTransactionSearchHandler(
+			service.NewEJTransactionSearchService(nil, nil),
+			service.NewEJCoverageService(nil, atmTerminalRepo),
+		)
+	}
 	var safHandler handler.SafHandler
 	if oracleDB != nil {
 		testHandler = handler.NewTestHandler(
@@ -470,6 +522,7 @@ func main() {
 		CortexTransactionSearch:    cortexTransactionSearchHandler,
 		SwitchTransactionSearch:    switchTransactionSearchHandler,
 		TerminalReconExport:        terminalReconExportHandler,
+		EJTransactionSearch:        ejTransactionSearchHandler,
 		VisaSettlement:             visaSettlementHandler,
 		MastercardIPM:              mastercardIPMHandler,
 	})

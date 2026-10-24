@@ -13,7 +13,13 @@ func registerAtmTerminalRoutes(protected *gin.RouterGroup, atmTerminalHandler ha
 		"/atm",
 		middleware.AuthorizeRolesOrPermissions(
 			[]string{"SUPERADMIN"},
-			[]string{"terminal:view-atm", "terminal:view-atm-transaction"},
+			[]string{
+				"terminal:view-atm",
+				"terminal:view-atm-transaction",
+				// EJ Finder / recon pickers need the full TMS ATM list.
+				"report:search-ej-transactions",
+				"report:export-terminal-recon",
+			},
 		),
 		atmTerminalHandler.GetAll,
 	)

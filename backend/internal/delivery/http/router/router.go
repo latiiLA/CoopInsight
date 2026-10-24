@@ -40,6 +40,7 @@ type Handlers struct {
 	CortexTransactionSearch    handler.CortexTransactionSearchHandler
 	SwitchTransactionSearch    handler.SwitchTransactionSearchHandler
 	TerminalReconExport        handler.TerminalReconExportHandler
+	EJTransactionSearch        handler.EJTransactionSearchHandler
 	VisaSettlement             handler.VisaSettlementHandler
 	MastercardIPM              handler.MastercardIPMHandler
 	EmbedSuccessRate           handler.EmbedSuccessRateHandler
@@ -159,6 +160,7 @@ func SetupRouter(handlers Handlers) *gin.Engine {
 	registerActivityLogRoutes(protected, handlers.ActivityLog)
 	registerAtmTerminalRoutes(protected, handlers.AtmTerminal)
 	registerPosTerminalRoutes(protected, handlers.PosTerminal)
+	registerEJTransactionSearchRoutes(protected, handlers.EJTransactionSearch)
 
 	// --------------------------------------------------
 	// Protected Oracle routes - longer timeout

@@ -96,16 +96,18 @@ func scanUnsettledRows(rows *sql.Rows) ([]model.UnsettledTransaction, error) {
 			rrn       sql.NullString
 			stan      sql.NullString
 			respCode  sql.NullString
-			amount    sql.NullFloat64
-			currency  sql.NullFloat64
-			terminal  sql.NullString
-			merchant  sql.NullString
-			product   sql.NullString
-			txnSource sql.NullString
-			txnDest   sql.NullString
-			issAcq    sql.NullString
-			posAtm    sql.NullString
-			txnId     sql.NullString
+			amount       sql.NullFloat64
+			currency     sql.NullFloat64
+			settlAmount  sql.NullFloat64
+			settlCurrency sql.NullFloat64
+			terminal     sql.NullString
+			merchant     sql.NullString
+			product      sql.NullString
+			txnSource    sql.NullString
+			txnDest      sql.NullString
+			issAcq       sql.NullString
+			posAtm       sql.NullString
+			txnId        sql.NullString
 		)
 
 		if err := rows.Scan(
@@ -120,6 +122,8 @@ func scanUnsettledRows(rows *sql.Rows) ([]model.UnsettledTransaction, error) {
 			&respCode,
 			&amount,
 			&currency,
+			&settlAmount,
+			&settlCurrency,
 			&terminal,
 			&merchant,
 			&product,
@@ -144,6 +148,8 @@ func scanUnsettledRows(rows *sql.Rows) ([]model.UnsettledTransaction, error) {
 			RespCode:       strings.TrimSpace(respCode.String),
 			Amount:         amount.Float64,
 			Currency:       int64(currency.Float64),
+			SettlementAmount:   settlAmount.Float64,
+			SettlementCurrency: int64(settlCurrency.Float64),
 			TerminalID:     strings.TrimSpace(terminal.String),
 			Merchant:       strings.TrimSpace(merchant.String),
 			CardProduct:    strings.TrimSpace(product.String),
