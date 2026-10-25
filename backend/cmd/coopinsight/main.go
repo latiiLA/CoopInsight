@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"os"
 	"time"
 
 	"github.com/latiiLA/CoopInsight/backend/configs"
@@ -99,20 +100,30 @@ func main() {
 	}
 
 	if ejDB != nil && configs.EJWatcherEnabled && configs.EJRoot != "" {
-		ejIndexer := service.NewEJIndexerService(
-			mongodb.NewEJFileRepository(ejDB),
-			mongodb.NewEJTransactionRepository(ejDB),
-		)
-		ejWatcher := service.NewEJWatcherService(
-			ejIndexer,
-			configs.EJRoot,
-			configs.EJPollInterval,
-		)
-		go ejWatcher.Start(context.Background())
-		logrus.WithFields(logrus.Fields{
-			"root":     configs.EJRoot,
-			"interval": configs.EJPollInterval.String(),
-		}).Info("EJ file poller running in background")
+		if info, err := os.Stat(configs.EJRoot); err != nil || !info.IsDir() {
+			// Common misconfig: NFS export syntax (host:/export) instead of a
+			// local mount path. WalkDir/lstat only see filesystem paths.
+			logrus.WithError(err).WithField("root", configs.EJRoot).Error(
+				"EJ_ROOT is not a readable directory; mount the share first " +
+					"(e.g. mount 10.12.41.10:/ATM-Log/EJ /mnt/ej) and set " +
+					"EJ_ROOT=/mnt/ej. Watcher not started",
+			)
+		} else {
+			ejIndexer := service.NewEJIndexerService(
+				mongodb.NewEJFileRepository(ejDB),
+				mongodb.NewEJTransactionRepository(ejDB),
+			)
+			ejWatcher := service.NewEJWatcherService(
+				ejIndexer,
+				configs.EJRoot,
+				configs.EJPollInterval,
+			)
+			go ejWatcher.Start(context.Background())
+			logrus.WithFields(logrus.Fields{
+				"root":     configs.EJRoot,
+				"interval": configs.EJPollInterval.String(),
+			}).Info("EJ file poller running in background")
+		}
 	} else if configs.EJEnabled {
 		logrus.Info("EJ watcher is off; set EJ_ROOT and EJ_WATCHER_ENABLED=true to poll for new journal data")
 	}
@@ -270,6 +281,7 @@ func main() {
 	var switchTransactionSearchHandler handler.SwitchTransactionSearchHandler
 	var terminalReconExportHandler handler.TerminalReconExportHandler
 	var ejTransactionSearchHandler handler.EJTransactionSearchHandler
+	var ejBrowseHandler handler.EJBrowseHandler
 	if ejDB != nil {
 		ejFileRepo := mongodb.NewEJFileRepository(ejDB)
 		ejTransactionSearchHandler = handler.NewEJTransactionSearchHandler(
@@ -279,11 +291,13 @@ func main() {
 			),
 			service.NewEJCoverageService(ejFileRepo, atmTerminalRepo),
 		)
+		ejBrowseHandler = handler.NewEJBrowseHandler(service.NewEJBrowseService(ejFileRepo))
 	} else {
 		ejTransactionSearchHandler = handler.NewEJTransactionSearchHandler(
 			service.NewEJTransactionSearchService(nil, nil),
 			service.NewEJCoverageService(nil, atmTerminalRepo),
 		)
+		ejBrowseHandler = handler.NewEJBrowseHandler(service.NewEJBrowseService(nil))
 	}
 	var safHandler handler.SafHandler
 	if oracleDB != nil {
@@ -523,6 +537,7 @@ func main() {
 		SwitchTransactionSearch:    switchTransactionSearchHandler,
 		TerminalReconExport:        terminalReconExportHandler,
 		EJTransactionSearch:        ejTransactionSearchHandler,
+		EJBrowse:                   ejBrowseHandler,
 		VisaSettlement:             visaSettlementHandler,
 		MastercardIPM:              mastercardIPMHandler,
 	})

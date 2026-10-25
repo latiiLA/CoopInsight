@@ -35,4 +35,8 @@ type EJFileRepository interface {
 	// ListIndexedForDates returns indexed EJ file rows whose filename date
 	// prefix falls in [dateFrom, dateTo] inclusive (YYYY-MM-DD).
 	ListIndexedForDates(ctx context.Context, dateFrom, dateTo string) ([]model.EJFile, error)
+	// ListTerminalSummaries groups indexed files by terminal for the date window.
+	ListTerminalSummaries(ctx context.Context, dateFrom, dateTo string) ([]model.EJBrowseTerminal, error)
+	// ListFilesByTerminal returns indexed files for one terminal in the date window.
+	ListFilesByTerminal(ctx context.Context, terminalID, dateFrom, dateTo string) ([]model.EJBrowseFile, error)
 }

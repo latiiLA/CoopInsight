@@ -50,8 +50,11 @@ func (w *ejWatcherService) Start(ctx context.Context) {
 		"interval": w.interval.String(),
 	}).Info("EJ watcher started (poll)")
 
-	// Immediate pass so today's files are current after process boot.
+	// Today first (fast), then one full catch-up so a fresh deploy does not wait
+	// ~1h before historical journals are walked. Start already runs in a
+	// background goroutine, so blocking here is fine.
 	w.runOnce(ctx, true)
+	w.runOnce(ctx, false)
 
 	ticker := time.NewTicker(w.interval)
 	defer ticker.Stop()
@@ -69,8 +72,27 @@ func (w *ejWatcherService) Start(ctx context.Context) {
 	}
 }
 
+func (w *ejWatcherService) passTimeout(todayOnly bool) time.Duration {
+	if todayOnly {
+		// Growing "today" files should finish well within one poll interval.
+		if w.interval < 2*time.Minute {
+			return 2 * time.Minute
+		}
+		return w.interval
+	}
+	// Full walks on a large NFS/SMB EJ tree routinely exceed the poll interval
+	// (local 1.5k files took ~2-4 minutes; production shares are slower).
+	// A 2m deadline was aborting historical indexing before it finished.
+	timeout := 45 * time.Minute
+	if min := w.interval * 30; min > timeout {
+		timeout = min
+	}
+	return timeout
+}
+
 func (w *ejWatcherService) runOnce(ctx context.Context, todayOnly bool) {
-	passCtx, cancel := context.WithTimeout(ctx, w.interval)
+	timeout := w.passTimeout(todayOnly)
+	passCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	opts := EJIndexOptions{TodayOnly: todayOnly}
@@ -79,12 +101,14 @@ func (w *ejWatcherService) runOnce(ctx context.Context, todayOnly bool) {
 	if err != nil && ctx.Err() == nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"today_only":  todayOnly,
+			"timeout":     timeout.String(),
 			"duration_ms": time.Since(started).Milliseconds(),
 		}).Warn("EJ watcher pass failed")
 		return
 	}
 	logrus.WithFields(logrus.Fields{
 		"today_only":  todayOnly,
+		"timeout":     timeout.String(),
 		"scanned":     result.Scanned,
 		"indexed":     result.Indexed,
 		"skipped":     result.Skipped,

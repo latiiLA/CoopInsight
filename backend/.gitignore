@@ -6,6 +6,9 @@ tmp
 coopinsight
 coopinsight.exe
 migrate
+ej-indexer
+ej-indexer.exe
+
 credentials/
 cmd/explorer
 cmd/tmp

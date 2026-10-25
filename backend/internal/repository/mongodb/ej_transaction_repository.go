@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -350,32 +351,9 @@ func (r *ejFileRepository) ListIndexedForDates(
 	if r.collection == nil {
 		return nil, common.ErrInternalServer
 	}
-	dateFrom = normalizeEJDate(dateFrom)
-	dateTo = normalizeEJDate(dateTo)
-	if dateFrom == "" || dateTo == "" {
-		return nil, common.ErrInvalidReportDate
-	}
-	from, err := time.ParseInLocation("2006-01-02", dateFrom, time.Local)
+	or, err := ejFilenameDateOR(dateFrom, dateTo)
 	if err != nil {
-		return nil, common.ErrInvalidReportDate
-	}
-	to, err := time.ParseInLocation("2006-01-02", dateTo, time.Local)
-	if err != nil {
-		return nil, common.ErrInvalidReportDate
-	}
-	if to.Before(from) {
-		return nil, common.ErrInvalidDateRange
-	}
-
-	or := make([]bson.M, 0, int(to.Sub(from).Hours()/24)+1)
-	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
-		prefix := d.Format("2006_01_02")
-		or = append(or, bson.M{
-			"filename": bson.M{
-				"$regex":   "^" + regexp.QuoteMeta(prefix) + "_",
-				"$options": "",
-			},
-		})
+		return nil, err
 	}
 	if len(or) == 0 {
 		return []model.EJFile{}, nil
@@ -401,6 +379,172 @@ func (r *ejFileRepository) ListIndexedForDates(
 		return nil, err
 	}
 	return out, nil
+}
+
+func (r *ejFileRepository) ListTerminalSummaries(
+	ctx context.Context,
+	dateFrom, dateTo string,
+) ([]model.EJBrowseTerminal, error) {
+	if r.collection == nil {
+		return nil, common.ErrInternalServer
+	}
+	or, err := ejFilenameDateOR(dateFrom, dateTo)
+	if err != nil {
+		return nil, err
+	}
+	if len(or) == 0 {
+		return []model.EJBrowseTerminal{}, nil
+	}
+
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.M{"$or": or}}},
+		{{Key: "$group", Value: bson.M{
+			"_id":        "$terminal_id",
+			"file_count": bson.M{"$sum": 1},
+			"txn_count":  bson.M{"$sum": "$txn_count"},
+		}}},
+		{{Key: "$sort", Value: bson.M{"_id": 1}}},
+	}
+	cursor, err := r.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = cursor.Close(ctx) }()
+
+	out := make([]model.EJBrowseTerminal, 0)
+	for cursor.Next(ctx) {
+		var row struct {
+			ID        string `bson:"_id"`
+			FileCount int    `bson:"file_count"`
+			TxnCount  int    `bson:"txn_count"`
+		}
+		if err := cursor.Decode(&row); err != nil {
+			return nil, err
+		}
+		id := strings.TrimSpace(row.ID)
+		if id == "" {
+			continue
+		}
+		out = append(out, model.EJBrowseTerminal{
+			TerminalID: id,
+			FileCount:  row.FileCount,
+			TxnCount:   row.TxnCount,
+		})
+	}
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (r *ejFileRepository) ListFilesByTerminal(
+	ctx context.Context,
+	terminalID, dateFrom, dateTo string,
+) ([]model.EJBrowseFile, error) {
+	if r.collection == nil {
+		return nil, common.ErrInternalServer
+	}
+	terminalID = strings.ToUpper(strings.TrimSpace(terminalID))
+	if terminalID == "" {
+		return nil, common.ErrInvalidTerminalID
+	}
+	or, err := ejFilenameDateOR(dateFrom, dateTo)
+	if err != nil {
+		return nil, err
+	}
+	if len(or) == 0 {
+		return []model.EJBrowseFile{}, nil
+	}
+
+	filter := bson.M{
+		"terminal_id": terminalID,
+		"$or":         or,
+	}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "filename", Value: -1}}).
+		SetProjection(bson.M{
+			"terminal_id": 1,
+			"filename":    1,
+			"path":        1,
+			"size":        1,
+			"txn_count":   1,
+			"atm_type":    1,
+		})
+	cursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = cursor.Close(ctx) }()
+
+	out := make([]model.EJBrowseFile, 0)
+	for cursor.Next(ctx) {
+		var row model.EJFile
+		if err := cursor.Decode(&row); err != nil {
+			return nil, err
+		}
+		out = append(out, model.EJBrowseFile{
+			TerminalID: row.TerminalID,
+			Filename:   row.Filename,
+			EJDate:     ejDateFromFilename(row.Filename),
+			Path:       row.Path,
+			Size:       row.Size,
+			TxnCount:   row.TxnCount,
+			AtmType:    row.AtmType,
+		})
+	}
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ejFilenameDateOR builds $or clauses matching YYYY_MM_DD_* filenames in range.
+func ejFilenameDateOR(dateFrom, dateTo string) ([]bson.M, error) {
+	dateFrom = normalizeEJDate(dateFrom)
+	dateTo = normalizeEJDate(dateTo)
+	if dateFrom == "" || dateTo == "" {
+		return nil, common.ErrInvalidReportDate
+	}
+	from, err := time.ParseInLocation("2006-01-02", dateFrom, time.Local)
+	if err != nil {
+		return nil, common.ErrInvalidReportDate
+	}
+	to, err := time.ParseInLocation("2006-01-02", dateTo, time.Local)
+	if err != nil {
+		return nil, common.ErrInvalidReportDate
+	}
+	if to.Before(from) {
+		return nil, common.ErrInvalidDateRange
+	}
+	days := int(to.Sub(from).Hours()/24) + 1
+	if days > 31 {
+		return nil, common.ErrDateRangeTooLarge
+	}
+
+	or := make([]bson.M, 0, days)
+	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
+		prefix := d.Format("2006_01_02")
+		or = append(or, bson.M{
+			"filename": bson.M{
+				"$regex":   "^" + regexp.QuoteMeta(prefix) + "_",
+				"$options": "",
+			},
+		})
+	}
+	return or, nil
+}
+
+// ejDateFromFilename maps YYYY_MM_DD_TERMINAL.log → YYYY-MM-DD.
+func ejDateFromFilename(filename string) string {
+	base := filepath.Base(strings.TrimSpace(filename))
+	parts := strings.Split(base, "_")
+	if len(parts) < 3 {
+		return ""
+	}
+	if len(parts[0]) != 4 || len(parts[1]) != 2 || len(parts[2]) != 2 {
+		return ""
+	}
+	return parts[0] + "-" + parts[1] + "-" + parts[2]
 }
 
 // normalizeEJDate accepts MM-DD-YYYY, MM/DD/YYYY, or YYYY-MM-DD → YYYY-MM-DD.

@@ -352,6 +352,7 @@ func registerReportRoutes(
 func registerEJTransactionSearchRoutes(
 	protected *gin.RouterGroup,
 	ejTransactionSearchHandler handler.EJTransactionSearchHandler,
+	ejBrowseHandler handler.EJBrowseHandler,
 ) {
 	if ejTransactionSearchHandler == nil {
 		return
@@ -373,6 +374,24 @@ func registerEJTransactionSearchRoutes(
 		),
 		ejTransactionSearchHandler.Search,
 	)
+	if ejBrowseHandler != nil {
+		ejPerm := middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{"report:search-ej-transactions"},
+		)
+		reports.GET("/ej-browse/terminals", ejPerm, ejBrowseHandler.ListTerminals)
+		reports.GET("/ej-browse/terminals/:terminalId/files", ejPerm, ejBrowseHandler.ListFiles)
+		reports.GET(
+			"/ej-browse/terminals/:terminalId/files/:filename/journal",
+			ejPerm,
+			ejBrowseHandler.GetJournalFile,
+		)
+		reports.GET(
+			"/ej-browse/terminals/:terminalId/files/:filename/download",
+			ejPerm,
+			ejBrowseHandler.DownloadJournalFile,
+		)
+	}
 	reports.GET(
 		"/ej-transactions/:id/journal",
 		middleware.AuthorizeRolesOrPermissions(

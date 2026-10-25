@@ -166,3 +166,21 @@ type EJCoverageResult struct {
 	Days        []EJCoverageDaySummary `json:"days"`
 	Terminals   []EJCoverageTerminal   `json:"terminals"`
 }
+
+// EJBrowseTerminal is one terminal with indexed EJ files in a date window.
+type EJBrowseTerminal struct {
+	TerminalID string `json:"terminalId"`
+	FileCount  int    `json:"fileCount"`
+	TxnCount   int    `json:"txnCount"`
+}
+
+// EJBrowseFile is one indexed journal file for browse-by-terminal.
+type EJBrowseFile struct {
+	TerminalID string `json:"terminalId"`
+	Filename   string `json:"filename"`
+	EJDate     string `json:"ejDate"`
+	Path       string `json:"path,omitempty"`
+	Size       int64  `json:"size"`
+	TxnCount   int    `json:"txnCount"`
+	AtmType    string `json:"atmType,omitempty"`
+}
