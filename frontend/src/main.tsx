@@ -8,7 +8,8 @@ import App from "./App";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "./components/ui/sonner";
 
-if (import.meta.env.VITE_APP_MODE === "production") {
+// Vite sets PROD from the build mode (npm run build), not a custom env key.
+if (import.meta.env.PROD) {
   console.log = () => {};
   console.info = () => {};
   console.debug = () => {};

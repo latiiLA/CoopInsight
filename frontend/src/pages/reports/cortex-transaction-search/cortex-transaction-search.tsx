@@ -300,7 +300,7 @@ export default function CortexTransactionSearchPage() {
             <Label htmlFor="ctx-card">Card</Label>
             <Input
               id="ctx-card"
-              placeholder="Last 4 or fragment"
+              placeholder="Last 4, fragment, or PAN (spaces ok)"
               value={form.card}
               onChange={(e) => setField("card", e.target.value)}
             />

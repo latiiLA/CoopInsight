@@ -409,45 +409,25 @@ export default function CardActivityDashboard({
   const hasData = (report?.daily?.length ?? 0) > 0;
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Card Activity Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            Organization-wide requested, issued, and activated activity, plus
-            branch rankings and per-branch progress over time.
+    <div className="container mx-auto space-y-4 pb-6">
+      <div className="space-y-1 py-1">
+        <h3 className="text-lg font-semibold tracking-tight">
+          Card Activity Dashboard
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Organization-wide requested, issued, and activated activity, plus
+          branch rankings and per-branch progress over time.
+        </p>
+        {canViewDetails ? (
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MousePointerClick className="size-3.5 shrink-0 text-primary" />
+            <span>
+              Tip: click a metric card, a number in Daily breakdown, a point on
+              the chart, or a branch count to open the individual cards behind
+              it.
+            </span>
           </p>
-          {canViewDetails ? (
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <MousePointerClick className="size-3.5 shrink-0 text-primary" />
-              <span>
-                Tip: click a metric card, a number in Daily breakdown, a point on
-                the chart, or a branch count to open the individual cards behind
-                it.
-              </span>
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={loading || !hasData}
-            onClick={exportCsv}
-          >
-            <Download className="size-3.5" />
-            CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={loading || !hasData}
-            onClick={exportXlsx}
-          >
-            <Download className="size-3.5" />
-            XLSX
-          </Button>
-        </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -591,13 +571,37 @@ export default function CardActivityDashboard({
 
       <Card className="py-4">
         <CardHeader className="px-4">
-          <CardTitle className="flex items-center gap-2">
-            <CalendarDays className="size-4 text-muted-foreground" />
-            Daily breakdown
-          </CardTitle>
-          <CardDescription>
-            {chartRows.length} day{chartRows.length === 1 ? "" : "s"}
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="size-4 text-muted-foreground" />
+                Daily breakdown
+              </CardTitle>
+              <CardDescription>
+                {chartRows.length} day{chartRows.length === 1 ? "" : "s"}
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading || !hasData}
+                onClick={exportCsv}
+              >
+                <Download className="size-3.5" />
+                CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading || !hasData}
+                onClick={exportXlsx}
+              >
+                <Download className="size-3.5" />
+                XLSX
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="px-4">
           {loading ? (

@@ -86,6 +86,20 @@ export type TerminalSuccessReport = {
   declineReasons: DeclineReason[];
 };
 
+export type CardProductSuccessReport = {
+  cardProduct: string;
+  cardProductLabel: string;
+  channel: string;
+  flow: string;
+  totalTransactions: number;
+  approvedCount: number;
+  declinedCount: number;
+  successRatePercent: number;
+  approvedAmount: number;
+  declinedAmount: number;
+  totalAmount: number;
+};
+
 export type EbirrCardlessWithdrawal = {
   id: string;
   rrn: string;

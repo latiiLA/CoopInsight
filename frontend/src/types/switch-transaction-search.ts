@@ -54,6 +54,8 @@ export type SwitchTransactionSearchArgs = {
   reversal?: SwitchTxnReversalFilter;
   amountMin?: number;
   amountMax?: number;
+  /** Undated card/RRN/trace search using short date windows. */
+  lookupWindow?: boolean;
   page?: number;
   pageSize?: number;
 };
@@ -62,6 +64,9 @@ export type SwitchTransactionSearchResult = {
   page: number;
   pageSize: number;
   hasMore: boolean;
+  hasMoreOlder?: boolean;
+  dateFrom?: string;
+  dateTo?: string;
   items: SwitchTransaction[];
 };
 

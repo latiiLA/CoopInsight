@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatMoneyWithCurrency } from "@/lib/iso-currency";
 import {
   SuccessBrowseOutcome,
   SuccessChannel,
@@ -24,15 +25,15 @@ import { AcquiringOutcomePie } from "./acquiring-outcome-pie";
 import { buildDeclineColumns } from "./columns";
 import { DeclineReasonsPie } from "./decline-reasons-pie";
 
+/** Switch success-rate amounts are stored in local issuer currency (ETB). */
+const AMOUNT_CURRENCY = "ETB";
+
 function formatCount(value: number) {
   return value.toLocaleString();
 }
 
 function formatAmount(value: number) {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return formatMoneyWithCurrency(value, AMOUNT_CURRENCY);
 }
 
 function MetricCard({
@@ -340,28 +341,28 @@ export function SuccessRateView({
       <div className="grid gap-4 py-2 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Total transactions"
-          value={report ? formatCount(report.totalTransactions) : "—"}
-          hint={`Amount ${report ? formatAmount(report.totalAmount) : "—"}`}
+          value={report ? formatCount(report.totalTransactions) : "-"}
+          hint={`Amount ${report ? formatAmount(report.totalAmount) : "-"}`}
           loading={loading}
           onAction={browse("all")}
         />
         <MetricCard
           label="Approved"
-          value={report ? formatCount(report.approvedCount) : "—"}
-          hint={`Amount ${report ? formatAmount(report.approvedAmount) : "—"}`}
+          value={report ? formatCount(report.approvedCount) : "-"}
+          hint={`Amount ${report ? formatAmount(report.approvedAmount) : "-"}`}
           loading={loading}
           onAction={browse("approved")}
         />
         <MetricCard
           label="Declined"
-          value={report ? formatCount(report.declinedCount) : "—"}
-          hint={`Amount ${report ? formatAmount(report.declinedAmount) : "—"}`}
+          value={report ? formatCount(report.declinedCount) : "-"}
+          hint={`Amount ${report ? formatAmount(report.declinedAmount) : "-"}`}
           loading={loading}
           onAction={browse("declined")}
         />
         <MetricCard
           label={copy.rateLabel}
-          value={report ? `${report.successRatePercent.toFixed(2)}%` : "—"}
+          value={report ? `${report.successRatePercent.toFixed(2)}%` : "-"}
           hint={
             report
               ? `${report.dateFrom} - ${report.dateTo}`

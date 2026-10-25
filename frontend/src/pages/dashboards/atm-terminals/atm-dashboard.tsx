@@ -1,4 +1,4 @@
-import { type ComponentType, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -11,17 +11,9 @@ import {
   Terminal,
 } from "lucide-react";
 
+import { MetricCard } from "@/components/metric-card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { fetchAtmTerminals } from "@/features/atm_terminal_slice";
-import { cn } from "@/lib/utils";
 import { AppDispatch, RootState } from "../../../../app/store/store";
 import { FleetChangeCard } from "../fleet-change-card";
 import {
@@ -36,49 +28,6 @@ import {
 } from "./atm-fleet";
 import { FleetPie, FleetRankList, FleetStackedBar } from "./atm-dashboard-charts";
 import { DistrictMixTable } from "./atm-district-table";
-
-function MetricCard({
-  label,
-  value,
-  hint,
-  icon: Icon,
-  loading,
-  onClick,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  icon: ComponentType<{ className?: string }>;
-  loading: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <Card
-      className={cn(
-        "gap-3 py-4",
-        onClick && "cursor-pointer transition-colors hover:bg-muted/40",
-      )}
-      onClick={onClick}
-    >
-      <CardHeader className="px-4">
-        <div className="flex items-start justify-between gap-3">
-          <CardDescription>{label}</CardDescription>
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Icon className="size-4" />
-          </div>
-        </div>
-        {loading ? (
-          <Skeleton className="h-8 w-20" />
-        ) : (
-          <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
-        )}
-      </CardHeader>
-      <CardContent className="px-4 text-sm text-muted-foreground">
-        {loading ? <Skeleton className="h-4 w-28" /> : hint}
-      </CardContent>
-    </Card>
-  );
-}
 
 const AtmDashboard = () => {
   const navigate = useNavigate();
@@ -135,15 +84,20 @@ const AtmDashboard = () => {
   const branchSlices = rankedBranches.slice(0, 10);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="container mx-auto min-w-0 space-y-4 pb-6">
+      <div className="flex flex-col gap-3 py-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-lg font-semibold">ATM Dashboard</h1>
+          <h3 className="text-lg font-semibold tracking-tight">ATM Dashboard</h3>
           <p className="text-sm text-muted-foreground">
-            Live ATM fleet from TMS. Stopped and relocated terminals were taken to another branch or are no longer operating.
+            Live ATM fleet from TMS. Stopped and relocated terminals were taken
+            to another branch or are no longer operating.
           </p>
         </div>
-        <Button onClick={() => navigate(atmTerminalsPath())}>
+        <Button
+          size="sm"
+          className="shrink-0"
+          onClick={() => navigate(atmTerminalsPath())}
+        >
           View all terminals
           <ArrowRight className="size-4" />
         </Button>
@@ -157,85 +111,101 @@ const AtmDashboard = () => {
         onClick={() => navigate(atmTerminalsPath())}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <MetricCard
-          label="Total ATMs"
-          value={formatCount(live.length)}
-          hint="Live fleet"
-          icon={Activity}
-          loading={loading}
-          onClick={() => navigate(atmTerminalsPath())}
-        />
-        <MetricCard
-          label="Active"
-          value={formatCount(countWhere(terminals, "status", "Active"))}
-          hint="In service"
-          icon={Monitor}
-          loading={loading}
-          onClick={() => navigate(atmTerminalsPath({ status: "Active" }))}
-        />
-        <MetricCard
-          label="Stopped"
-          value={formatCount(countWhere(terminals, "status", "Stopped"))}
-          hint="No longer operating"
-          icon={Pause}
-          loading={loading}
-          onClick={() => navigate(atmTerminalsPath({ status: "Stopped" }))}
-        />
-        <MetricCard
-          label="New"
-          value={formatCount(countWhere(terminals, "status", "New"))}
-          hint="Not yet in service"
-          icon={Terminal}
-          loading={loading}
-          onClick={() => navigate(atmTerminalsPath({ status: "New" }))}
-        />
-        <MetricCard
-          label="Relocated"
-          value={formatCount(countWhere(terminals, "status", "Relocated"))}
-          hint="Moved to another branch"
-          icon={MapPin}
-          loading={loading}
-          onClick={() => navigate(atmTerminalsPath({ status: "Relocated" }))}
-        />
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,5fr)_minmax(0,2fr)_minmax(0,2fr)]">
+        <section className="min-w-0 space-y-2">
+          <h4 className="text-sm font-semibold tracking-tight">Status</h4>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+            <MetricCard
+              compact
+              label="Total ATMs"
+              value={formatCount(live.length)}
+              icon={Activity}
+              loading={loading}
+              onClick={() => navigate(atmTerminalsPath())}
+            />
+            <MetricCard
+              compact
+              label="Active"
+              value={formatCount(countWhere(terminals, "status", "Active"))}
+              icon={Monitor}
+              loading={loading}
+              onClick={() => navigate(atmTerminalsPath({ status: "Active" }))}
+            />
+            <MetricCard
+              compact
+              label="Stopped"
+              value={formatCount(countWhere(terminals, "status", "Stopped"))}
+              icon={Pause}
+              loading={loading}
+              onClick={() => navigate(atmTerminalsPath({ status: "Stopped" }))}
+            />
+            <MetricCard
+              compact
+              label="New"
+              value={formatCount(countWhere(terminals, "status", "New"))}
+              icon={Terminal}
+              loading={loading}
+              onClick={() => navigate(atmTerminalsPath({ status: "New" }))}
+            />
+            <MetricCard
+              compact
+              label="Relocated"
+              value={formatCount(countWhere(terminals, "status", "Relocated"))}
+              icon={MapPin}
+              loading={loading}
+              onClick={() =>
+                navigate(atmTerminalsPath({ status: "Relocated" }))
+              }
+            />
+          </div>
+        </section>
+
+        <section className="min-w-0 space-y-2">
+          <h4 className="text-sm font-semibold tracking-tight">Site</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <MetricCard
+              compact
+              label="Onsite"
+              value={formatCount(countWhere(terminals, "site", "Onsite"))}
+              icon={MapPin}
+              loading={loading}
+              onClick={() => navigate(atmTerminalsPath({ site: "Onsite" }))}
+            />
+            <MetricCard
+              compact
+              label="Offsite"
+              value={formatCount(countWhere(terminals, "site", "Offsite"))}
+              icon={MapPin}
+              loading={loading}
+              onClick={() => navigate(atmTerminalsPath({ site: "Offsite" }))}
+            />
+          </div>
+        </section>
+
+        <section className="min-w-0 space-y-2">
+          <h4 className="text-sm font-semibold tracking-tight">Type</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <MetricCard
+              compact
+              label="CRM"
+              value={formatCount(countWhere(terminals, "type", "CRM"))}
+              icon={Monitor}
+              loading={loading}
+              onClick={() => navigate(atmTerminalsPath({ type: "CRM" }))}
+            />
+            <MetricCard
+              compact
+              label="NCR"
+              value={formatCount(countWhere(terminals, "type", "NCR"))}
+              icon={Monitor}
+              loading={loading}
+              onClick={() => navigate(atmTerminalsPath({ type: "NCR" }))}
+            />
+          </div>
+        </section>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Onsite"
-          value={formatCount(countWhere(terminals, "site", "Onsite"))}
-          hint="Branch ATMs"
-          icon={MapPin}
-          loading={loading}
-          onClick={() => navigate(atmTerminalsPath({ site: "Onsite" }))}
-        />
-        <MetricCard
-          label="Offsite"
-          value={formatCount(countWhere(terminals, "site", "Offsite"))}
-          hint="Off-branch ATMs"
-          icon={MapPin}
-          loading={loading}
-          onClick={() => navigate(atmTerminalsPath({ site: "Offsite" }))}
-        />
-        <MetricCard
-          label="CRM"
-          value={formatCount(countWhere(terminals, "type", "CRM"))}
-          hint="Cash recycler"
-          icon={Monitor}
-          loading={loading}
-          onClick={() => navigate(atmTerminalsPath({ type: "CRM" }))}
-        />
-        <MetricCard
-          label="NCR"
-          value={formatCount(countWhere(terminals, "type", "NCR"))}
-          hint="NCR fleet"
-          icon={Monitor}
-          loading={loading}
-          onClick={() => navigate(atmTerminalsPath({ type: "NCR" }))}
-        />
-      </div>
-
-      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <FleetPie
           title="All statuses"
           description="Active, new, stopped, and relocated"
@@ -270,7 +240,7 @@ const AtmDashboard = () => {
         />
       </div>
 
-      <div className="grid min-w-0 gap-4 xl:grid-cols-2">
+      <div className="grid min-w-0 gap-3 xl:grid-cols-2">
         <FleetStackedBar
           title="Live ATMs by district"
           description={

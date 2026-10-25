@@ -293,7 +293,7 @@ export default function PrepaidVisaSearch() {
             <Label htmlFor="pv-search-card">Card</Label>
             <Input
               id="pv-search-card"
-              placeholder="Last 4 or fragment"
+              placeholder="Last 4, fragment, or PAN (spaces ok)"
               value={form.card}
               onChange={(e) => setField("card", e.target.value)}
             />

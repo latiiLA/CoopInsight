@@ -113,7 +113,7 @@ export function DeclineReasonsPie({
             className={
               compact
                 ? "grid items-start gap-4"
-                : "grid items-center gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]"
+                : "grid items-center gap-4 lg:grid-cols-[minmax(0,1fr)_10.5rem]"
             }
           >
             <div className="h-72">

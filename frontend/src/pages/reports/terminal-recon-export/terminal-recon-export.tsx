@@ -25,6 +25,7 @@ import type { PosTerminal } from "@/types/pos-terminal";
 import { AppDispatch, RootState } from "../../../../app/store/store";
 import { getTokenFromAuth, withAuthHeader } from "../../../../utility/auth-token";
 import getErrorMessage from "../../../../utility/error-message";
+import { hasPermission } from "../../../../utility/has-permission";
 import { STOPPED as ATM_STOPPED } from "../../dashboards/atm-terminals/atm-fleet";
 import { STOPPED as POS_STOPPED } from "../../dashboards/pos-terminals/pos-fleet";
 import {
@@ -150,6 +151,7 @@ function buildXlsx(headers: string[], rows: string[][], filename: string) {
 export default function TerminalReconExportPage() {
   const dispatch = useDispatch<AppDispatch>();
   const authUser = useSelector((state: RootState) => state.user.authUser);
+  const permissions = useSelector((state: RootState) => state.user.permissions);
   const atmTerminals = useSelector(
     (state: RootState) => state.atmTerminal.terminals,
   );
@@ -159,7 +161,24 @@ export default function TerminalReconExportPage() {
   const atmLoading = useSelector((state: RootState) => state.atmTerminal.loading);
   const posLoading = useSelector((state: RootState) => state.posTerminal.loading);
 
-  const [source, setSource] = useState<Source>("switch");
+  const canExportSwitch = hasPermission(
+    ["report:export-switch-terminal-recon"],
+    permissions,
+  );
+  const canExportCortex = hasPermission(
+    ["report:export-cortex-terminal-recon"],
+    permissions,
+  );
+  const allowedSources = useMemo<Source[]>(() => {
+    const sources: Source[] = [];
+    if (canExportSwitch) sources.push("switch");
+    if (canExportCortex) sources.push("cortex");
+    return sources;
+  }, [canExportCortex, canExportSwitch]);
+
+  const [source, setSource] = useState<Source>(
+    canExportSwitch ? "switch" : "cortex",
+  );
   const [fleet, setFleet] = useState<Fleet>("atm");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [terminal, setTerminal] = useState("");
@@ -168,6 +187,13 @@ export default function TerminalReconExportPage() {
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const [lastElapsedMs, setLastElapsedMs] = useState<number | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (allowedSources.length === 0) return;
+    if (!allowedSources.includes(source)) {
+      setSource(allowedSources[0]);
+    }
+  }, [allowedSources, source]);
 
   useEffect(() => {
     if (!exporting) return;
@@ -365,8 +391,12 @@ export default function TerminalReconExportPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="switch">Switch</SelectItem>
-                <SelectItem value="cortex">Cortex</SelectItem>
+                {canExportSwitch ? (
+                  <SelectItem value="switch">Switch</SelectItem>
+                ) : null}
+                {canExportCortex ? (
+                  <SelectItem value="cortex">Cortex</SelectItem>
+                ) : null}
               </SelectContent>
             </Select>
           </div>

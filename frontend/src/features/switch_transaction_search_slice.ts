@@ -22,6 +22,9 @@ interface SwitchTxnSearchState {
   error: string | null;
   page: number;
   hasMore: boolean;
+  hasMoreOlder: boolean;
+  appliedDateFrom: string | null;
+  appliedDateTo: string | null;
   requestId: string | null;
   lastArgs: SwitchTransactionSearchArgs | null;
   detail: SwitchTransactionDetail | null;
@@ -38,6 +41,9 @@ const initialState: SwitchTxnSearchState = {
   error: null,
   page: 0,
   hasMore: false,
+  hasMoreOlder: false,
+  appliedDateFrom: null,
+  appliedDateTo: null,
   requestId: null,
   lastArgs: null,
   detail: null,
@@ -87,9 +93,18 @@ function toParams(args: SwitchTransactionSearchArgs) {
     ...(args.amountMax != null && !Number.isNaN(args.amountMax)
       ? { amountMax: args.amountMax }
       : {}),
+    ...(args.lookupWindow ? { lookupWindow: "1" } : {}),
     page,
     pageSize: args.pageSize ?? SWITCH_TXN_SEARCH_PAGE_SIZE,
   };
+}
+
+/** Normalize API echo (MM-DD-YYYY) back to query form (MM/dd/yyyy). */
+function echoDateToParam(raw?: string | null): string | undefined {
+  if (!raw?.trim()) return undefined;
+  const m = raw.trim().match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+  if (!m) return raw.trim();
+  return `${m[1]}/${m[2]}/${m[3]}`;
 }
 
 function isCanceled(
@@ -156,6 +171,9 @@ export const fetchSwitchTransactionSearch = createAsyncThunk<
       page: payload?.page ?? args.page ?? 1,
       pageSize: payload?.pageSize ?? SWITCH_TXN_SEARCH_PAGE_SIZE,
       hasMore: Boolean(payload?.hasMore),
+      hasMoreOlder: Boolean(payload?.hasMoreOlder),
+      dateFrom: payload?.dateFrom ?? args.dateFrom,
+      dateTo: payload?.dateTo ?? args.dateTo,
       items: payload?.items ?? [],
       append,
     };
@@ -199,6 +217,9 @@ const switchTxnSearchSlice = createSlice({
           state.items = [];
           state.page = 0;
           state.hasMore = false;
+          state.hasMoreOlder = false;
+          state.appliedDateFrom = null;
+          state.appliedDateTo = null;
         }
       })
       .addCase(fetchSwitchTransactionSearch.fulfilled, (state, action) => {
@@ -209,6 +230,20 @@ const switchTxnSearchSlice = createSlice({
         state.loadingMore = false;
         state.page = action.payload.page;
         state.hasMore = action.payload.hasMore;
+        state.hasMoreOlder = action.payload.hasMoreOlder;
+        state.appliedDateFrom = action.payload.dateFrom ?? null;
+        state.appliedDateTo = action.payload.dateTo ?? null;
+        if (state.lastArgs && (action.payload.dateFrom || action.payload.dateTo)) {
+          state.lastArgs = {
+            ...state.lastArgs,
+            dateFrom:
+              echoDateToParam(action.payload.dateFrom) ??
+              state.lastArgs.dateFrom,
+            dateTo:
+              echoDateToParam(action.payload.dateTo) ?? state.lastArgs.dateTo,
+            page: action.payload.page,
+          };
+        }
         if (action.payload.append) {
           state.items = state.items.concat(action.payload.items);
         } else {

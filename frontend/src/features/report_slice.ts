@@ -15,6 +15,7 @@ import {
   SuccessTransactionReport,
   TerminalPerformanceReport,
   TerminalPerformanceRow,
+  CardProductSuccessReport,
   TerminalSuccessReport,
   TerminalTransaction,
 } from "@/types/report";
@@ -74,6 +75,9 @@ interface ReportState {
    * land after the user opened the ATM page and render POS terminals there.
    */
   terminalSuccessRateChannel: string | null;
+  cardProductSuccessRate: CardProductSuccessReport[];
+  cardProductSuccessRateLoading: boolean;
+  cardProductSuccessRateError: string | null;
   transactionMix: TransactionMixReport | null;
   transactionMixLoading: boolean;
   transactionMixError: string | null;
@@ -173,6 +177,9 @@ const initialState: ReportState = {
   terminalSuccessRateLoading: false,
   terminalSuccessRateError: null,
   terminalSuccessRateChannel: null,
+  cardProductSuccessRate: [],
+  cardProductSuccessRateLoading: false,
+  cardProductSuccessRateError: null,
   transactionMix: null,
   transactionMixLoading: false,
   transactionMixError: null,
@@ -346,6 +353,77 @@ export const fetchSuccessTransactions = createAsyncThunk<
       if (
         thunkAPI.signal.aborted ||
         (axios.isAxiosError(error) && error.code === "ERR_CANCELED")
+      ) {
+        throw error;
+      }
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+interface FetchCardProductSuccessRateParams extends FetchReportDateParams {
+  channel?: SuccessChannel;
+  flow?: SuccessFlow;
+}
+
+export const fetchCardProductSuccessRate = createAsyncThunk<
+  CardProductSuccessReport[],
+  FetchCardProductSuccessRateParams,
+  {
+    state: RootState;
+    rejectValue: string;
+  }
+>(
+  "report/fetchCardProductSuccessRate",
+  async ({ dateFrom, dateTo, channel = "switch", flow }, thunkAPI) => {
+    try {
+      const token = getTokenFromAuth(thunkAPI.getState().user.authUser);
+      if (!token) {
+        return thunkAPI.rejectWithValue("Authentication token not found");
+      }
+      const resolvedFlow =
+        flow ?? (channel === "switch" ? "overall" : "acquiring");
+      const response = await api.get<{
+        isSuccessful: boolean;
+        message: string;
+        data: CardProductSuccessReport[];
+      }>("/reports/card-product-success-rate", {
+        ...withAuthHeader(token),
+        params: {
+          dateFrom,
+          dateTo,
+          channel,
+          flow: resolvedFlow,
+        },
+        signal: thunkAPI.signal,
+        timeout: 180_000,
+      });
+      const rows = response.data.data;
+      if (!rows) {
+        return thunkAPI.rejectWithValue(
+          "Failed to fetch card product success rate",
+        );
+      }
+      return rows.map((row) => ({
+        cardProduct: toText(row.cardProduct),
+        cardProductLabel: toText(row.cardProductLabel) || toText(row.cardProduct),
+        channel: toText(row.channel),
+        flow: toText(row.flow),
+        totalTransactions: toNumber(row.totalTransactions),
+        approvedCount: toNumber(row.approvedCount),
+        declinedCount: toNumber(row.declinedCount),
+        successRatePercent: toNumber(row.successRatePercent),
+        approvedAmount: toNumber(row.approvedAmount),
+        declinedAmount: toNumber(row.declinedAmount),
+        totalAmount: toNumber(row.totalAmount),
+      }));
+    } catch (error) {
+      if (
+        thunkAPI.signal.aborted ||
+        axios.isCancel(error) ||
+        (axios.isAxiosError(error) &&
+          error.code === "ERR_CANCELED" &&
+          !error.response)
       ) {
         throw error;
       }
@@ -857,6 +935,10 @@ const reportSlice = createSlice({
       state.terminalSuccessRateError = null;
       state.terminalSuccessRateChannel = null;
     },
+    clearCardProductSuccessRate: (state) => {
+      state.cardProductSuccessRate = [];
+      state.cardProductSuccessRateError = null;
+    },
     clearTransactionMix: (state) => {
       state.transactionMix = null;
       state.transactionMixError = null;
@@ -996,6 +1078,22 @@ const reportSlice = createSlice({
         state.terminalSuccessRateError =
           action.payload || "Failed to fetch terminal success rate";
       })
+      .addCase(fetchCardProductSuccessRate.pending, (state) => {
+        state.cardProductSuccessRateLoading = true;
+        state.cardProductSuccessRateError = null;
+        state.cardProductSuccessRate = [];
+      })
+      .addCase(fetchCardProductSuccessRate.fulfilled, (state, action) => {
+        state.cardProductSuccessRateLoading = false;
+        state.cardProductSuccessRate = action.payload;
+      })
+      .addCase(fetchCardProductSuccessRate.rejected, (state, action) => {
+        if (action.meta.aborted) return;
+        state.cardProductSuccessRateLoading = false;
+        state.cardProductSuccessRate = [];
+        state.cardProductSuccessRateError =
+          action.payload || "Failed to fetch card product success rate";
+      })
       .addCase(fetchTransactionMix.pending, (state, action) => {
         state.transactionMixLoading = true;
         state.transactionMixError = null;
@@ -1032,6 +1130,7 @@ export const {
   clearTerminalTransactions,
   clearTerminalComparison,
   clearTerminalSuccessRate,
+  clearCardProductSuccessRate,
   clearTransactionMix,
 } = reportSlice.actions;
 

@@ -19,6 +19,10 @@ export function getLastDaysRange(days: number): DateRange {
   return { from: subDays(to, days - 1), to };
 }
 
+export function getLast7DaysRange(): DateRange {
+  return getLastDaysRange(7);
+}
+
 export function getLast30DaysRange(): DateRange {
   return getLastDaysRange(30);
 }

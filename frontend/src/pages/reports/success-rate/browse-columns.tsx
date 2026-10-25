@@ -3,6 +3,7 @@ import { ArrowUpDown } from "lucide-react";
 
 import { type DataTableFeatures } from "@/components/data-table-features";
 import { Button } from "@/components/ui/button";
+import { formatMoneyWithCurrency } from "@/lib/iso-currency";
 import { SuccessTransactionDetail } from "@/types/report";
 
 const columnHelper = createColumnHelper<
@@ -10,11 +11,11 @@ const columnHelper = createColumnHelper<
   SuccessTransactionDetail
 >();
 
+/** Switch success-rate amounts are stored in local issuer currency (ETB). */
+const AMOUNT_CURRENCY = "ETB";
+
 function formatAmount(value: number) {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return formatMoneyWithCurrency(value, AMOUNT_CURRENCY);
 }
 
 export const browseColumns = columnHelper.columns([

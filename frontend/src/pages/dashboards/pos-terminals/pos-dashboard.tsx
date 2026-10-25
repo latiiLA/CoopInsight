@@ -1,4 +1,4 @@
-import { type ComponentType, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -12,17 +12,9 @@ import {
   Terminal,
 } from "lucide-react";
 
+import { MetricCard } from "@/components/metric-card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { fetchPosTerminals } from "@/features/pos_terminal_slice";
-import { cn } from "@/lib/utils";
 import { AppDispatch, RootState } from "../../../../app/store/store";
 import { FleetChangeCard } from "../fleet-change-card";
 import {
@@ -46,49 +38,6 @@ import {
   FleetStackedBar,
 } from "../atm-terminals/atm-dashboard-charts";
 import { PosDistrictMixTable } from "./pos-district-table";
-
-function MetricCard({
-  label,
-  value,
-  hint,
-  icon: Icon,
-  loading,
-  onClick,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  icon: ComponentType<{ className?: string }>;
-  loading: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <Card
-      className={cn(
-        "gap-3 py-4",
-        onClick && "cursor-pointer transition-colors hover:bg-muted/40",
-      )}
-      onClick={onClick}
-    >
-      <CardHeader className="px-4">
-        <div className="flex items-start justify-between gap-3">
-          <CardDescription>{label}</CardDescription>
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Icon className="size-4" />
-          </div>
-        </div>
-        {loading ? (
-          <Skeleton className="h-8 w-20" />
-        ) : (
-          <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
-        )}
-      </CardHeader>
-      <CardContent className="px-4 text-sm text-muted-foreground">
-        {loading ? <Skeleton className="h-4 w-28" /> : hint}
-      </CardContent>
-    </Card>
-  );
-}
 
 const PosDashboard = () => {
   const navigate = useNavigate();
@@ -146,15 +95,21 @@ const PosDashboard = () => {
   const merchantSlices = rankedMerchants.slice(0, 10);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="container mx-auto min-w-0 space-y-4 pb-6">
+      <div className="flex flex-col gap-3 py-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-lg font-semibold">POS Dashboard</h1>
+          <h3 className="text-lg font-semibold tracking-tight">POS Dashboard</h3>
           <p className="text-sm text-muted-foreground">
-            Live POS fleet from TMS. Merchant sites are at the customer; branch sites sit in a Coop branch. Stopped and relocated terminals are no longer operating.
+            Live POS fleet from TMS. Merchant sites are at the customer; branch
+            sites sit in a Coop branch. Stopped and relocated terminals are no
+            longer operating.
           </p>
         </div>
-        <Button onClick={() => navigate(posTerminalsPath())}>
+        <Button
+          size="sm"
+          className="shrink-0"
+          onClick={() => navigate(posTerminalsPath())}
+        >
           View all terminals
           <ArrowRight className="size-4" />
         </Button>
@@ -168,85 +123,105 @@ const PosDashboard = () => {
         onClick={() => navigate(posTerminalsPath())}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <MetricCard
-          label="Total POS"
-          value={formatCount(live.length)}
-          hint="Live fleet"
-          icon={Activity}
-          loading={loading}
-          onClick={() => navigate(posTerminalsPath())}
-        />
-        <MetricCard
-          label="Active"
-          value={formatCount(countWhere(terminals, "status", "Active"))}
-          hint="In service"
-          icon={Terminal}
-          loading={loading}
-          onClick={() => navigate(posTerminalsPath({ status: "Active" }))}
-        />
-        <MetricCard
-          label="New"
-          value={formatCount(countWhere(terminals, "status", "New"))}
-          hint="Not yet in service"
-          icon={Store}
-          loading={loading}
-          onClick={() => navigate(posTerminalsPath({ status: "New" }))}
-        />
-        <MetricCard
-          label="Stopped"
-          value={formatCount(countWhere(terminals, "status", "Stopped"))}
-          hint="No longer operating"
-          icon={Pause}
-          loading={loading}
-          onClick={() => navigate(posTerminalsPath({ status: "Stopped" }))}
-        />
-        <MetricCard
-          label="Relocated"
-          value={formatCount(countWhere(terminals, "status", "Relocated"))}
-          hint="Moved off this site"
-          icon={MapPin}
-          loading={loading}
-          onClick={() => navigate(posTerminalsPath({ status: "Relocated" }))}
-        />
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,5fr)_minmax(0,2fr)_minmax(0,2fr)]">
+        <section className="min-w-0 space-y-2">
+          <h4 className="text-sm font-semibold tracking-tight">Status</h4>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+            <MetricCard
+              compact
+              label="Total POS"
+              value={formatCount(live.length)}
+              icon={Activity}
+              loading={loading}
+              onClick={() => navigate(posTerminalsPath())}
+            />
+            <MetricCard
+              compact
+              label="Active"
+              value={formatCount(countWhere(terminals, "status", "Active"))}
+              icon={Terminal}
+              loading={loading}
+              onClick={() => navigate(posTerminalsPath({ status: "Active" }))}
+            />
+            <MetricCard
+              compact
+              label="New"
+              value={formatCount(countWhere(terminals, "status", "New"))}
+              icon={Store}
+              loading={loading}
+              onClick={() => navigate(posTerminalsPath({ status: "New" }))}
+            />
+            <MetricCard
+              compact
+              label="Stopped"
+              value={formatCount(countWhere(terminals, "status", "Stopped"))}
+              icon={Pause}
+              loading={loading}
+              onClick={() => navigate(posTerminalsPath({ status: "Stopped" }))}
+            />
+            <MetricCard
+              compact
+              label="Relocated"
+              value={formatCount(countWhere(terminals, "status", "Relocated"))}
+              icon={MapPin}
+              loading={loading}
+              onClick={() =>
+                navigate(posTerminalsPath({ status: "Relocated" }))
+              }
+            />
+          </div>
+        </section>
+
+        <section className="min-w-0 space-y-2">
+          <h4 className="text-sm font-semibold tracking-tight">Site</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <MetricCard
+              compact
+              label="Merchant"
+              value={formatCount(countWhere(terminals, "site", SITE_MERCHANT))}
+              icon={Store}
+              loading={loading}
+              onClick={() => navigate(posTerminalsPath({ site: SITE_MERCHANT }))}
+            />
+            <MetricCard
+              compact
+              label="Branch"
+              value={formatCount(countWhere(terminals, "site", SITE_BRANCH))}
+              icon={Building2}
+              loading={loading}
+              onClick={() => navigate(posTerminalsPath({ site: SITE_BRANCH }))}
+            />
+          </div>
+        </section>
+
+        <section className="min-w-0 space-y-2">
+          <h4 className="text-sm font-semibold tracking-tight">Other</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <MetricCard
+              compact
+              label="To relocate"
+              value={formatCount(
+                countWhere(terminals, "status", TO_BE_RELOCATED),
+              )}
+              icon={MapPin}
+              loading={loading}
+              onClick={() =>
+                navigate(posTerminalsPath({ status: TO_BE_RELOCATED }))
+              }
+            />
+            <MetricCard
+              compact
+              label="Merchants"
+              value={formatCount(uniqueMerchantCount(terminals))}
+              icon={Store}
+              loading={loading}
+              onClick={() => navigate(posTerminalsPath())}
+            />
+          </div>
+        </section>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="To be relocated"
-          value={formatCount(countWhere(terminals, "status", TO_BE_RELOCATED))}
-          hint="Live, pending a move"
-          icon={MapPin}
-          loading={loading}
-          onClick={() => navigate(posTerminalsPath({ status: TO_BE_RELOCATED }))}
-        />
-        <MetricCard
-          label="Merchant"
-          value={formatCount(countWhere(terminals, "site", SITE_MERCHANT))}
-          hint="At the merchant"
-          icon={Store}
-          loading={loading}
-          onClick={() => navigate(posTerminalsPath({ site: SITE_MERCHANT }))}
-        />
-        <MetricCard
-          label="Branch"
-          value={formatCount(countWhere(terminals, "site", SITE_BRANCH))}
-          hint="In a Coop branch"
-          icon={Building2}
-          loading={loading}
-          onClick={() => navigate(posTerminalsPath({ site: SITE_BRANCH }))}
-        />
-        <MetricCard
-          label="Merchants"
-          value={formatCount(uniqueMerchantCount(terminals))}
-          hint="Unique live merchant IDs"
-          icon={Store}
-          loading={loading}
-          onClick={() => navigate(posTerminalsPath())}
-        />
-      </div>
-
-      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <FleetPie
           title="All statuses"
           description="Active, new, to-be-relocated, stopped, and relocated"
@@ -283,7 +258,7 @@ const PosDashboard = () => {
         />
       </div>
 
-      <div className="grid min-w-0 gap-4 xl:grid-cols-2">
+      <div className="grid min-w-0 gap-3 xl:grid-cols-2">
         <FleetStackedBar
           title="Live POS by district"
           description="Merchant vs branch live fleet"

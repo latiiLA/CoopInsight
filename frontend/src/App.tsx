@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+﻿import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
 import Layout from "../app/layout";
@@ -19,6 +19,9 @@ const SuccessRateTrends = lazy(
 );
 const TerminalSuccessRate = lazy(
   () => import("./pages/reports/success-rate/terminal-success-rate"),
+);
+const CardProductSuccessRate = lazy(
+  () => import("./pages/reports/success-rate/card-product-success-rate"),
 );
 const EbirrCardlessWithdrawal = lazy(
   () => import("./pages/reports/ebirr-cardless-withdrawal/ebirr-cardless-withdrawal"),
@@ -201,7 +204,6 @@ function App() {
             element={
               <RequirePermission
                 permissions={[
-                  "report:view-success-transactions",
                   "report:view-atm-overall-success-rate",
                   "report:view-atm-acquiring-success-rate",
                   "report:view-atm-onus-success-rate",
@@ -229,7 +231,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-switch-overall-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="switch" flow="overall" />
@@ -242,7 +243,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-switch-onus-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="switch" flow="onus" />
@@ -255,7 +255,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-switch-offus-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="switch" flow="offus" />
@@ -268,7 +267,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-switch-issuing-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="switch" flow="issuing" />
@@ -282,7 +280,6 @@ function App() {
                 permissions={[
                   "report:view-switch-remote-onus-success-rate",
                   "report:view-switch-issuing-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="switch" flow="remote_onus" />
@@ -299,7 +296,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-atm-overall-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="atm" flow="overall" />
@@ -312,7 +308,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-atm-acquiring-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="atm" flow="acquiring" />
@@ -325,7 +320,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-atm-onus-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="atm" flow="onus" />
@@ -338,7 +332,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-atm-offus-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="atm" flow="offus" />
@@ -351,7 +344,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-atm-issuing-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="atm" flow="issuing" />
@@ -368,7 +360,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-pos-overall-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="pos" flow="overall" />
@@ -381,7 +372,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-pos-acquiring-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="pos" flow="acquiring" />
@@ -394,7 +384,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-pos-onus-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="pos" flow="onus" />
@@ -407,7 +396,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-pos-offus-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="pos" flow="offus" />
@@ -420,7 +408,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-pos-issuing-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <SuccessRate channel="pos" flow="issuing" />
@@ -433,7 +420,6 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-pos-acquiring-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <TerminalSuccessRate channel="pos" />
@@ -446,10 +432,26 @@ function App() {
               <RequirePermission
                 permissions={[
                   "report:view-atm-acquiring-success-rate",
-                  "report:view-success-transactions",
                 ]}
               >
                 <TerminalSuccessRate channel="atm" />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/card-product-success-rate"
+            element={
+              <RequirePermission
+                permissions={[
+                  "report:view-card-product-success-rate",
+                  "report:view-switch-overall-success-rate",
+                  "report:view-atm-acquiring-success-rate",
+                  "report:view-atm-overall-success-rate",
+                  "report:view-pos-acquiring-success-rate",
+                  "report:view-pos-overall-success-rate",
+                ]}
+              >
+                <CardProductSuccessRate />
               </RequirePermission>
             }
           />
@@ -495,7 +497,10 @@ function App() {
             path="/terminal-recon-export"
             element={
               <RequirePermission
-                permissions={["report:export-terminal-recon"]}
+                permissions={[
+                  "report:export-switch-terminal-recon",
+                  "report:export-cortex-terminal-recon",
+                ]}
               >
                 <TerminalReconExport />
               </RequirePermission>

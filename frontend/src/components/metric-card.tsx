@@ -14,7 +14,7 @@ type MetricCardProps = {
   label: string;
   value: string;
   /** Secondary line under the value, e.g. how the figure was derived. */
-  hint: string;
+  hint?: string;
   icon: ComponentType<{ className?: string }>;
   loading?: boolean;
   onClick?: () => void;
@@ -42,6 +42,8 @@ export function MetricCard({
   compact = false,
 }: MetricCardProps) {
   const interactive = Boolean(onClick);
+  const showFooter =
+    Boolean(drillHint) || Boolean(hint) || (loading && Boolean(hint));
 
   return (
     <Card
@@ -92,21 +94,23 @@ export function MetricCard({
           </CardTitle>
         )}
       </CardHeader>
-      <CardContent
-        className={cn(
-          "text-muted-foreground",
-          compact ? "px-3 text-xs leading-snug" : "px-4 text-sm",
-        )}
-      >
-        {loading ? (
-          <Skeleton className={cn(compact ? "h-3 w-24" : "h-4 w-28")} />
-        ) : (
-          hint
-        )}
-        {!loading && drillHint ? (
-          <div className="mt-1 text-xs text-primary/80">{drillHint}</div>
-        ) : null}
-      </CardContent>
+      {showFooter ? (
+        <CardContent
+          className={cn(
+            "text-muted-foreground",
+            compact ? "px-3 text-xs leading-snug" : "px-4 text-sm",
+          )}
+        >
+          {loading && hint ? (
+            <Skeleton className={cn(compact ? "h-3 w-24" : "h-4 w-28")} />
+          ) : (
+            hint
+          )}
+          {!loading && drillHint ? (
+            <div className="mt-1 text-xs text-primary/80">{drillHint}</div>
+          ) : null}
+        </CardContent>
+      ) : null}
     </Card>
   );
 }

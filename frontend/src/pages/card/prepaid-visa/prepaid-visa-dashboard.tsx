@@ -52,7 +52,7 @@ import {
   formatUsd,
   productLabel,
 } from "./prepaid-visa-format";
-import { getLast30DaysRange, prepaidVisaHref } from "./prepaid-visa-range";
+import { getLast7DaysRange, prepaidVisaHref } from "./prepaid-visa-range";
 
 function formatRangeLabel(range: DateRange | undefined): string {
   if (!range?.from || !range?.to) {
@@ -69,7 +69,7 @@ export default function PrepaidVisaDashboard() {
     (state: RootState) => state.prepaidVisa,
   );
   const [dateRange, setDateRange] = useState<DateRange | undefined>(
-    () => getLast30DaysRange(),
+    () => getLast7DaysRange(),
   );
   const [product, setProduct] = useState<PrepaidVisaProductFilter>("");
   const requestRef = useRef<{ abort: () => void } | null>(null);

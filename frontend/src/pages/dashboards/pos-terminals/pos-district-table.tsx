@@ -58,18 +58,18 @@ export function PosDistrictMixTable({
   onOpen: (filters: Partial<PosTerminalFilters>) => void;
 }) {
   return (
-    <Card className="gap-4 py-4">
-      <CardHeader className="px-4">
-        <CardTitle>District mix</CardTitle>
-        <CardDescription>
+    <Card className="gap-2 py-3">
+      <CardHeader className="gap-1 px-3">
+        <CardTitle className="text-base">District mix</CardTitle>
+        <CardDescription className="text-xs">
           Live counts by status and site. Stopped and relocated are no longer operating. Click a number to open that list.
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-4">
+      <CardContent className="px-3">
         {loading ? (
-          <Skeleton className="h-80 w-full" />
+          <Skeleton className="h-64 w-full" />
         ) : rows.length === 0 ? (
-          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
             No terminal data
           </div>
         ) : (

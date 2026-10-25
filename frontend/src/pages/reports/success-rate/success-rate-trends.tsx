@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchSuccessRateTrend } from "@/features/report_slice";
+import { formatMoneyWithCurrency } from "@/lib/iso-currency";
 import {
   SuccessChannel,
   SuccessFlow,
@@ -62,6 +63,9 @@ import {
 } from "@/types/report";
 import { hasPermission } from "../../../../utility/has-permission";
 import { AppDispatch, RootState } from "../../../../app/store/store";
+
+/** Switch success-rate amounts are stored in local issuer currency (ETB). */
+const AMOUNT_CURRENCY = "ETB";
 
 type TrendPreset = "7d" | "30d" | "12m" | "ytd" | "custom";
 
@@ -102,7 +106,10 @@ function canViewCombo(
   flow: SuccessFlow,
   permissions: string[],
 ) {
-  const required = [permissionFor(channel, flow), "report:view-success-transactions"];
+  // Specific rate permission only. Do not OR the legacy
+  // report:view-success-transactions alias or ATM/POS roles unlock every
+  // Switch/POS/ATM combo on this page.
+  const required = [permissionFor(channel, flow)];
   if (channel === "switch" && flow === "remote_onus") {
     required.push("report:view-switch-issuing-success-rate");
   }
@@ -136,10 +143,7 @@ function formatCount(value: number) {
 }
 
 function formatAmount(value: number) {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return formatMoneyWithCurrency(value, AMOUNT_CURRENCY);
 }
 
 /**

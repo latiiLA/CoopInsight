@@ -111,21 +111,21 @@ export function FleetPie({
   const slices = toPieSlices(rows, total);
 
   return (
-    <Card className="gap-4 py-4">
-      <CardHeader className="px-4">
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+    <Card className="gap-2 py-3">
+      <CardHeader className="gap-1 px-3">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent className="px-4">
+      <CardContent className="px-3">
         {loading ? (
-          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-40 w-full" />
         ) : slices.length === 0 ? (
-          <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
             No terminal data
           </div>
         ) : (
-          <div className="grid items-center gap-4 lg:grid-cols-[minmax(0,1fr)_12rem]">
-            <div className="h-64">
+          <div className="grid items-center gap-3">
+            <div className="mx-auto h-36 w-full max-w-[14rem]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -134,8 +134,8 @@ export function FleetPie({
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={84}
+                    innerRadius={36}
+                    outerRadius={58}
                     paddingAngle={2}
                     cursor={onSelect ? "pointer" : undefined}
                     onClick={(_, index) => {
@@ -159,11 +159,11 @@ export function FleetPie({
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <ul className="max-h-64 space-y-2 overflow-y-auto text-sm">
+            <ul className="max-h-28 space-y-1.5 overflow-y-auto text-xs">
               {slices.map((slice) => (
                 <li key={slice.name} className="flex items-start gap-2">
                   <span
-                    className="mt-1 size-2.5 shrink-0 rounded-full"
+                    className="mt-1 size-2 shrink-0 rounded-full"
                     style={{ backgroundColor: slice.fill }}
                   />
                   <span className="min-w-0 flex-1 leading-snug">{slice.name}</span>
@@ -275,24 +275,24 @@ export function FleetRankList({
   const max = Math.max(...rows.map((row) => row.count), 1);
 
   return (
-    <Card className="gap-4 py-4">
-      <CardHeader className="px-4">
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+    <Card className="gap-2 py-3">
+      <CardHeader className="gap-1 px-3">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent className="px-4">
+      <CardContent className="px-3">
         {loading ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {Array.from({ length: 8 }).map((_, index) => (
-              <Skeleton key={index} className="h-10 w-full" />
+              <Skeleton key={index} className="h-8 w-full" />
             ))}
           </div>
         ) : rows.length === 0 ? (
-          <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
             No terminal data
           </div>
         ) : (
-          <ol className="space-y-2.5">
+          <ol className="space-y-1.5">
             {rows.map((row, index) => {
               const clickable = Boolean(onSelect) && row.name !== OTHERS;
 
@@ -301,7 +301,7 @@ export function FleetRankList({
                   <button
                     type="button"
                     disabled={!clickable}
-                    className="w-full rounded-md px-1 py-1 text-left disabled:cursor-default enabled:hover:bg-muted/50"
+                    className="w-full rounded-md px-1 py-0.5 text-left disabled:cursor-default enabled:hover:bg-muted/50"
                     onClick={() => {
                       if (clickable) {
                         onSelect?.(row.name);
@@ -319,7 +319,7 @@ export function FleetRankList({
                         {formatCount(row.count)}
                       </span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full bg-primary"
                         style={{ width: `${Math.max((row.count / max) * 100, 6)}%` }}
@@ -385,41 +385,41 @@ export function FleetStackedBar({
   onSelect?: (name: string) => void;
   actions?: ReactNode;
 }) {
-  const height = Math.max(360, rows.length * 34);
+  const height = Math.max(260, rows.length * 28);
 
   return (
-    <Card className="gap-4 py-4">
-      <CardHeader className="px-4">
+    <Card className="gap-2 py-3">
+      <CardHeader className="gap-1 px-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <CardTitle className="text-base">{title}</CardTitle>
+            <CardDescription className="text-xs">{description}</CardDescription>
           </div>
           {actions}
         </div>
       </CardHeader>
-      <CardContent className="px-4">
+      <CardContent className="px-3">
         {loading ? (
-          <Skeleton className="h-80 w-full" />
+          <Skeleton className="h-64 w-full" />
         ) : rows.length === 0 ? (
-          <div className="flex h-80 items-center justify-center text-sm text-muted-foreground">
+          <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
             No terminal data
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div style={{ height }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={rows}
                   layout="vertical"
-                  margin={{ top: 8, right: 16, left: 4, bottom: 8 }}
+                  margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
                 >
                   <CartesianGrid horizontal={false} strokeDasharray="3 3" />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                   <YAxis
                     type="category"
                     dataKey="name"
-                    width={128}
+                    width={112}
                     tick={{ fontSize: 11 }}
                     interval={0}
                     tickFormatter={formatAxisLabel}
@@ -431,7 +431,7 @@ export function FleetStackedBar({
                       dataKey={item.key}
                       stackId="mix"
                       fill={item.color}
-                      maxBarSize={22}
+                      maxBarSize={18}
                       cursor={onSelect ? "pointer" : undefined}
                       radius={
                         index === series.length - 1 ? [0, 6, 6, 0] : [0, 0, 0, 0]
@@ -447,11 +447,11 @@ export function FleetStackedBar({
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <ul className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+            <ul className="flex flex-wrap gap-3 text-xs text-muted-foreground">
               {series.map((item) => (
                 <li key={item.key} className="flex items-center gap-2">
                   <span
-                    className="size-2.5 rounded-full"
+                    className="size-2 rounded-full"
                     style={{ backgroundColor: item.color }}
                   />
                   {item.key}

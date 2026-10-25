@@ -1,4 +1,4 @@
-import * as React from "react";
+﻿import * as React from "react";
 import {
   Activity,
   ArrowLeftRight,
@@ -70,7 +70,6 @@ import {
   OffUsIcon,
   OnUsIcon,
   SuccessRateIcon,
-  SuccessRateTrendsIcon,
   SwitchIcon,
 } from "./icons/success-rate-icons";
 import { NavLink } from "react-router-dom";
@@ -160,7 +159,7 @@ const data: {
 
   navMain: [
     {
-      // Icon legend — learn once, reused across channels:
+      // Icon legend â€” learn once, reused across channels:
       // overall = channel identity (SwitchIcon / AtmIcon / PosIcon)
       // on-us = OnUsIcon (bank / CoopBank)
       // off-us = OffUsIcon (cross-bank swap)
@@ -172,35 +171,11 @@ const data: {
       url: "#",
       items: [
         {
-          title: "Trends",
-          icon: SuccessRateTrendsIcon,
-          url: "success-rate-trends",
-          permissions: [
-            "report:view-success-transactions",
-            "report:view-atm-overall-success-rate",
-            "report:view-atm-acquiring-success-rate",
-            "report:view-atm-onus-success-rate",
-            "report:view-atm-offus-success-rate",
-            "report:view-atm-issuing-success-rate",
-            "report:view-pos-overall-success-rate",
-            "report:view-pos-acquiring-success-rate",
-            "report:view-pos-onus-success-rate",
-            "report:view-pos-offus-success-rate",
-            "report:view-pos-issuing-success-rate",
-            "report:view-switch-overall-success-rate",
-            "report:view-switch-onus-success-rate",
-            "report:view-switch-offus-success-rate",
-            "report:view-switch-remote-onus-success-rate",
-            "report:view-switch-issuing-success-rate",
-          ],
-        },
-        {
           title: "Switch Overall",
           icon: SwitchIcon,
           url: "switch-overall-success-rate",
           permissions: [
             "report:view-switch-overall-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -209,7 +184,6 @@ const data: {
           url: "switch-onus-success-rate",
           permissions: [
             "report:view-switch-onus-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -218,7 +192,6 @@ const data: {
           url: "switch-offus-success-rate",
           permissions: [
             "report:view-switch-offus-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -228,7 +201,6 @@ const data: {
           permissions: [
             "report:view-switch-remote-onus-success-rate",
             "report:view-switch-issuing-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -237,7 +209,6 @@ const data: {
           url: "switch-issuing-success-rate",
           permissions: [
             "report:view-switch-issuing-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -246,7 +217,6 @@ const data: {
           url: "atm-overall-success-rate",
           permissions: [
             "report:view-atm-overall-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -255,7 +225,6 @@ const data: {
           url: "atm-acquiring-success-rate",
           permissions: [
             "report:view-atm-acquiring-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -264,7 +233,6 @@ const data: {
           url: "atm-onus-success-rate",
           permissions: [
             "report:view-atm-onus-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -273,7 +241,6 @@ const data: {
           url: "atm-offus-success-rate",
           permissions: [
             "report:view-atm-offus-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -282,7 +249,6 @@ const data: {
           url: "atm-issuing-success-rate",
           permissions: [
             "report:view-atm-issuing-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -291,7 +257,6 @@ const data: {
           url: "pos-overall-success-rate",
           permissions: [
             "report:view-pos-overall-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -300,7 +265,6 @@ const data: {
           url: "pos-acquiring-success-rate",
           permissions: [
             "report:view-pos-acquiring-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -309,7 +273,6 @@ const data: {
           url: "pos-onus-success-rate",
           permissions: [
             "report:view-pos-onus-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -318,7 +281,6 @@ const data: {
           url: "pos-offus-success-rate",
           permissions: [
             "report:view-pos-offus-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -327,7 +289,6 @@ const data: {
           url: "pos-issuing-success-rate",
           permissions: [
             "report:view-pos-issuing-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -336,7 +297,6 @@ const data: {
           url: "pos-terminal-success-rate",
           permissions: [
             "report:view-pos-acquiring-success-rate",
-            "report:view-success-transactions",
           ],
         },
         {
@@ -345,7 +305,19 @@ const data: {
           url: "atm-terminal-success-rate",
           permissions: [
             "report:view-atm-acquiring-success-rate",
-            "report:view-success-transactions",
+          ],
+        },
+        {
+          title: "Card Type Success Rate",
+          icon: CreditCard,
+          url: "card-product-success-rate",
+          permissions: [
+            "report:view-card-product-success-rate",
+            "report:view-switch-overall-success-rate",
+            "report:view-atm-acquiring-success-rate",
+            "report:view-atm-overall-success-rate",
+            "report:view-pos-acquiring-success-rate",
+            "report:view-pos-overall-success-rate",
           ],
         },
       ],
@@ -374,22 +346,25 @@ const data: {
           permissions: ["report:view-transaction-mix"],
         },
         {
-          title: "Cortex transaction search",
-          icon: Search,
-          url: "cortex-transaction-search",
-          permissions: ["report:search-cortex-transactions"],
-        },
-        {
           title: "Switch transaction search",
           icon: Search,
           url: "switch-transaction-search",
           permissions: ["report:search-switch-transactions"],
         },
         {
+          title: "Cortex transaction search",
+          icon: Search,
+          url: "cortex-transaction-search",
+          permissions: ["report:search-cortex-transactions"],
+        },
+        {
           title: "Switch / Cortex export",
           icon: Download,
           url: "terminal-recon-export",
-          permissions: ["report:export-terminal-recon"],
+          permissions: [
+            "report:export-switch-terminal-recon",
+            "report:export-cortex-terminal-recon",
+          ],
         },
       ],
     },

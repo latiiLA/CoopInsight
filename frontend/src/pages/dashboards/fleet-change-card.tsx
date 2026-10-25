@@ -45,14 +45,14 @@ export function FleetChangeCard({
   return (
     <Card
       className={cn(
-        "gap-3 py-4",
-        onClick && "cursor-pointer transition-colors hover:bg-muted/40",
+        "gap-1.5 py-2.5",
+        onClick && "cursor-pointer transition-colors hover:border-primary/50",
       )}
       onClick={onClick}
     >
-      <CardHeader className="px-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <CardDescription>{label}</CardDescription>
+      <CardHeader className="gap-1 px-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <CardDescription className="text-xs">{label}</CardDescription>
           <div className="flex items-center gap-2">
             <div
               className="flex flex-wrap gap-1"
@@ -71,22 +71,22 @@ export function FleetChangeCard({
                 </Button>
               ))}
             </div>
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Icon className="size-4" />
+            <div className="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Icon className="size-3.5" />
             </div>
           </div>
         </div>
         {loading ? (
-          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-6 w-20" />
         ) : (
-          <CardTitle className="text-2xl tabular-nums">
+          <CardTitle className="text-lg leading-tight tabular-nums">
             {stats.current.toLocaleString()}
           </CardTitle>
         )}
       </CardHeader>
-      <CardContent className="px-4 text-sm text-muted-foreground">
+      <CardContent className="px-3 text-xs leading-snug text-muted-foreground">
         {loading ? (
-          <Skeleton className="h-4 w-56" />
+          <Skeleton className="h-3 w-56" />
         ) : (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span
@@ -100,7 +100,8 @@ export function FleetChangeCard({
               {formatSignedCount(stats.net)} {phrase}
             </span>
             <span>
-              {stats.added.toLocaleString()} added · {stats.removed.toLocaleString()} relocated or stopped
+              {stats.added.toLocaleString()} added ·{" "}
+              {stats.removed.toLocaleString()} relocated or stopped
             </span>
           </div>
         )}

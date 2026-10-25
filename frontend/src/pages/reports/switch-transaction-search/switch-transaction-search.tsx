@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, parse, subDays } from "date-fns";
 import { useCallback, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useDispatch, useSelector } from "react-redux";
@@ -96,6 +96,36 @@ function parseOptionalAmount(raw: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+const LOOKUP_WINDOW_DAYS = 7;
+
+function parseApiDate(raw: string | null | undefined): Date | null {
+  if (!raw?.trim()) return null;
+  for (const layout of ["MM-dd-yyyy", "MM/dd/yyyy"]) {
+    const d = parse(raw.trim(), layout, new Date());
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return null;
+}
+
+function formatUiDate(raw: string | null | undefined): string {
+  const d = parseApiDate(raw);
+  return d ? format(d, "MMM d, yyyy") : raw?.trim() || "-";
+}
+
+function olderLookupWindow(dateFrom: string): {
+  dateFrom: string;
+  dateTo: string;
+} | null {
+  const from = parseApiDate(dateFrom);
+  if (!from) return null;
+  const nextTo = subDays(from, 1);
+  const nextFrom = subDays(nextTo, LOOKUP_WINDOW_DAYS - 1);
+  return {
+    dateFrom: format(nextFrom, "MM/dd/yyyy"),
+    dateTo: format(nextTo, "MM/dd/yyyy"),
+  };
+}
+
 export default function SwitchTransactionSearchPage() {
   const dispatch = useDispatch<AppDispatch>();
   const {
@@ -105,6 +135,9 @@ export default function SwitchTransactionSearchPage() {
     loadingMore,
     error,
     hasMore,
+    hasMoreOlder,
+    appliedDateFrom,
+    appliedDateTo,
     page,
     lastArgs,
     detail,
@@ -124,18 +157,20 @@ export default function SwitchTransactionSearchPage() {
   );
 
   const buildArgs = useCallback(
-    (nextPage: number) => {
+    (nextPage: number, opts?: { lookupWindow?: boolean }) => {
       const amountMin = parseOptionalAmount(form.amountMin);
       const amountMax = parseOptionalAmount(form.amountMax);
+      const hasDates = Boolean(dateRange?.from && dateRange?.to);
+      const hasLookupKey = Boolean(
+        form.rrn.trim() || form.card.trim() || form.trace.trim(),
+      );
+      const lookupWindow =
+        opts?.lookupWindow ?? (!hasDates && hasLookupKey);
       return {
-        dateFrom:
-          dateRange?.from && dateRange?.to
-            ? format(dateRange.from, "MM/dd/yyyy")
-            : undefined,
-        dateTo:
-          dateRange?.from && dateRange?.to
-            ? format(dateRange.to, "MM/dd/yyyy")
-            : undefined,
+        dateFrom: hasDates
+          ? format(dateRange!.from!, "MM/dd/yyyy")
+          : undefined,
+        dateTo: hasDates ? format(dateRange!.to!, "MM/dd/yyyy") : undefined,
         product: form.product || undefined,
         card: form.card || undefined,
         q: form.q || undefined,
@@ -162,6 +197,7 @@ export default function SwitchTransactionSearchPage() {
         reversal: form.reversal || undefined,
         amountMin,
         amountMax,
+        lookupWindow: lookupWindow || undefined,
         page: nextPage,
         pageSize: SWITCH_TXN_SEARCH_PAGE_SIZE,
       };
@@ -214,12 +250,38 @@ export default function SwitchTransactionSearchPage() {
     form.trace,
   ]);
 
-  const onLoadMore = useCallback(async () => {
-    if (!lastArgs || !hasMore || loadingMore) return;
+  const onRequestMore = useCallback(async () => {
+    if (!lastArgs || loadingMore) return;
+
+    if (hasMore) {
+      const result = await dispatch(
+        fetchSwitchTransactionSearch({
+          ...lastArgs,
+          page: page + 1,
+          append: true,
+        }),
+      );
+      if (
+        fetchSwitchTransactionSearch.rejected.match(result) &&
+        !result.meta.aborted
+      ) {
+        toast.error(result.payload || "Failed to load more");
+      }
+      return;
+    }
+
+    if (!hasMoreOlder || !appliedDateFrom) return;
+    const older = olderLookupWindow(appliedDateFrom);
+    if (!older) {
+      toast.error("Could not build an older date window");
+      return;
+    }
     const result = await dispatch(
       fetchSwitchTransactionSearch({
         ...lastArgs,
-        page: page + 1,
+        ...older,
+        lookupWindow: true,
+        page: 1,
         append: true,
       }),
     );
@@ -227,9 +289,51 @@ export default function SwitchTransactionSearchPage() {
       fetchSwitchTransactionSearch.rejected.match(result) &&
       !result.meta.aborted
     ) {
-      toast.error(result.payload || "Failed to load more");
+      toast.error(result.payload || "Failed to load older results");
     }
-  }, [dispatch, hasMore, lastArgs, loadingMore, page]);
+  }, [
+    appliedDateFrom,
+    dispatch,
+    hasMore,
+    hasMoreOlder,
+    lastArgs,
+    loadingMore,
+    page,
+  ]);
+
+  const searchSummary = useMemo(() => {
+    if (!submitted || loading || error) return null;
+    const parts: string[] = [];
+    if (lastArgs?.card?.trim()) {
+      parts.push(`card ${lastArgs.card.trim()}`);
+    }
+    if (lastArgs?.rrn?.trim()) {
+      parts.push(`RRN ${lastArgs.rrn.trim()}`);
+    }
+    if (lastArgs?.trace?.trim()) {
+      parts.push(`trace ${lastArgs.trace.trim()}`);
+    }
+    const criteria = parts.length > 0 ? parts.join(", ") : "your filters";
+    const range =
+      appliedDateFrom && appliedDateTo
+        ? `${formatUiDate(appliedDateFrom)} - ${formatUiDate(appliedDateTo)}`
+        : null;
+    return {
+      criteria,
+      range,
+      count: items.length,
+    };
+  }, [
+    appliedDateFrom,
+    appliedDateTo,
+    error,
+    items.length,
+    lastArgs,
+    loading,
+    submitted,
+  ]);
+
+  const canRequestMore = (hasMore || hasMoreOlder) && !loading;
 
   const onRowClick = useCallback(
     (row: SwitchTransaction) => {
@@ -256,7 +360,8 @@ export default function SwitchTransactionSearchPage() {
         </h3>
         <p className="text-sm text-muted-foreground">
           Look up IST switch log rows by date, RRN, card, trace, route, and
-          related criteria. Results appear after you search.
+          related criteria. Card or RRN searches without a date use the last
+          7 days first; use Request more for older windows.
         </p>
       </div>
 
@@ -289,7 +394,7 @@ export default function SwitchTransactionSearchPage() {
             <Label htmlFor="sw-card">Card</Label>
             <Input
               id="sw-card"
-              placeholder="Last 4 or fragment"
+              placeholder="Last 4, fragment, or PAN (spaces ok)"
               value={form.card}
               onChange={(e) => setField("card", e.target.value)}
             />
@@ -564,6 +669,18 @@ export default function SwitchTransactionSearchPage() {
 
       {(loading || (submitted && !emptyHint)) && (
         <>
+          {searchSummary ? (
+            <p className="text-sm text-muted-foreground">
+              Showing {searchSummary.count.toLocaleString()} row
+              {searchSummary.count === 1 ? "" : "s"} for {searchSummary.criteria}
+              {searchSummary.range ? ` · ${searchSummary.range}` : ""}.
+              {canRequestMore
+                ? hasMore
+                  ? " More rows are available in this window."
+                  : " Older dates may still match."
+                : ""}
+            </p>
+          ) : null}
           <DataTable
             loading={loading}
             columns={switchTxnSearchColumns}
@@ -573,15 +690,19 @@ export default function SwitchTransactionSearchPage() {
             enableExport={!loadingMore}
             onRowClick={onRowClick}
           />
-          {hasMore && !loading ? (
+          {canRequestMore ? (
             <div className="flex justify-center">
               <Button
                 type="button"
                 variant="outline"
                 disabled={loadingMore}
-                onClick={() => void onLoadMore()}
+                onClick={() => void onRequestMore()}
               >
-                {loadingMore ? "Loading..." : "Load more"}
+                {loadingMore
+                  ? "Loading..."
+                  : hasMore
+                    ? "Request more"
+                    : "Request more (older dates)"}
               </Button>
             </div>
           ) : null}
