@@ -30,6 +30,8 @@ type Props = {
   journalFile: EJJournalFileView | null;
   journalFileLoading: boolean;
   journalFileError: string | null;
+  /** When true, hide transaction-block mode (browse-by-terminal opens whole files). */
+  fileOnly?: boolean;
 };
 
 async function copyText(label: string, text: string) {
@@ -69,16 +71,19 @@ export function EJJournalViewer({
   journalFile,
   journalFileLoading,
   journalFileError,
+  fileOnly = false,
 }: Props) {
   const preRef = useRef<HTMLPreElement | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const loading = mode === "file" ? journalFileLoading : journalLoading;
-  const error = mode === "file" ? journalFileError : journalError;
+  const effectiveMode: JournalViewerMode = fileOnly ? "file" : mode;
+  const loading =
+    effectiveMode === "file" ? journalFileLoading : journalLoading;
+  const error = effectiveMode === "file" ? journalFileError : journalError;
   const filename =
-    mode === "file"
+    effectiveMode === "file"
       ? journalFile?.filename
       : journal?.filename;
-  const path = mode === "file" ? journalFile?.path : journal?.path;
+  const path = effectiveMode === "file" ? journalFile?.path : journal?.path;
 
   const highlightStart =
     journalFile?.highlightLine ?? journal?.lineStart ?? 0;
@@ -88,7 +93,7 @@ export function EJJournalViewer({
     highlightStart;
 
   useEffect(() => {
-    if (mode !== "file" || !highlightStart || !preRef.current) {
+    if (effectiveMode !== "file" || !highlightStart || !preRef.current) {
       return;
     }
     const target = preRef.current.querySelector(
@@ -97,10 +102,10 @@ export function EJJournalViewer({
     if (target instanceof HTMLElement) {
       target.scrollIntoView({ block: "center" });
     }
-  }, [mode, highlightStart, journalFile]);
+  }, [effectiveMode, highlightStart, journalFile]);
 
   const wholeFileLines =
-    mode === "file" && journalFile?.content
+    effectiveMode === "file" && journalFile?.content
       ? journalFile.content.split(/\r?\n/)
       : null;
 
@@ -117,13 +122,13 @@ export function EJJournalViewer({
         <DialogHeader className="space-y-1 border-b px-6 py-4 text-left">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <FileSearch className="size-3.5 shrink-0 text-primary" />
-            {mode === "file" ? "Whole journal file" : "Open journal"}
+            {effectiveMode === "file" ? "Whole journal file" : "Open journal"}
           </div>
           <DialogTitle className="text-base">
             {filename || (loading ? "Loading journal..." : "Journal")}
           </DialogTitle>
           <DialogDescription>
-            {mode === "file"
+            {effectiveMode === "file"
               ? journalFile
                 ? `${formatBytes(journalFile.sizeBytes)}${
                     journalFile.terminalId
@@ -144,28 +149,32 @@ export function EJJournalViewer({
         </DialogHeader>
 
         <div className="flex flex-wrap items-center gap-2 border-b px-6 py-2">
-          <Button
-            type="button"
-            variant={mode === "block" ? "default" : "outline"}
-            size="sm"
-            disabled={journalLoading}
-            onClick={() => onModeChange("block")}
-          >
-            This transaction
-          </Button>
-          <Button
-            type="button"
-            variant={mode === "file" ? "default" : "outline"}
-            size="sm"
-            disabled={journalFileLoading}
-            onClick={() => {
-              onModeChange("file");
-              onRequestWholeFile();
-            }}
-          >
-            <FileText className="mr-1.5 size-3.5" />
-            {journalFileLoading ? "Loading file..." : "View whole file"}
-          </Button>
+          {!fileOnly ? (
+            <Button
+              type="button"
+              variant={effectiveMode === "block" ? "default" : "outline"}
+              size="sm"
+              disabled={journalLoading}
+              onClick={() => onModeChange("block")}
+            >
+              This transaction
+            </Button>
+          ) : null}
+          {!fileOnly ? (
+            <Button
+              type="button"
+              variant={effectiveMode === "file" ? "default" : "outline"}
+              size="sm"
+              disabled={journalFileLoading}
+              onClick={() => {
+                onModeChange("file");
+                onRequestWholeFile();
+              }}
+            >
+              <FileText className="mr-1.5 size-3.5" />
+              {journalFileLoading ? "Loading file..." : "View whole file"}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -184,7 +193,7 @@ export function EJJournalViewer({
             {downloading ? "Downloading..." : "Download file"}
           </Button>
 
-          {mode === "block" && journal?.lineStart ? (
+          {effectiveMode === "block" && journal?.lineStart ? (
             <Button
               type="button"
               variant="outline"
@@ -208,7 +217,7 @@ export function EJJournalViewer({
               Copy path
             </Button>
           ) : null}
-          {mode === "block" && journal?.rawText ? (
+          {effectiveMode === "block" && journal?.rawText ? (
             <Button
               type="button"
               variant="outline"
@@ -219,7 +228,7 @@ export function EJJournalViewer({
               Copy text
             </Button>
           ) : null}
-          {mode === "file" && journalFile?.content ? (
+          {effectiveMode === "file" && journalFile?.content ? (
             <Button
               type="button"
               variant="outline"
@@ -237,7 +246,7 @@ export function EJJournalViewer({
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
           {loading ? (
             <p className="text-sm text-muted-foreground">
-              {mode === "file"
+              {effectiveMode === "file"
                 ? "Opening whole journal file..."
                 : "Opening journal..."}
             </p>
@@ -246,13 +255,13 @@ export function EJJournalViewer({
             <p className="text-sm text-destructive">{error}</p>
           ) : null}
 
-          {mode === "block" && journal?.rawText && !loading ? (
+          {effectiveMode === "block" && journal?.rawText && !loading ? (
             <pre className="whitespace-pre-wrap break-words rounded-md border bg-muted/30 p-3 font-mono text-[12px] leading-relaxed">
               {journal.rawText}
             </pre>
           ) : null}
 
-          {mode === "file" && wholeFileLines && !loading ? (
+          {effectiveMode === "file" && wholeFileLines && !loading ? (
             <pre
               ref={preRef}
               className="rounded-md border bg-muted/30 p-3 font-mono text-[11px] leading-relaxed"

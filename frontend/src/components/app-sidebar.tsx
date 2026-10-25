@@ -521,6 +521,12 @@ const data: {
           permissions: ["report:search-ej-transactions"],
         },
         {
+          title: "By Terminal",
+          icon: Terminal,
+          url: "ej-by-terminal",
+          permissions: ["report:search-ej-transactions"],
+        },
+        {
           title: "Coverage",
           icon: ChartBar,
           url: "ej-coverage",

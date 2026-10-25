@@ -621,26 +621,21 @@ export default function Home() {
     showQuickLinks;
 
   return (
-    <div className="container mx-auto min-w-0 space-y-8 pb-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            {greetingForHour(new Date().getHours())}
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Welcome back, {firstName}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Today&apos;s {subtitleFocus} for {todayLabel}
-          </p>
-        </div>
+    <div className="container mx-auto min-w-0 space-y-4 pb-6">
+      <div>
+        <p className="text-sm text-muted-foreground">
+          {greetingForHour(new Date().getHours())}
+        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Welcome back, {firstName}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Today&apos;s {subtitleFocus} for {todayLabel}
+        </p>
       </div>
 
       {showSuccessSection ? (
-        <Section
-          title={`${successLabel} performance`}
-          description={`Today's ${successLabel.toLowerCase()} authorization outcomes`}
-        >
+        <section className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               label={`${successLabel} transactions`}
@@ -782,7 +777,7 @@ export default function Home() {
               />
             </div>
           )}
-        </Section>
+        </section>
       ) : null}
 
       {!showSuccessSection && showDepositSection ? (

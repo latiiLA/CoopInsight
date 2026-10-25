@@ -283,7 +283,9 @@ export default function EJTransactionSearchPage() {
       return "Pick a date range, then optionally narrow by card, terminal, auth, status, amount, or customer account. Results appear after you search.";
     }
     if (error) return error;
-    if (items.length === 0) return "No matching journal rows";
+    if (items.length === 0) {
+      return "No matching journal rows. If you expected hits, check EJ Coverage for these dates. Search only finds journals that have already been indexed.";
+    }
     return null;
   }, [error, items.length, loading, submitted]);
 

@@ -19,6 +19,7 @@ import prepaidVisaReducer from "@/features/prepaid_visa_slice";
 import cortexTxnSearchReducer from "@/features/cortex_transaction_search_slice";
 import switchTxnSearchReducer from "@/features/switch_transaction_search_slice";
 import ejTxnSearchReducer from "@/features/ej_transaction_search_slice";
+import ejBrowseReducer from "@/features/ej_browse_slice";
 import ejCoverageReducer from "@/features/ej_coverage_slice";
 import visaSettlementReducer from "@/features/visa_settlement_slice";
 import mastercardIPMReducer from "@/features/mastercard_ipm_slice";
@@ -45,6 +46,7 @@ export const store = configureStore({
     cortexTxnSearch: cortexTxnSearchReducer,
     switchTxnSearch: switchTxnSearchReducer,
     ejTransactionSearch: ejTxnSearchReducer,
+    ejBrowse: ejBrowseReducer,
     ejCoverage: ejCoverageReducer,
     visaSettlement: visaSettlementReducer,
     mastercardIPM: mastercardIPMReducer,

@@ -52,6 +52,9 @@ const EJTransactionSearch = lazy(
 const EJCoverage = lazy(
   () => import("./pages/reports/ej-coverage/ej-coverage"),
 );
+const EJByTerminal = lazy(
+  () => import("./pages/reports/ej-by-terminal/ej-by-terminal"),
+);
 const ManageUsers = lazy(
   () => import("./pages/system administrations/users/manage-users"),
 );
@@ -533,6 +536,16 @@ function App() {
                 permissions={["report:search-ej-transactions"]}
               >
                 <EJCoverage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/ej-by-terminal"
+            element={
+              <RequirePermission
+                permissions={["report:search-ej-transactions"]}
+              >
+                <EJByTerminal />
               </RequirePermission>
             }
           />
