@@ -215,17 +215,9 @@ func cortexTxnSearchFilterClause(req model.CortexTransactionSearchRequest, inclu
 	var parts []string
 	var args []any
 
-	card := prepaidVisaSanitizeSearch(req.Card)
-	if card != "" {
-		cardUp := strings.ToUpper(card)
-		parts = append(parts, `(
-			UPPER(TRIM(NVL(c.PAN_DISPLAY, ' '))) LIKE :card_like
-			OR SUBSTR(TRIM(c.PAN_DISPLAY), -4) = :card_exact
-		)`)
-		args = append(args,
-			sql.Named("card_like", "%"+cardUp+"%"),
-			sql.Named("card_exact", cardUp),
-		)
+	if cardSQL, cardArgs := prepaidVisaCardFilterSQL("c.PAN_DISPLAY", req.Card); cardSQL != "" {
+		parts = append(parts, cardSQL)
+		args = append(args, cardArgs...)
 	}
 
 	branch := strings.ToUpper(prepaidVisaSanitizeSearch(req.Branch))

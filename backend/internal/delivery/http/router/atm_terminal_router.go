@@ -18,7 +18,8 @@ func registerAtmTerminalRoutes(protected *gin.RouterGroup, atmTerminalHandler ha
 				"terminal:view-atm-transaction",
 				// EJ Finder / recon pickers need the full TMS ATM list.
 				"report:search-ej-transactions",
-				"report:export-terminal-recon",
+				"report:export-switch-terminal-recon",
+				"report:export-cortex-terminal-recon",
 			},
 		),
 		atmTerminalHandler.GetAll,

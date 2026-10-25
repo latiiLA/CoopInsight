@@ -95,6 +95,9 @@ func parseSwitchTxnSearchRequest(c *gin.Context) (model.SwitchTransactionSearchR
 		return model.SwitchTransactionSearchRequest{}, 0, 0, false
 	}
 
+	lookupWindow := strings.EqualFold(strings.TrimSpace(c.Query("lookupWindow")), "true") ||
+		strings.TrimSpace(c.Query("lookupWindow")) == "1"
+
 	req := model.SwitchTransactionSearchRequest{
 		DateFrom:         strings.TrimSpace(c.Query("dateFrom")),
 		DateTo:           strings.TrimSpace(c.Query("dateTo")),
@@ -122,6 +125,7 @@ func parseSwitchTxnSearchRequest(c *gin.Context) (model.SwitchTransactionSearchR
 		Reversal:         strings.TrimSpace(c.Query("reversal")),
 		AmountMin:        amtMin,
 		AmountMax:        amtMax,
+		LookupWindow:     lookupWindow,
 	}
 	return req, page, pageSize, true
 }

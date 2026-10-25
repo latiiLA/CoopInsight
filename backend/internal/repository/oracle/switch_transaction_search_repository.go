@@ -136,6 +136,8 @@ func (r *switchTransactionSearchRepository) Search(
 		Page:     page,
 		PageSize: pageSize,
 		HasMore:  hasMore,
+		DateFrom: strings.TrimSpace(req.DateFrom),
+		DateTo:   strings.TrimSpace(req.DateTo),
 		Items:    pageRows,
 	}, nil
 }
@@ -338,22 +340,56 @@ func switchTxnSanitizeDigits(raw string, maxLen int) string {
 	return b.String()
 }
 
+// switchTxnCardFilterSQL matches MASK_PAN / PAN without REGEXP_REPLACE.
+// Digits are normalized. For BIN+last4 (typical masked paste) only use
+// MASK_PAN LIKE '424312%3877' — never leading-wildcard PAN LIKE, which forces
+// a full scan inside the date window and times out on shclog.
+func switchTxnCardFilterSQL(raw string) (string, []any) {
+	card := switchTxnSanitizeDigits(raw, 19)
+	if card == "" {
+		return "", nil
+	}
+
+	last4 := card
+	if len(card) > 4 {
+		last4 = card[len(card)-4:]
+	}
+
+	switch {
+	case len(card) <= 4:
+		return `(
+			SUBSTR(TRIM(t.MASK_PAN), -4) = :card_last4
+			OR SUBSTR(TRIM(t.PAN), -4) = :card_last4
+		)`, []any{sql.Named("card_last4", last4)}
+	case len(card) >= 16:
+		bin := card[:6]
+		return `(
+			TRIM(t.PAN) = :card_pan_exact
+			OR TRIM(t.MASK_PAN) LIKE :card_bin_last
+		)`, []any{
+			sql.Named("card_pan_exact", card),
+			sql.Named("card_bin_last", bin+"%"+last4),
+		}
+	case len(card) >= 10:
+		bin := card[:6]
+		return `TRIM(t.MASK_PAN) LIKE :card_bin_last`, []any{
+			sql.Named("card_bin_last", bin+"%"+last4),
+		}
+	default:
+		// Mid-length fragment: prefer MASK_PAN prefix/suffix style when possible.
+		return `TRIM(t.MASK_PAN) LIKE :card_like`, []any{
+			sql.Named("card_like", "%"+card+"%"),
+		}
+	}
+}
+
 func switchTxnSearchFilterClause(req model.SwitchTransactionSearchRequest) (string, []any) {
 	var parts []string
 	var args []any
 
-	card := prepaidVisaSanitizeSearch(req.Card)
-	if card != "" {
-		cardUp := strings.ToUpper(card)
-		parts = append(parts, `(
-			UPPER(TRIM(NVL(t.MASK_PAN, ' '))) LIKE :card_like
-			OR SUBSTR(TRIM(t.MASK_PAN), -4) = :card_exact
-			OR SUBSTR(TRIM(t.PAN), -4) = :card_exact
-		)`)
-		args = append(args,
-			sql.Named("card_like", "%"+cardUp+"%"),
-			sql.Named("card_exact", cardUp),
-		)
+	if cardSQL, cardArgs := switchTxnCardFilterSQL(req.Card); cardSQL != "" {
+		parts = append(parts, cardSQL)
+		args = append(args, cardArgs...)
 	}
 
 	product := strings.ToUpper(prepaidVisaSanitizeSearch(req.Product))

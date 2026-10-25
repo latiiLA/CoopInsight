@@ -20,6 +20,7 @@ type SuccessTransactionService interface {
 		limit int,
 	) ([]model.SuccessTransactionDetail, error)
 	GetTerminalReport(ctx context.Context, dateFrom, dateTo, channel string) ([]model.TerminalSuccessReport, error)
+	GetCardProductReport(ctx context.Context, dateFrom, dateTo, channel, flow string) ([]model.CardProductSuccessReport, error)
 }
 
 type successTransactionService struct {
@@ -297,6 +298,80 @@ func (s *successTransactionService) GetTerminalReport(ctx context.Context, dateF
 	})
 
 	return merged, nil
+}
+
+func (s *successTransactionService) GetCardProductReport(
+	ctx context.Context,
+	dateFrom, dateTo, channel, flow string,
+) ([]model.CardProductSuccessReport, error) {
+	if s.repository == nil {
+		return nil, common.ErrOracleUnavailable
+	}
+
+	normalizedChannel, err := normalizeSuccessChannel(channel)
+	if err != nil {
+		return nil, err
+	}
+	normalizedFlow, err := normalizeSuccessFlow(flow)
+	if err != nil {
+		return nil, err
+	}
+
+	from, err := parseReportDate(dateFrom)
+	if err != nil {
+		return nil, err
+	}
+	to, err := parseReportDate(dateTo)
+	if err != nil {
+		return nil, err
+	}
+	fromTime, _ := time.Parse("01-02-2006", from)
+	toTime, _ := time.Parse("01-02-2006", to)
+	if fromTime.After(toTime) {
+		return nil, common.ErrInvalidDateRange
+	}
+
+	rows, err := s.repository.GetCardProductReport(
+		ctx, from, to, normalizedChannel, normalizedFlow,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Merge duplicate scheme keys after canonicalization (e.g. ETB → ETH).
+	byKey := make(map[string]model.CardProductSuccessReport, len(rows))
+	order := make([]string, 0, len(rows))
+	for _, row := range rows {
+		existing, ok := byKey[row.CardProduct]
+		if !ok {
+			byKey[row.CardProduct] = row
+			order = append(order, row.CardProduct)
+			continue
+		}
+		existing.TotalTransactions += row.TotalTransactions
+		existing.ApprovedCount += row.ApprovedCount
+		existing.DeclinedCount += row.DeclinedCount
+		existing.ApprovedAmount += row.ApprovedAmount
+		existing.DeclinedAmount += row.DeclinedAmount
+		existing.TotalAmount += row.TotalAmount
+		if existing.TotalTransactions > 0 {
+			existing.SuccessRatePercent = float64(existing.ApprovedCount) /
+				float64(existing.TotalTransactions) * 100
+		}
+		byKey[row.CardProduct] = existing
+	}
+
+	out := make([]model.CardProductSuccessReport, 0, len(order))
+	for _, key := range order {
+		out = append(out, byKey[key])
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].TotalTransactions != out[j].TotalTransactions {
+			return out[i].TotalTransactions > out[j].TotalTransactions
+		}
+		return out[i].CardProductLabel < out[j].CardProductLabel
+	})
+	return out, nil
 }
 
 // registeredTerminalIDs returns the live fleet from source MongoDB, keyed by

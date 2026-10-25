@@ -59,6 +59,22 @@ type TerminalSuccessReport struct {
 	DeclineReasons     []DeclineReason `json:"declineReasons"`
 }
 
+// CardProductSuccessReport is one card scheme/product's success-rate metrics
+// (tried vs approved) for comparison across CARDPRODUCT values.
+type CardProductSuccessReport struct {
+	CardProduct        string  `json:"cardProduct"`
+	CardProductLabel   string  `json:"cardProductLabel"`
+	Channel            string  `json:"channel"`
+	Flow               string  `json:"flow"`
+	TotalTransactions  int64   `json:"totalTransactions"`
+	ApprovedCount      int64   `json:"approvedCount"`
+	DeclinedCount      int64   `json:"declinedCount"`
+	SuccessRatePercent float64 `json:"successRatePercent"`
+	ApprovedAmount     float64 `json:"approvedAmount"`
+	DeclinedAmount     float64 `json:"declinedAmount"`
+	TotalAmount        float64 `json:"totalAmount"`
+}
+
 // SuccessTransactionDetail is one shclog authorization row for browse/drill-down.
 type SuccessTransactionDetail struct {
 	ID               string  `json:"id"`

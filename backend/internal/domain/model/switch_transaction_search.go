@@ -31,6 +31,10 @@ type SwitchTransactionSearchRequest struct {
 	Reversal         string   `json:"reversal,omitempty"` // "" | exclude | only
 	AmountMin        *float64 `json:"amountMin,omitempty"`
 	AmountMax        *float64 `json:"amountMax,omitempty"`
+
+	// LookupWindow is true when the client is paging undated card/RRN/trace
+	// searches in short date chunks (including "Request more older").
+	LookupWindow bool `json:"lookupWindow,omitempty"`
 }
 
 // SwitchTransaction is one oasis.shclog row for Reports search.
@@ -59,11 +63,16 @@ type SwitchTransaction struct {
 }
 
 // SwitchTransactionSearchResult is a single paged search response.
+// DateFrom/DateTo are the bounds actually queried (echoed so the UI can
+// summarize the window and request an older chunk for card/RRN lookups).
 type SwitchTransactionSearchResult struct {
-	Page     int                 `json:"page"`
-	PageSize int                 `json:"pageSize"`
-	HasMore  bool                `json:"hasMore"`
-	Items    []SwitchTransaction `json:"items"`
+	Page         int                 `json:"page"`
+	PageSize     int                 `json:"pageSize"`
+	HasMore      bool                `json:"hasMore"`
+	HasMoreOlder bool                `json:"hasMoreOlder"`
+	DateFrom     string              `json:"dateFrom,omitempty"`
+	DateTo       string              `json:"dateTo,omitempty"`
+	Items        []SwitchTransaction `json:"items"`
 }
 
 // SwitchTransactionDetail is a full IST switch-log row for Reports drill-down.

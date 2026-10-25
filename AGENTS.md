@@ -46,7 +46,7 @@ powershell -File scripts/smoke-check.ps1 -Login
    - `data-testid="login-username"`
    - `data-testid="login-password"`
    - `data-testid="login-submit"`
-3. Use local login (`VITE_LOGIN_TYPE=login`) with bootstrap admin from `backend/.env` (`BOOTSTRAP_ADMIN_USERNAME`, default `systemadmin`).
+3. Use Vite dev (`npm run dev`) so `.env.development` sets local login (`VITE_LOGIN_TYPE=login`). Bootstrap admin is from `backend/.env` (`BOOTSTRAP_ADMIN_USERNAME`, default `systemadmin`).
 4. Expect redirect to `/home` on success.
 
 ## After relevant changes

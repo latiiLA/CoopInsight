@@ -15,4 +15,5 @@ type SuccessTransactionRepository interface {
 		limit int,
 	) ([]model.SuccessTransactionDetail, error)
 	GetTerminalReport(ctx context.Context, dateFrom, dateTo, channel string) ([]model.TerminalSuccessReport, error)
+	GetCardProductReport(ctx context.Context, dateFrom, dateTo, channel, flow string) ([]model.CardProductSuccessReport, error)
 }

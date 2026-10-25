@@ -510,6 +510,60 @@ WHERE `)
 	return b.String()
 }
 
+// cardProductSuccessQuery returns tried vs approved success metrics per
+// CARDPRODUCT (card scheme/type) for the selected channel and flow.
+func cardProductSuccessQuery(channel, flow string) string {
+	approved := trulyApprovedExpr(channel)
+	msgType, merchantType, routing := channelFilters(channel, flow)
+
+	var b strings.Builder
+	b.WriteString(reversalsCTE(2))
+	b.WriteString("\n")
+	b.WriteString(`SELECT /*+ USE_HASH(t rev) */
+	NVL(TRIM(t.CARDPRODUCT), 'UNKNOWN') AS card_product,
+	COUNT(*) AS total_number_of_transaction,
+	COUNT(CASE WHEN `)
+	b.WriteString(approved)
+	b.WriteString(` THEN 1 END) AS number_of_approved_txn,
+	COUNT(*) - COUNT(CASE WHEN `)
+	b.WriteString(approved)
+	b.WriteString(` THEN 1 END) AS number_of_declined_txn,
+	CASE
+		WHEN COUNT(*) = 0 THEN 0
+		ELSE ROUND(
+			(
+				COUNT(CASE WHEN `)
+	b.WriteString(approved)
+	b.WriteString(` THEN 1 END)
+				/ NULLIF(COUNT(*), 0)
+			) * 100,
+			2
+		)
+	END AS percent_success_rate,
+	CASE WHEN COUNT(*) = 0 THEN 0 ELSE SUM(CASE WHEN (`)
+	b.WriteString(approved)
+	b.WriteString(`) AND t.amount IS NOT NULL THEN t.amount ELSE 0 END) END AS total_approved_amount,
+	CASE WHEN COUNT(*) = 0 THEN 0 ELSE
+		SUM(CASE WHEN t.amount IS NULL THEN 0 ELSE t.amount END) -
+		SUM(CASE WHEN (`)
+	b.WriteString(approved)
+	b.WriteString(`) AND t.amount IS NOT NULL THEN t.amount ELSE 0 END)
+	END AS total_declined_amount,
+	CASE WHEN COUNT(*) = 0 THEN 0 ELSE SUM(CASE WHEN t.amount IS NULL THEN 0 ELSE t.amount END) END AS total_transaction_amount
+FROM oasis.shclog t
+LEFT JOIN rev ON rev.refnum = TRIM(t.REFNUM)
+WHERE `)
+	b.WriteString(msgType)
+	b.WriteString("\n\tAND ")
+	b.WriteString(merchantType)
+	b.WriteString("\n\tAND ")
+	b.WriteString(routing)
+	b.WriteString("\n\tAND t.LOCAL_DATE BETWEEN TO_DATE(:date_from, 'MM-DD-YYYY') AND TO_DATE(:date_to, 'MM-DD-YYYY')\n")
+	b.WriteString("GROUP BY NVL(TRIM(t.CARDPRODUCT), 'UNKNOWN')\n")
+	b.WriteString("ORDER BY COUNT(*) DESC\n")
+	return b.String()
+}
+
 func listSuccessTransactionsQuery(
 	channel, flow, outcomeFilter, respFilter string,
 	limit int,

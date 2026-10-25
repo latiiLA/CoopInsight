@@ -20,7 +20,7 @@ Uses `MONGO_URL` and `DB_NAME` from `.env` (cwd should be `backend/` so `godoten
 | Command | Effect |
 |---|---|
 | `up` | Schema indexes only |
-| `seed` | Permissions, SUPERADMIN role, bootstrap admin (no indexes) |
+| `seed` | Permissions, SUPERADMIN + operational roles, bootstrap admin, role test users (no indexes) |
 | `all` | `up` then `seed` |
 
 ## Bootstrap admin env

@@ -29,19 +29,37 @@ func NewSwitchTransactionSearchService(
 	return &switchTransactionSearchService{repository: repository}
 }
 
+// Undated card/RRN/trace lookups run in short windows so the first page returns
+// quickly; the UI can request older windows afterward.
+const (
+	// Short first window so card MASK_PAN lookups return before the HTTP timeout.
+	switchTxnLookupWindowDays = 7
+	switchTxnLookupMaxMonths  = 24
+)
+
 func (s *switchTransactionSearchService) Search(
 	ctx context.Context,
 	req model.SwitchTransactionSearchRequest,
 	page, pageSize int,
 ) (*model.SwitchTransactionSearchResult, error) {
-	req, page, pageSize, err := parseSwitchTxnSearchArgs(req, page, pageSize)
+	req, page, pageSize, windowed, err := parseSwitchTxnSearchArgs(req, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
 	if s.repository == nil {
 		return nil, common.ErrOracleUnavailable
 	}
-	return s.repository.Search(ctx, req, page, pageSize)
+	result, err := s.repository.Search(ctx, req, page, pageSize)
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		return nil, nil
+	}
+	result.DateFrom = req.DateFrom
+	result.DateTo = req.DateTo
+	result.HasMoreOlder = windowed && switchTxnCanExtendOlder(req.DateFrom)
+	return result, nil
 }
 
 func (s *switchTransactionSearchService) GetByRowID(
@@ -61,7 +79,7 @@ func (s *switchTransactionSearchService) GetByRowID(
 func parseSwitchTxnSearchArgs(
 	req model.SwitchTransactionSearchRequest,
 	page, pageSize int,
-) (model.SwitchTransactionSearchRequest, int, int, error) {
+) (model.SwitchTransactionSearchRequest, int, int, bool, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -125,30 +143,54 @@ func parseSwitchTxnSearchArgs(
 	dateTo := strings.TrimSpace(req.DateTo)
 	if dateFrom == "" && dateTo == "" {
 		if !hasLookupKey {
-			return req, page, pageSize, common.ErrSwitchTxnSearchNeedsCriteria
+			return req, page, pageSize, false, common.ErrSwitchTxnSearchNeedsCriteria
 		}
-		req.DateFrom = ""
-		req.DateTo = ""
-		return req, page, pageSize, nil
+		// First undated lookup: short window only (not 24 months).
+		to := time.Now().UTC().Truncate(24 * time.Hour)
+		from := to.AddDate(0, 0, -(switchTxnLookupWindowDays - 1))
+		floor := switchTxnLookupFloor(to)
+		if from.Before(floor) {
+			from = floor
+		}
+		req.DateFrom = from.Format("01-02-2006")
+		req.DateTo = to.Format("01-02-2006")
+		return req, page, pageSize, true, nil
 	}
 	if dateFrom == "" || dateTo == "" {
-		return req, page, pageSize, common.ErrInvalidReportDate
+		return req, page, pageSize, false, common.ErrInvalidReportDate
 	}
 
 	from, err := parseReportDate(dateFrom)
 	if err != nil {
-		return req, page, pageSize, err
+		return req, page, pageSize, false, err
 	}
 	to, err := parseReportDate(dateTo)
 	if err != nil {
-		return req, page, pageSize, err
+		return req, page, pageSize, false, err
 	}
 	fromTime, _ := time.Parse("01-02-2006", from)
 	toTime, _ := time.Parse("01-02-2006", to)
 	if fromTime.After(toTime) {
-		return req, page, pageSize, common.ErrInvalidDateRange
+		return req, page, pageSize, false, common.ErrInvalidDateRange
 	}
 	req.DateFrom = from
 	req.DateTo = to
-	return req, page, pageSize, nil
+	// Older chunks from the UI send lookupWindow=1 with an explicit short span.
+	// Do not treat a user-picked date range as windowed.
+	windowed := hasLookupKey && req.LookupWindow &&
+		int(toTime.Sub(fromTime).Hours()/24)+1 <= switchTxnLookupWindowDays+1
+	return req, page, pageSize, windowed, nil
+}
+
+func switchTxnLookupFloor(asOf time.Time) time.Time {
+	return asOf.AddDate(0, -switchTxnLookupMaxMonths, 0)
+}
+
+func switchTxnCanExtendOlder(dateFromMMDDYYYY string) bool {
+	from, err := time.Parse("01-02-2006", strings.TrimSpace(dateFromMMDDYYYY))
+	if err != nil {
+		return false
+	}
+	floor := switchTxnLookupFloor(time.Now().UTC().Truncate(24 * time.Hour))
+	return from.After(floor)
 }

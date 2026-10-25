@@ -13,7 +13,13 @@ func registerPosTerminalRoutes(protected *gin.RouterGroup, posTerminalHandler ha
 		"/pos",
 		middleware.AuthorizeRolesOrPermissions(
 			[]string{"SUPERADMIN"},
-			[]string{"terminal:view-pos", "terminal:view-pos-transaction"},
+			[]string{
+				"terminal:view-pos",
+				"terminal:view-pos-transaction",
+				// Recon export pickers need the full TMS POS list.
+				"report:export-switch-terminal-recon",
+				"report:export-cortex-terminal-recon",
+			},
 		),
 		posTerminalHandler.GetAll,
 	)

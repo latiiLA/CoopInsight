@@ -119,6 +119,79 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermissions []st
 	}
 }
 
+// AuthorizeTerminalReconExport gates Switch / Cortex recon export by the
+// `source` query parameter (switch | cortex). SUPERADMIN bypasses the check.
+func AuthorizeTerminalReconExport() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claimsValue, exists := c.Get("claims")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{
+				Message: "Unauthorized or token expired",
+				Error:   "Authentication claims not found",
+			})
+			return
+		}
+
+		claims, ok := toClaimsMap(claimsValue)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, response.Status{
+				Message: "Authorization failed",
+				Error:   "Invalid authentication claims",
+			})
+			return
+		}
+
+		if role, ok := claims["role"].(string); ok {
+			if containsPermission([]string{"SUPERADMIN"}, role) {
+				c.Next()
+				return
+			}
+		}
+
+		source := strings.ToLower(strings.TrimSpace(c.Query("source")))
+		var required string
+		switch source {
+		case "switch":
+			required = "report:export-switch-terminal-recon"
+		case "cortex":
+			required = "report:export-cortex-terminal-recon"
+		default:
+			c.AbortWithStatusJSON(http.StatusBadRequest, response.Status{
+				Message: "Invalid export source",
+				Error:   "source must be switch or cortex",
+			})
+			return
+		}
+
+		permissions, exists := claims["permissions"]
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusForbidden, response.Status{
+				Message: "Access denied",
+				Error:   "Permissions not found",
+			})
+			return
+		}
+
+		userPermissions := extractPermissions(permissions)
+		if containsPermission(userPermissions, required) {
+			c.Next()
+			return
+		}
+
+		logrus.WithFields(logrus.Fields{
+			"role":     claims["role"],
+			"required": required,
+			"source":   source,
+			"have":     userPermissions,
+		}).Warn("Terminal recon export access denied")
+
+		c.AbortWithStatusJSON(http.StatusForbidden, response.Status{
+			Message: "Access denied",
+			Error:   "Insufficient permissions",
+		})
+	}
+}
+
 // HasPermission reports whether the authenticated caller holds the named
 // permission.
 //

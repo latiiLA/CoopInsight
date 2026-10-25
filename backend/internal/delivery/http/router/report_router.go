@@ -243,6 +243,22 @@ func registerReportRoutes(
 		successTransactionHandler.GetTerminalReport,
 	)
 	reports.GET(
+		"/card-product-success-rate",
+		middleware.AuthorizeRolesOrPermissions(
+			[]string{"SUPERADMIN"},
+			[]string{
+				"report:view-card-product-success-rate",
+				"report:view-switch-overall-success-rate",
+				"report:view-atm-acquiring-success-rate",
+				"report:view-atm-overall-success-rate",
+				"report:view-pos-acquiring-success-rate",
+				"report:view-pos-overall-success-rate",
+				"report:view-success-transactions",
+			},
+		),
+		successTransactionHandler.GetCardProductReport,
+	)
+	reports.GET(
 		"/ebirr-cardless-withdrawal",
 		middleware.AuthorizeRolesOrPermissions([]string{}, []string{"report:view-ebirr-cardless-withdrawal"}),
 		ebirrCardlessHandler.GetReport,
@@ -313,18 +329,12 @@ func registerReportRoutes(
 	)
 	reports.GET(
 		"/terminal-recon/chunk",
-		middleware.AuthorizeRolesOrPermissions(
-			[]string{"SUPERADMIN"},
-			[]string{"report:export-terminal-recon"},
-		),
+		middleware.AuthorizeTerminalReconExport(),
 		terminalReconExportHandler.Chunk,
 	)
 	reports.GET(
 		"/terminal-recon/export",
-		middleware.AuthorizeRolesOrPermissions(
-			[]string{"SUPERADMIN"},
-			[]string{"report:export-terminal-recon"},
-		),
+		middleware.AuthorizeTerminalReconExport(),
 		terminalReconExportHandler.Export,
 	)
 	reports.GET(

@@ -260,6 +260,50 @@ func prepaidVisaSanitizeSearch(raw string) string {
 	return out
 }
 
+// prepaidVisaSanitizeCardDigits keeps digits only (spaces, dashes, stars ignored)
+// so card search matches how operators type PANs, not only exact stored text.
+func prepaidVisaSanitizeCardDigits(raw string) string {
+	const maxLen = 19
+	var b strings.Builder
+	for _, r := range strings.TrimSpace(raw) {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+		if b.Len() >= maxLen {
+			break
+		}
+	}
+	return b.String()
+}
+
+// prepaidVisaCardFilterSQL matches PAN_DISPLAY without REGEXP_REPLACE.
+// BIN+last4 uses LIKE '424312%3877' for masked values like 424312XXXXXX3877.
+func prepaidVisaCardFilterSQL(panExpr, raw string) (string, []any) {
+	card := prepaidVisaSanitizeCardDigits(raw)
+	if card == "" {
+		return "", nil
+	}
+	last4 := card
+	if len(card) > 4 {
+		last4 = card[len(card)-4:]
+	}
+	switch {
+	case len(card) <= 4:
+		return fmt.Sprintf(`SUBSTR(TRIM(%s), -4) = :card_last4`, panExpr), []any{
+			sql.Named("card_last4", last4),
+		}
+	case len(card) >= 10:
+		bin := card[:6]
+		return fmt.Sprintf(`UPPER(TRIM(NVL(%s, ' '))) LIKE :card_bin_last`, panExpr), []any{
+			sql.Named("card_bin_last", strings.ToUpper(bin)+"%"+last4),
+		}
+	default:
+		return fmt.Sprintf(`UPPER(TRIM(NVL(%s, ' '))) LIKE :card_like`, panExpr), []any{
+			sql.Named("card_like", "%"+strings.ToUpper(card)+"%"),
+		}
+	}
+}
+
 // Date bound for CTXDATE columns. Empty dates → soft 24-month cap (RRN/card lookups).
 func prepaidVisaLedgerDateClause(alias, dateFrom, dateTo string) (string, []any) {
 	if strings.TrimSpace(dateFrom) == "" || strings.TrimSpace(dateTo) == "" {
@@ -280,17 +324,9 @@ func prepaidVisaSearchCommonClause(req model.PrepaidVisaSearchRequest, includeCa
 	var parts []string
 	var args []any
 
-	card := prepaidVisaSanitizeSearch(req.Card)
-	if card != "" {
-		cardUp := strings.ToUpper(card)
-		parts = append(parts, `(
-			UPPER(TRIM(NVL(c.PAN_DISPLAY, ' '))) LIKE :card_like
-			OR SUBSTR(TRIM(c.PAN_DISPLAY), -4) = :card_exact
-		)`)
-		args = append(args,
-			sql.Named("card_like", "%"+cardUp+"%"),
-			sql.Named("card_exact", cardUp),
-		)
+	if cardSQL, cardArgs := prepaidVisaCardFilterSQL("c.PAN_DISPLAY", req.Card); cardSQL != "" {
+		parts = append(parts, cardSQL)
+		args = append(args, cardArgs...)
 	}
 
 	branch := strings.ToUpper(prepaidVisaSanitizeSearch(req.Branch))

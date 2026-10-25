@@ -51,18 +51,17 @@ Default listen port is **`:8088`** (HTTPS).
 
 ```bash
 cd frontend
-cp .env.example .env
+cp .env.example .env   # optional shared defaults
 ```
 
-Typical local values:
+Login type is chosen by Vite mode, so you do not flip values when switching:
 
-```env
-VITE_API_URL=/api
-VITE_LOGIN_TYPE=login
-VITE_LIVE_MONITORING_ENABLED=false
-```
+| Command | Mode file | Login |
+|---|---|---|
+| `npm run dev` | `.env.development` | local Mongo (`login`) |
+| `npm run build` | `.env.production` | LDAP (`login-ldap`) |
 
-Use `VITE_LOGIN_TYPE=login` for the seeded Mongo admin; use `login-ldap` when LDAP is configured on the backend.
+Shared keys (`VITE_API_URL`, etc.) live in `.env`. Override locally with `.env.local` or `.env.development.local` (gitignored).
 
 ```bash
 npm install

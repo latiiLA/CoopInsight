@@ -550,6 +550,64 @@ func (r *successTransactionRepository) GetTerminalReport(ctx context.Context, da
 	return results, nil
 }
 
+// GetCardProductReport returns tried vs approved metrics per CARDPRODUCT.
+func (r *successTransactionRepository) GetCardProductReport(
+	ctx context.Context,
+	dateFrom, dateTo, channel, flow string,
+) ([]model.CardProductSuccessReport, error) {
+	query := cardProductSuccessQuery(channel, flow)
+
+	rows, err := r.db.QueryContext(
+		ctx,
+		query,
+		sql.Named("date_from", dateFrom),
+		sql.Named("date_to", dateTo),
+	)
+	if err != nil {
+		return nil, wrapError(common.ErrFailedToFetchReport, err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var results []model.CardProductSuccessReport
+	for rows.Next() {
+		var (
+			product                                                          string
+			total, approved, declined, rate, apprAmt, declAmt, totalAmt sql.NullFloat64
+		)
+		if err := rows.Scan(
+			&product,
+			&total,
+			&approved,
+			&declined,
+			&rate,
+			&apprAmt,
+			&declAmt,
+			&totalAmt,
+		); err != nil {
+			return nil, wrapError(common.ErrFailedToFetchReport, err)
+		}
+		key, label := canonicalMixScheme(product)
+		results = append(results, model.CardProductSuccessReport{
+			CardProduct:        key,
+			CardProductLabel:   label,
+			Channel:            channel,
+			Flow:               flow,
+			TotalTransactions:  nullInt(total),
+			ApprovedCount:      nullInt(approved),
+			DeclinedCount:      nullInt(declined),
+			SuccessRatePercent: nullFloat(rate),
+			ApprovedAmount:     nullFloat(apprAmt),
+			DeclinedAmount:     nullFloat(declAmt),
+			TotalAmount:        nullFloat(totalAmt),
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, wrapError(common.ErrFailedToFetchReport, err)
+	}
+
+	return results, nil
+}
+
 func nullInt(value sql.NullFloat64) int64 {
 	if !value.Valid {
 		return 0

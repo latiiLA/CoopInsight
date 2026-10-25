@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/latiiLA/CoopInsight/backend/internal/common"
 	"github.com/latiiLA/CoopInsight/backend/internal/common/response"
+	"github.com/latiiLA/CoopInsight/backend/internal/delivery/http/middleware"
 	"github.com/latiiLA/CoopInsight/backend/internal/service"
 )
 
@@ -31,6 +32,7 @@ type SuccessTransactionHandler interface {
 	GetTrend(c *gin.Context)
 	ListTransactions(c *gin.Context)
 	GetTerminalReport(c *gin.Context)
+	GetCardProductReport(c *gin.Context)
 }
 
 type successTransactionHandler struct {
@@ -217,6 +219,52 @@ func (h *successTransactionHandler) GetTerminalReport(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Status{
 		IsSuccessful: true,
 		Message:      "Terminal success rate report fetched successfully",
+		Data:         report,
+	})
+}
+
+func (h *successTransactionHandler) GetCardProductReport(c *gin.Context) {
+	dateFrom := c.Query("dateFrom")
+	dateTo := c.Query("dateTo")
+	channel := c.Query("channel")
+	flow := c.Query("flow")
+	if channel == "" {
+		channel = "switch"
+	}
+	if flow == "" {
+		if strings.EqualFold(channel, "switch") {
+			flow = "overall"
+		} else {
+			flow = "acquiring"
+		}
+	}
+
+	if dateFrom == "" || dateTo == "" {
+		c.JSON(http.StatusBadRequest, response.Status{
+			IsSuccessful: false,
+			Message:      common.ErrInvalidReportDate.Error(),
+			Error:        common.MessInvalidRequest,
+		})
+		return
+	}
+
+	if !middleware.HasPermission(c, "report:view-card-product-success-rate") &&
+		!canViewSuccessRate(c, channel, flow) {
+		writeAppError(c, common.ErrForbidden)
+		return
+	}
+
+	report, err := h.service.GetCardProductReport(
+		c.Request.Context(), dateFrom, dateTo, channel, flow,
+	)
+	if err != nil {
+		writeAppError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Card product success rate report fetched successfully",
 		Data:         report,
 	})
 }
